@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { autocompletion } from '@codemirror/autocomplete'
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
+  const { t } = useTranslation()
   const [filterText, setFilterText] = useState(query.filter ?? '{}')
   const [sortText, setSortText] = useState(query.sort ?? '')
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
       setExplainResult(null)
       onRun(filterText.trim() || '{}', sortText.trim())
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'JSON inválido')
+      setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
     }
   }
 
@@ -51,7 +53,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
       const result = await api.explain(db, coll, filterText.trim() || '{}')
       setExplainResult(JSON.stringify(result, null, 2))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'JSON inválido')
+      setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
     } finally {
       setExplaining(false)
     }
@@ -88,7 +90,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
         height="80px"
         extensions={extensions}
         onChange={(value) => setFilterText(value)}
-        placeholder='{ "status": "ativo" }'
+        placeholder={t('queryEditor.filterPlaceholder')}
         basicSetup={{ lineNumbers: false, foldGutter: false }}
       />
       <div className={styles.row}>
@@ -97,26 +99,26 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
           style={{ minHeight: 'unset', flex: 1 }}
           value={sortText}
           onChange={(e) => setSortText(e.target.value)}
-          placeholder='sort: { "campo": 1 }'
+          placeholder={t('queryEditor.sortPlaceholder')}
         />
       </div>
       <div className={styles.row}>
         <button className={styles.button} onClick={run}>
-          Executar
+          {t('queryEditor.run')}
         </button>
         <button className={styles.button} onClick={() => void explain()} disabled={explaining}>
-          {explaining ? 'Explicando…' : 'Explain'}
+          {explaining ? t('queryEditor.explaining') : t('queryEditor.explain')}
         </button>
         <button className={styles.button} onClick={onNewDocument}>
-          + Novo documento
+          {t('queryEditor.newDocument')}
         </button>
         {error && <span className={styles.error}>{error}</span>}
         <div className={styles.spacer} />
         <a className={styles.exportLink} href={exportURL(db, coll, 'json', { filter: filterText })} download>
-          Exportar JSON
+          {t('queryEditor.exportJson')}
         </a>
         <a className={styles.exportLink} href={exportURL(db, coll, 'csv', { filter: filterText })} download>
-          Exportar CSV
+          {t('queryEditor.exportCsv')}
         </a>
       </div>
       {explainResult && (

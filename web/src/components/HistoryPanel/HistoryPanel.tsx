@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import styles from './HistoryPanel.module.css'
 import { useHistory } from '../../hooks/useHistory'
 import type { HistoryEntry } from '../../types'
@@ -7,19 +8,20 @@ interface Props {
 }
 
 export function HistoryPanel({ onReplay }: Props) {
+  const { t } = useTranslation()
   const { data, isLoading } = useHistory()
 
-  if (isLoading) return <div className={styles.empty}>Carregando…</div>
-  if (!data || data.length === 0) return <div className={styles.empty}>Nenhuma consulta ainda</div>
+  if (isLoading) return <div className={styles.empty}>{t('historyPanel.loading')}</div>
+  if (!data || data.length === 0) return <div className={styles.empty}>{t('historyPanel.empty')}</div>
 
   return (
     <div className={styles.panel}>
       <table>
         <thead>
           <tr>
-            <th>Banco</th>
-            <th>Coleção</th>
-            <th>Filtro</th>
+            <th>{t('historyPanel.database')}</th>
+            <th>{t('historyPanel.collection')}</th>
+            <th>{t('historyPanel.filter')}</th>
           </tr>
         </thead>
         <tbody>

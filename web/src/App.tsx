@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import styles from './App.module.css'
 import { Sidebar } from './components/Sidebar/Sidebar'
@@ -20,17 +21,12 @@ const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
 
 type Tab = 'documents' | 'schema' | 'indexes' | 'history' | 'server'
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'documents', label: 'Documentos' },
-  { id: 'schema', label: 'Schema' },
-  { id: 'indexes', label: 'Índices' },
-  { id: 'history', label: 'Histórico' },
-  { id: 'server', label: 'Servidor' },
-]
+const TAB_IDS: Tab[] = ['documents', 'schema', 'indexes', 'history', 'server']
 
 const DEFAULT_QUERY: FindQuery = { filter: '{}', sort: '', skip: 0, limit: 50 }
 
 export default function App() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { theme, cycle } = useTheme()
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
@@ -83,17 +79,22 @@ export default function App() {
   return (
     <div className={styles.app}>
       <div className={styles.tabbar}>
-        {TABS.map((t) => (
+        {TAB_IDS.map((id) => (
           <button
-            key={t.id}
-            className={tab === t.id ? styles.tabActive : styles.tab}
-            onClick={() => setTab(t.id)}
+            key={id}
+            className={tab === id ? styles.tabActive : styles.tab}
+            onClick={() => setTab(id)}
           >
-            {t.label}
+            {t(`app.tabs.${id}`)}
           </button>
         ))}
         <div className={styles.spacer} />
-        <button className={styles.tab} onClick={cycle} title={`Tema: ${theme}`} aria-label="Alternar tema">
+        <button
+          className={styles.tab}
+          onClick={cycle}
+          title={t('app.themeTitle', { theme })}
+          aria-label={t('app.themeToggle')}
+        >
           {THEME_ICON[theme]}
         </button>
       </div>
@@ -104,7 +105,7 @@ export default function App() {
         <div className={styles.main}>
           {!selection && tab !== 'history' && (
             <div style={{ padding: 16, color: 'var(--color-text-muted)' }}>
-              Selecione uma coleção na barra lateral.
+              {t('app.selectCollectionHint')}
             </div>
           )}
 
@@ -130,7 +131,7 @@ export default function App() {
           {selection && tab === 'schema' && <SchemaPanel db={selection.db} coll={selection.coll} />}
           {selection && tab === 'indexes' && <IndexPanel db={selection.db} coll={selection.coll} />}
           {tab === 'history' && <HistoryPanel onReplay={replayHistory} />}
-          {selection && tab === 'server' && <div style={{ padding: 16 }}>Informações do servidor</div>}
+          {selection && tab === 'server' && <div style={{ padding: 16 }}>{t('app.serverInfoPlaceholder')}</div>}
         </div>
       </div>
 

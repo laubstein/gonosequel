@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import styles from './IndexPanel.module.css'
 import { api } from '../../api/client'
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function IndexPanel({ db, coll }: Props) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: indexes, isLoading } = useQuery({
     queryKey: ['indexes', db, coll],
@@ -42,14 +44,14 @@ export function IndexPanel({ db, coll }: Props) {
   return (
     <div className={styles.panel}>
       {isLoading ? (
-        <div>Carregando…</div>
+        <div>{t('indexPanel.loading')}</div>
       ) : (
         <table>
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Campos</th>
-              <th>Único</th>
+              <th>{t('indexPanel.name')}</th>
+              <th>{t('indexPanel.fields')}</th>
+              <th>{t('indexPanel.unique')}</th>
               <th></th>
             </tr>
           </thead>
@@ -58,11 +60,11 @@ export function IndexPanel({ db, coll }: Props) {
               <tr key={idx.name}>
                 <td>{idx.name}</td>
                 <td>{Object.entries(idx.keys ?? {}).map(([k, v]) => `${k}: ${v}`).join(', ')}</td>
-                <td>{idx.unique ? 'sim' : 'não'}</td>
+                <td>{idx.unique ? t('indexPanel.yes') : t('indexPanel.no')}</td>
                 <td>
                   {idx.name !== '_id_' && (
                     <button className={styles.dropButton} onClick={() => drop.mutate(idx.name)}>
-                      Apagar
+                      {t('indexPanel.drop')}
                     </button>
                   )}
                 </td>
@@ -75,19 +77,19 @@ export function IndexPanel({ db, coll }: Props) {
       <div className={styles.form}>
         <input
           className={styles.input}
-          placeholder="campo"
+          placeholder={t('indexPanel.fieldPlaceholder')}
           value={field}
           onChange={(e) => setField(e.target.value)}
         />
         <select className={styles.input} value={direction} onChange={(e) => setDirection(e.target.value as '1' | '-1')}>
-          <option value="1">crescente</option>
-          <option value="-1">decrescente</option>
+          <option value="1">{t('indexPanel.ascending')}</option>
+          <option value="-1">{t('indexPanel.descending')}</option>
         </select>
         <label>
-          <input type="checkbox" checked={unique} onChange={(e) => setUnique(e.target.checked)} /> único
+          <input type="checkbox" checked={unique} onChange={(e) => setUnique(e.target.checked)} /> {t('indexPanel.uniqueLabel')}
         </label>
         <button className={styles.button} onClick={() => field && create.mutate()} disabled={!field || create.isPending}>
-          Criar índice
+          {t('indexPanel.create')}
         </button>
       </div>
       {error && <div className={styles.error}>{error}</div>}

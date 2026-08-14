@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import styles from './DocumentEditor.module.css'
 import { api } from '../../api/client'
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function DocumentEditor({ db, coll, target, onClose }: Props) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [text, setText] = useState('{}')
   const [error, setError] = useState<string | null>(null)
@@ -68,7 +70,7 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
     try {
       JSON.parse(text)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'JSON inválido')
+      setError(e instanceof Error ? e.message : t('documentEditor.invalidJson'))
       return
     }
     save.mutate()
@@ -78,16 +80,16 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          {target.mode === 'new' ? 'Novo documento' : 'Editar documento'}
+          {target.mode === 'new' ? t('documentEditor.newTitle') : t('documentEditor.editTitle')}
           <div className={styles.headerSpacer} />
-          <button className={styles.closeButton} onClick={onClose} aria-label="Fechar">
+          <button className={styles.closeButton} onClick={onClose} aria-label={t('documentEditor.close')}>
             ✕
           </button>
         </div>
 
         <div className={styles.body}>
           {target.mode === 'edit' && existing.isLoading ? (
-            <div>Carregando…</div>
+            <div>{t('documentEditor.loading')}</div>
           ) : (
             <textarea className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
           )}
@@ -97,15 +99,15 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
         <div className={styles.footer}>
           {target.mode === 'edit' && (
             <button className={styles.buttonDanger} onClick={() => remove.mutate()} disabled={remove.isPending}>
-              Excluir
+              {t('documentEditor.delete')}
             </button>
           )}
           <div className={styles.footerSpacer} />
           <button className={styles.button} onClick={onClose}>
-            Cancelar
+            {t('documentEditor.cancel')}
           </button>
           <button className={styles.buttonPrimary} onClick={handleSave} disabled={save.isPending}>
-            Salvar
+            {t('documentEditor.save')}
           </button>
         </div>
       </div>

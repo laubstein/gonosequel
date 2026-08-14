@@ -1,0 +1,103 @@
+{
+  "app": {
+    "tabs": {
+      "documents": "Documents",
+      "schema": "Schema",
+      "indexes": "Indexes",
+      "history": "History",
+      "server": "Server"
+    },
+    "selectCollectionHint": "Select a collection in the sidebar.",
+    "serverInfoPlaceholder": "Server information",
+    "themeToggle": "Toggle theme",
+    "themeTitle": "Theme: {{theme}}"
+  },
+  "sidebar": {
+    "loading": "Loading…",
+    "selectDatabase": "Select a database",
+    "newDatabase": "New database",
+    "dropDatabase": "Delete database",
+    "refresh": "Refresh",
+    "filterCollections": "Filter collections…",
+    "newCollection": "+ New collection",
+    "noCollections": "No collections",
+    "dropCollection": "Delete {{name}}",
+    "promptNewDatabaseName": "New database name:",
+    "confirmDropDatabase": "Delete database \"{{name}}\" and all its collections?",
+    "promptNewCollectionName": "New collection name:",
+    "confirmDropCollection": "Delete collection \"{{name}}\"?",
+    "documentCount_one": "{{formattedCount}} document",
+    "documentCount_other": "{{formattedCount}} documents",
+    "indexCount_one": "{{count}} index",
+    "indexCount_other": "{{count}} indexes"
+  },
+  "queryEditor": {
+    "filterPlaceholder": "{ \"status\": \"active\" }",
+    "sortPlaceholder": "sort: { \"field\": 1 }",
+    "run": "Run",
+    "explain": "Explain",
+    "explaining": "Explaining…",
+    "newDocument": "+ New document",
+    "exportJson": "Export JSON",
+    "exportCsv": "Export CSV",
+    "invalidJson": "Invalid JSON"
+  },
+  "results": {
+    "loading": "Loading…",
+    "queryError": "Query error",
+    "noDocuments": "No documents found",
+    "table": "Table",
+    "json": "JSON",
+    "documentCount_one": "{{formattedCount}} document",
+    "documentCount_other": "{{formattedCount}} documents"
+  },
+  "pagination": {
+    "page": "page {{page}} of {{total}}",
+    "perPage": "{{count}} per page"
+  },
+  "documentEditor": {
+    "newTitle": "New document",
+    "editTitle": "Edit document",
+    "close": "Close",
+    "loading": "Loading…",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "invalidJson": "Invalid JSON"
+  },
+  "indexPanel": {
+    "loading": "Loading…",
+    "name": "Name",
+    "fields": "Fields",
+    "unique": "Unique",
+    "yes": "yes",
+    "no": "no",
+    "drop": "Delete",
+    "fieldPlaceholder": "field",
+    "ascending": "ascending",
+    "descending": "descending",
+    "uniqueLabel": "unique",
+    "create": "Create index"
+  },
+  "schemaPanel": {
+    "loading": "Loading…",
+    "noData": "No data to infer schema",
+    "field": "Field",
+    "observedTypes": "Observed types"
+  },
+  "historyPanel": {
+    "loading": "Loading…",
+    "empty": "No queries yet",
+    "database": "Database",
+    "collection": "Collection",
+    "filter": "Filter"
+  },
+  "connectionModal": {
+    "title": "Connect to MongoDB",
+    "urlLabel": "Connection URL",
+    "urlPlaceholder": "mongodb://user:password@host:27017",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "savedConnections": "Saved connections"
+  }
+}

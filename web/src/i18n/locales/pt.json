@@ -1,0 +1,103 @@
+{
+  "app": {
+    "tabs": {
+      "documents": "Documentos",
+      "schema": "Schema",
+      "indexes": "Índices",
+      "history": "Histórico",
+      "server": "Servidor"
+    },
+    "selectCollectionHint": "Selecione uma coleção na barra lateral.",
+    "serverInfoPlaceholder": "Informações do servidor",
+    "themeToggle": "Alternar tema",
+    "themeTitle": "Tema: {{theme}}"
+  },
+  "sidebar": {
+    "loading": "Carregando…",
+    "selectDatabase": "Selecione um banco",
+    "newDatabase": "Novo banco",
+    "dropDatabase": "Apagar banco",
+    "refresh": "Atualizar",
+    "filterCollections": "filtrar coleções…",
+    "newCollection": "+ Nova coleção",
+    "noCollections": "Nenhuma coleção",
+    "dropCollection": "Apagar {{name}}",
+    "promptNewDatabaseName": "Nome do novo banco:",
+    "confirmDropDatabase": "Apagar o banco \"{{name}}\" e todas as suas coleções?",
+    "promptNewCollectionName": "Nome da nova coleção:",
+    "confirmDropCollection": "Apagar a coleção \"{{name}}\"?",
+    "documentCount_one": "{{formattedCount}} documento",
+    "documentCount_other": "{{formattedCount}} documentos",
+    "indexCount_one": "{{count}} índice",
+    "indexCount_other": "{{count}} índices"
+  },
+  "queryEditor": {
+    "filterPlaceholder": "{ \"status\": \"ativo\" }",
+    "sortPlaceholder": "sort: { \"campo\": 1 }",
+    "run": "Executar",
+    "explain": "Explain",
+    "explaining": "Explicando…",
+    "newDocument": "+ Novo documento",
+    "exportJson": "Exportar JSON",
+    "exportCsv": "Exportar CSV",
+    "invalidJson": "JSON inválido"
+  },
+  "results": {
+    "loading": "Carregando…",
+    "queryError": "Erro ao consultar",
+    "noDocuments": "Nenhum documento encontrado",
+    "table": "Tabela",
+    "json": "JSON",
+    "documentCount_one": "{{formattedCount}} documento",
+    "documentCount_other": "{{formattedCount}} documentos"
+  },
+  "pagination": {
+    "page": "página {{page}} de {{total}}",
+    "perPage": "{{count}} por página"
+  },
+  "documentEditor": {
+    "newTitle": "Novo documento",
+    "editTitle": "Editar documento",
+    "close": "Fechar",
+    "loading": "Carregando…",
+    "delete": "Excluir",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "invalidJson": "JSON inválido"
+  },
+  "indexPanel": {
+    "loading": "Carregando…",
+    "name": "Nome",
+    "fields": "Campos",
+    "unique": "Único",
+    "yes": "sim",
+    "no": "não",
+    "drop": "Apagar",
+    "fieldPlaceholder": "campo",
+    "ascending": "crescente",
+    "descending": "decrescente",
+    "uniqueLabel": "único",
+    "create": "Criar índice"
+  },
+  "schemaPanel": {
+    "loading": "Carregando…",
+    "noData": "Sem dados para inferir o schema",
+    "field": "Campo",
+    "observedTypes": "Tipos observados"
+  },
+  "historyPanel": {
+    "loading": "Carregando…",
+    "empty": "Nenhuma consulta ainda",
+    "database": "Banco",
+    "collection": "Coleção",
+    "filter": "Filtro"
+  },
+  "connectionModal": {
+    "title": "Conectar ao MongoDB",
+    "urlLabel": "URL de conexão",
+    "urlPlaceholder": "mongodb://usuário:senha@host:27017",
+    "connect": "Conectar",
+    "connecting": "Conectando…",
+    "savedConnections": "Conexões salvas"
+  }
+}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import styles from './ConnectionModal.module.css'
 import { api } from '../../api/client'
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function ConnectionModal({ onConnected }: Props) {
+  const { t } = useTranslation()
   const [url, setUrl] = useState('mongodb://localhost:27017')
   const [error, setError] = useState<string | null>(null)
 
@@ -35,26 +37,26 @@ export function ConnectionModal({ onConnected }: Props) {
   return (
     <div className={styles.overlay}>
       <div className={styles.card}>
-        <div className={styles.title}>Conectar ao MongoDB</div>
+        <div className={styles.title}>{t('connectionModal.title')}</div>
 
         <div className={styles.field}>
-          <label className={styles.label}>URL de conexão</label>
+          <label className={styles.label}>{t('connectionModal.urlLabel')}</label>
           <input
             className={styles.input}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="mongodb://usuário:senha@host:27017"
+            placeholder={t('connectionModal.urlPlaceholder')}
           />
         </div>
 
         <button className={styles.button} onClick={() => connect.mutate(url)} disabled={connect.isPending}>
-          {connect.isPending ? 'Conectando…' : 'Conectar'}
+          {connect.isPending ? t('connectionModal.connecting') : t('connectionModal.connect')}
         </button>
         {error && <div className={styles.error}>{error}</div>}
 
         {bookmarkList && bookmarkList.length > 0 && (
           <div className={styles.bookmarks}>
-            <div className={styles.label}>Conexões salvas</div>
+            <div className={styles.label}>{t('connectionModal.savedConnections')}</div>
             {bookmarkList.map((b) => (
               <div key={b.name} className={styles.bookmarkItem} onClick={() => connectBookmark.mutate(b.name)}>
                 {b.name} — {b.uri}

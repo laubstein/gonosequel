@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import styles from './SchemaPanel.module.css'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
 
@@ -7,18 +8,19 @@ interface Props {
 }
 
 export function SchemaPanel({ db, coll }: Props) {
+  const { t } = useTranslation()
   const { data, isLoading } = useCollectionSchema(db, coll)
 
-  if (isLoading) return <div className={styles.empty}>Carregando…</div>
-  if (!data || data.length === 0) return <div className={styles.empty}>Sem dados para inferir o schema</div>
+  if (isLoading) return <div className={styles.empty}>{t('schemaPanel.loading')}</div>
+  if (!data || data.length === 0) return <div className={styles.empty}>{t('schemaPanel.noData')}</div>
 
   return (
     <div className={styles.panel}>
       <table>
         <thead>
           <tr>
-            <th>Campo</th>
-            <th>Tipos observados</th>
+            <th>{t('schemaPanel.field')}</th>
+            <th>{t('schemaPanel.observedTypes')}</th>
           </tr>
         </thead>
         <tbody>

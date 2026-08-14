@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import styles from './Sidebar.module.css'
 import { useDatabases } from '../../hooks/useDatabases'
 import { useCollections } from '../../hooks/useCollections'
@@ -24,6 +25,7 @@ function formatBytes(n: number): string {
 }
 
 export function Sidebar({ selection, onSelect }: Props) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: databases, isLoading: dbsLoading } = useDatabases()
   const [currentDb, setCurrentDb] = useState<string | null>(selection?.db ?? null)
@@ -71,25 +73,25 @@ export function Sidebar({ selection, onSelect }: Props) {
   })
 
   function handleCreateDatabase() {
-    const name = window.prompt('Nome do novo banco:')
+    const name = window.prompt(t('sidebar.promptNewDatabaseName'))
     if (name) createDatabase.mutate(name)
   }
 
   function handleDropDatabase() {
     if (!currentDb) return
-    if (window.confirm(`Apagar o banco "${currentDb}" e todas as suas coleções?`)) {
+    if (window.confirm(t('sidebar.confirmDropDatabase', { name: currentDb }))) {
       dropDatabase.mutate(currentDb)
     }
   }
 
   function handleCreateCollection() {
     if (!currentDb) return
-    const name = window.prompt('Nome da nova coleção:')
+    const name = window.prompt(t('sidebar.promptNewCollectionName'))
     if (name) createCollection.mutate(name)
   }
 
   function handleDropCollection(name: string) {
-    if (window.confirm(`Apagar a coleção "${name}"?`)) {
+    if (window.confirm(t('sidebar.confirmDropCollection', { name }))) {
       dropCollection.mutate(name)
     }
   }
@@ -103,7 +105,7 @@ export function Sidebar({ selection, onSelect }: Props) {
           onChange={(e) => setCurrentDb(e.target.value || null)}
         >
           <option value="" disabled>
-            {dbsLoading ? 'Carregando…' : 'Selecione um banco'}
+            {dbsLoading ? t('sidebar.loading') : t('sidebar.selectDatabase')}
           </option>
           {databases?.map((db) => (
             <option key={db.name} value={db.name}>
@@ -111,26 +113,26 @@ export function Sidebar({ selection, onSelect }: Props) {
             </option>
           ))}
         </select>
-        <button className={styles.iconButton} onClick={handleCreateDatabase} title="Novo banco" aria-label="Novo banco">
+        <button className={styles.iconButton} onClick={handleCreateDatabase} title={t('sidebar.newDatabase')} aria-label={t('sidebar.newDatabase')}>
           +
         </button>
         <button
           className={styles.iconButton}
           onClick={handleDropDatabase}
-          title="Apagar banco"
-          aria-label="Apagar banco"
+          title={t('sidebar.dropDatabase')}
+          aria-label={t('sidebar.dropDatabase')}
           disabled={!currentDb}
         >
           −
         </button>
-        <button className={styles.iconButton} onClick={refresh} title="Atualizar" aria-label="Atualizar">
+        <button className={styles.iconButton} onClick={refresh} title={t('sidebar.refresh')} aria-label={t('sidebar.refresh')}>
           ⟳
         </button>
       </div>
 
       <input
         className={styles.filterInput}
-        placeholder="filtrar coleções…"
+        placeholder={t('sidebar.filterCollections')}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
@@ -138,15 +140,15 @@ export function Sidebar({ selection, onSelect }: Props) {
       {currentDb && (
         <div className={styles.newCollectionRow}>
           <button className={styles.newCollectionButton} onClick={handleCreateCollection}>
-            + Nova coleção
+            {t('sidebar.newCollection')}
           </button>
         </div>
       )}
 
       <ul className={styles.collectionList}>
-        {collsLoading && <li className={styles.empty}>Carregando…</li>}
+        {collsLoading && <li className={styles.empty}>{t('sidebar.loading')}</li>}
         {!collsLoading && currentDb && filtered.length === 0 && (
-          <li className={styles.empty}>Nenhuma coleção</li>
+          <li className={styles.empty}>{t('sidebar.noCollections')}</li>
         )}
         {filtered.map((c) => (
           <li key={c.name} className={styles.collectionRow}>
@@ -163,8 +165,8 @@ export function Sidebar({ selection, onSelect }: Props) {
             <button
               className={styles.dropButton}
               onClick={() => handleDropCollection(c.name)}
-              title={`Apagar ${c.name}`}
-              aria-label={`Apagar ${c.name}`}
+              title={t('sidebar.dropCollection', { name: c.name })}
+              aria-label={t('sidebar.dropCollection', { name: c.name })}
             >
               ✕
             </button>
@@ -174,9 +176,9 @@ export function Sidebar({ selection, onSelect }: Props) {
 
       {stats && (
         <div className={styles.statsPanel}>
-          <span>{stats.count.toLocaleString()} documentos</span>
+          <span>{t('sidebar.documentCount', { count: stats.count, formattedCount: stats.count.toLocaleString() })}</span>
           <span>{formatBytes(stats.sizeBytes)}</span>
-          <span>{stats.indexCount} índices</span>
+          <span>{t('sidebar.indexCount', { count: stats.indexCount })}</span>
         </div>
       )}
     </aside>

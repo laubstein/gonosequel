@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import styles from './Results.module.css'
 import { useDocuments } from '../../hooks/useDocuments'
 import { summarizeValue, docId } from '../../api/extjson'
@@ -28,22 +29,23 @@ function collectColumns(docs: ExtJSONDocument[]): string[] {
 }
 
 export function Results({ db, coll, query, onOpenDocument }: Props) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<ViewMode>('table')
   const { data, isLoading, isError, error } = useDocuments(db, coll, query)
 
   const columns = useMemo(() => collectColumns(data?.documents ?? []), [data])
 
   if (isLoading) {
-    return <div className={styles.empty}>Carregando…</div>
+    return <div className={styles.empty}>{t('results.loading')}</div>
   }
   if (isError) {
-    return <div className={styles.empty}>{error instanceof Error ? error.message : 'Erro ao consultar'}</div>
+    return <div className={styles.empty}>{error instanceof Error ? error.message : t('results.queryError')}</div>
   }
   if (!data || data.documents.length === 0) {
     return (
       <div className={styles.container}>
         <Toolbar mode={mode} setMode={setMode} total={0} estimate={false} />
-        <div className={styles.empty}>Nenhum documento encontrado</div>
+        <div className={styles.empty}>{t('results.noDocuments')}</div>
       </div>
     )
   }
@@ -97,17 +99,18 @@ function Toolbar({
   total: number
   estimate: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <div className={styles.toolbar}>
       <button className={mode === 'table' ? styles.toggleButtonActive : styles.toggleButton} onClick={() => setMode('table')}>
-        Tabela
+        {t('results.table')}
       </button>
       <button className={mode === 'json' ? styles.toggleButtonActive : styles.toggleButton} onClick={() => setMode('json')}>
-        JSON
+        {t('results.json')}
       </button>
       <span className={styles.status}>
         {estimate ? '~' : ''}
-        {total.toLocaleString()} documentos
+        {t('results.documentCount', { count: total, formattedCount: total.toLocaleString() })}
       </span>
     </div>
   )
