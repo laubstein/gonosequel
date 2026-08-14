@@ -7,21 +7,41 @@ import { Pagination } from './components/Pagination/Pagination'
 import { IndexPanel } from './components/IndexPanel/IndexPanel'
 import { SchemaPanel } from './components/SchemaPanel/SchemaPanel'
 import { HistoryPanel } from './components/HistoryPanel/HistoryPanel'
+import { useDocuments } from './hooks/useDocuments'
+import type { ExtJSONDocument, FindQuery } from './types'
 
-type Tab = 'documents' | 'schema' | 'indexes' | 'query' | 'history' | 'server'
+type Tab = 'documents' | 'schema' | 'indexes' | 'history' | 'server'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'documents', label: 'Documentos' },
   { id: 'schema', label: 'Schema' },
   { id: 'indexes', label: 'Índices' },
-  { id: 'query', label: 'Query' },
   { id: 'history', label: 'Histórico' },
   { id: 'server', label: 'Servidor' },
 ]
 
+const DEFAULT_QUERY: FindQuery = { filter: '{}', sort: '', skip: 0, limit: 50 }
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('documents')
   const [selection, setSelection] = useState<{ db: string; coll: string } | null>(null)
+  const [query, setQuery] = useState<FindQuery>(DEFAULT_QUERY)
+  const [, setOpenDocument] = useState<ExtJSONDocument | null>(null)
+
+  const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query)
+
+  function selectCollection(db: string, coll: string) {
+    setSelection({ db, coll })
+    setQuery(DEFAULT_QUERY)
+  }
+
+  function runQuery(filter: string, sort: string) {
+    setQuery((q) => ({ ...q, filter, sort, skip: 0 }))
+  }
+
+  function paginate(skip: number, limit: number) {
+    setQuery((q) => ({ ...q, skip, limit }))
+  }
 
   return (
     <div className={styles.app}>
@@ -39,26 +59,31 @@ export default function App() {
       </div>
 
       <div className={styles.layout}>
-        <Sidebar selection={selection} onSelect={(db, coll) => setSelection({ db, coll })} />
+        <Sidebar selection={selection} onSelect={selectCollection} />
 
         <div className={styles.main}>
-          {tab === 'documents' && selection && (
-            <>
-              <QueryEditor db={selection.db} coll={selection.coll} />
-              <Results db={selection.db} coll={selection.coll} />
-              <Pagination db={selection.db} coll={selection.coll} />
-            </>
-          )}
-          {tab === 'schema' && selection && <SchemaPanel db={selection.db} coll={selection.coll} />}
-          {tab === 'indexes' && selection && <IndexPanel db={selection.db} coll={selection.coll} />}
-          {tab === 'query' && selection && <QueryEditor db={selection.db} coll={selection.coll} standalone />}
-          {tab === 'history' && <HistoryPanel />}
-          {tab === 'server' && <div style={{ padding: 16 }}>Informações do servidor</div>}
-          {!selection && tab !== 'history' && tab !== 'server' && (
+          {!selection && tab !== 'history' && (
             <div style={{ padding: 16, color: 'var(--color-text-muted)' }}>
               Selecione uma coleção na barra lateral.
             </div>
           )}
+
+          {selection && tab === 'documents' && (
+            <>
+              <QueryEditor db={selection.db} coll={selection.coll} query={query} onRun={runQuery} />
+              <Results db={selection.db} coll={selection.coll} query={query} onOpenDocument={setOpenDocument} />
+              <Pagination
+                query={query}
+                total={data?.total ?? 0}
+                totalIsEstimate={data?.totalIsEstimate ?? false}
+                onChange={paginate}
+              />
+            </>
+          )}
+          {selection && tab === 'schema' && <SchemaPanel db={selection.db} coll={selection.coll} />}
+          {selection && tab === 'indexes' && <IndexPanel db={selection.db} coll={selection.coll} />}
+          {tab === 'history' && <HistoryPanel />}
+          {selection && tab === 'server' && <div style={{ padding: 16 }}>Informações do servidor</div>}
         </div>
       </div>
     </div>

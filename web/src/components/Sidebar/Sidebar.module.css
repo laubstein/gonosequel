@@ -1,0 +1,90 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+.dbRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 6px;
+}
+
+.dbSelect {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.iconButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.iconButton:hover {
+  background: var(--color-bg-inset);
+}
+
+.filterInput {
+  margin: 0 10px 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.collectionList {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0 6px;
+}
+
+.collectionItem {
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collectionItem:hover {
+  background: var(--color-bg-inset);
+}
+
+.collectionItemActive {
+  composes: collectionItem;
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+.statsPanel {
+  border-top: 1px solid var(--color-border);
+  padding: 10px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.empty {
+  padding: 10px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
