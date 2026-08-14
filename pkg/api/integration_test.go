@@ -267,3 +267,61 @@ func TestAPIExplainReturnsQueryPlan(t *testing.T) {
 		t.Errorf("expected queryPlanner in explain response, got: %s", body)
 	}
 }
+
+func TestAPIAggregate(t *testing.T) {
+	app := newTestApp(t, false)
+
+	if resp, body := doJSON(t, app, http.MethodPost, "/api/databases/api_test_agg/collections", map[string]string{"name": "items"}); resp.StatusCode != http.StatusCreated {
+		t.Fatalf("create collection: status=%d body=%v", resp.StatusCode, body)
+	}
+
+	for _, n := range []int{1, 2, 3} {
+		insertBody, err := json.Marshal(map[string]int{"n": n})
+		if err != nil {
+			t.Fatalf("marshal insert body: %v", err)
+		}
+		req := httptest.NewRequest(http.MethodPost, "/api/databases/api_test_agg/collections/items/documents", bytes.NewReader(insertBody))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("insert document: %v", err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusCreated {
+			t.Fatalf("insert document: status=%d", resp.StatusCode)
+		}
+	}
+
+	pipeline := []byte(`[{"$group":{"_id":null,"total":{"$sum":"$n"}}}]`)
+	aggReq := httptest.NewRequest(http.MethodPost, "/api/databases/api_test_agg/collections/items/aggregate", bytes.NewReader(pipeline))
+	aggReq.Header.Set("Content-Type", "application/json")
+	aggResp, err := app.Test(aggReq)
+	if err != nil {
+		t.Fatalf("aggregate: %v", err)
+	}
+	defer aggResp.Body.Close()
+	body, _ := io.ReadAll(aggResp.Body)
+	if aggResp.StatusCode != http.StatusOK {
+		t.Fatalf("aggregate: status=%d body=%s", aggResp.StatusCode, body)
+	}
+	if !bytes.Contains(body, []byte(`"total":6`)) {
+		t.Errorf("expected total:6 in aggregate response, got: %s", body)
+	}
+}
+
+func TestAPIAggregateRejectedInReadonlyMode(t *testing.T) {
+	app := newTestApp(t, true)
+
+	pipeline := []byte(`[{"$limit":1}]`)
+	req := httptest.NewRequest(http.MethodPost, "/api/databases/api_test_agg_ro/collections/items/aggregate", bytes.NewReader(pipeline))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", resp.StatusCode)
+	}
+}

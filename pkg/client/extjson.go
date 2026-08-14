@@ -41,6 +41,16 @@ func FromExtJSON(raw []byte) (bson.M, error) {
 	return doc, nil
 }
 
+// FromExtJSONArray unmarshals an Extended JSON array — an aggregation
+// pipeline, in practice — sent by the frontend into a BSON array.
+func FromExtJSONArray(raw []byte) (bson.A, error) {
+	var arr bson.A
+	if err := bson.UnmarshalExtJSON(raw, true, &arr); err != nil {
+		return nil, fmt.Errorf("unmarshal extjson array: %w", err)
+	}
+	return arr, nil
+}
+
 // EncodeDocID encodes a document's _id (which may be any BSON type, not
 // just ObjectID) into a URL-safe string suitable for a route path segment.
 func EncodeDocID(id any) (string, error) {
