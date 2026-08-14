@@ -101,14 +101,14 @@ func (d *deps) handleConnectionInfo(c fiber.Ctx) error {
 	return fiber.NewError(fiber.StatusNotFound, "session not found")
 }
 
-// handleServerStatus reports a trimmed serverStatus summary for the
-// current connection.
+// handleServerStatus reports version, uptime, connection pool usage, and
+// operation counters for the current connection's server.
 func (d *deps) handleServerStatus(c fiber.Ctx) error {
-	version, err := currentClient(c).ServerVersion(c.Context())
+	status, err := currentClient(c).ServerStatus(c.Context())
 	if err != nil {
 		return fmt.Errorf("server status: %w", err)
 	}
-	return c.JSON(fiber.Map{"version": version})
+	return c.JSON(status)
 }
 
 // redactURI strips the password from a mongodb:// connection string before

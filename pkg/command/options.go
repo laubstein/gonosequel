@@ -25,8 +25,6 @@ type Options struct {
 	AuthUser string
 	AuthPass string
 	Readonly bool
-	SkipOpen bool
-	Prefix   string
 	DevProxy string
 
 	ReadTimeout  time.Duration
@@ -54,8 +52,6 @@ func Parse(args []string) (*Options, error) {
 	fs.StringVar(&opts.AuthUser, "auth-user", envOr("ME_AUTH_USER", ""), "basic auth username for the web UI")
 	fs.StringVar(&opts.AuthPass, "auth-pass", envOr("ME_AUTH_PASS", ""), "basic auth password for the web UI")
 	fs.BoolVar(&opts.Readonly, "readonly", envBoolOr("ME_READONLY", false), "reject all non-GET requests")
-	fs.BoolVar(&opts.SkipOpen, "skip-open", envBoolOr("ME_SKIP_OPEN", false), "do not open a browser on startup")
-	fs.StringVar(&opts.Prefix, "prefix", envOr("ME_PREFIX", ""), "serve the app under a URL path prefix")
 	fs.StringVar(&opts.DevProxy, "dev-proxy", envOr("ME_DEV_PROXY", ""), "proxy non-API requests to this URL (dev mode)")
 
 	readTimeout := fs.Duration("read-timeout", 30*time.Second, "HTTP read timeout")

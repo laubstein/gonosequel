@@ -81,7 +81,7 @@ echo "==> Starting mongo-express-go API on :${HTTP_PORT}"
 # A real binary, not `go run .`: go run's own process never execs into
 # the compiled binary, it runs it as a child, so killing go run's PID
 # leaves that child running behind — confirmed while testing this script.
-"$API_BIN" --url "mongodb://localhost:${MONGO_PORT}" --http-port "$HTTP_PORT" --skip-open &
+"$API_BIN" --url "mongodb://localhost:${MONGO_PORT}" --http-port "$HTTP_PORT" &
 API_PID=$!
 
 # Both child processes run in the background and the script waits on

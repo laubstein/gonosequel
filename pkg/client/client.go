@@ -43,16 +43,3 @@ func Connect(ctx context.Context, uri string) (*Client, error) {
 func (c *Client) Close(ctx context.Context) error {
 	return c.mongo.Disconnect(ctx)
 }
-
-// ServerVersion reports the MongoDB server's version string via
-// buildInfo.
-func (c *Client) ServerVersion(ctx context.Context) (string, error) {
-	var result struct {
-		Version string `bson:"version"`
-	}
-	err := c.mongo.Database("admin").RunCommand(ctx, map[string]any{"buildInfo": 1}).Decode(&result)
-	if err != nil {
-		return "", fmt.Errorf("buildInfo: %w", err)
-	}
-	return result.Version, nil
-}

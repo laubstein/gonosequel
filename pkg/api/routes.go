@@ -7,7 +7,7 @@ import "github.com/gofiber/fiber/v3"
 func registerRoutes(app *fiber.App, d *deps) {
 	api := app.Group("/api")
 
-	api.Get("/info", handleInfo)
+	api.Get("/info", d.handleInfo)
 	api.Get("/sessions", d.handleListSessions)
 	api.Get("/bookmarks", d.handleListBookmarks)
 	api.Post("/connect", d.handleConnect)

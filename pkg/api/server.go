@@ -50,6 +50,7 @@ type deps struct {
 	registry     *session.Registry
 	history      *history.Store
 	sessions     bool
+	readonly     bool
 	bookmarksDir string
 }
 
@@ -79,6 +80,7 @@ func New(cfg Config) *fiber.App {
 		registry:     cfg.Registry,
 		history:      history.NewStore(),
 		sessions:     cfg.Sessions,
+		readonly:     cfg.Readonly,
 		bookmarksDir: cfg.BookmarksDir,
 	}
 	registerRoutes(app, d)
