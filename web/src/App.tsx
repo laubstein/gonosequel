@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import styles from './App.module.css'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { QueryEditor } from './components/QueryEditor/QueryEditor'
@@ -8,9 +9,14 @@ import { IndexPanel } from './components/IndexPanel/IndexPanel'
 import { SchemaPanel } from './components/SchemaPanel/SchemaPanel'
 import { HistoryPanel } from './components/HistoryPanel/HistoryPanel'
 import { DocumentEditor, type EditorTarget } from './components/DocumentEditor/DocumentEditor'
+import { ConnectionModal } from './components/ConnectionModal/ConnectionModal'
 import { useDocuments } from './hooks/useDocuments'
+import { useTheme } from './hooks/useTheme'
 import { docId } from './api/extjson'
+import { api } from './api/client'
 import type { ExtJSONDocument, FindQuery, HistoryEntry } from './types'
+
+const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
 
 type Tab = 'documents' | 'schema' | 'indexes' | 'history' | 'server'
 
@@ -25,6 +31,13 @@ const TABS: { id: Tab; label: string }[] = [
 const DEFAULT_QUERY: FindQuery = { filter: '{}', sort: '', skip: 0, limit: 50 }
 
 export default function App() {
+  const queryClient = useQueryClient()
+  const { theme, cycle } = useTheme()
+  const { data: sessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['sessions'],
+    queryFn: api.sessions,
+  })
+
   const [tab, setTab] = useState<Tab>('documents')
   const [selection, setSelection] = useState<{ db: string; coll: string } | null>(null)
   const [query, setQuery] = useState<FindQuery>(DEFAULT_QUERY)
@@ -57,6 +70,16 @@ export default function App() {
     setTab('documents')
   }
 
+  // In --sessions mode the server starts with no active connection, so
+  // GET /api/sessions comes back empty until the user connects through
+  // this modal. In single-connection mode a "default" session is always
+  // pre-registered at startup, so this never renders.
+  if (!sessionsLoading && sessions && sessions.length === 0) {
+    return (
+      <ConnectionModal onConnected={() => void queryClient.invalidateQueries({ queryKey: ['sessions'] })} />
+    )
+  }
+
   return (
     <div className={styles.app}>
       <div className={styles.tabbar}>
@@ -70,6 +93,9 @@ export default function App() {
           </button>
         ))}
         <div className={styles.spacer} />
+        <button className={styles.tab} onClick={cycle} title={`Tema: ${theme}`} aria-label="Alternar tema">
+          {THEME_ICON[theme]}
+        </button>
       </div>
 
       <div className={styles.layout}>

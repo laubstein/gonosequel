@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/laubstein/mongo-express-go/pkg/api"
+	"github.com/laubstein/mongo-express-go/pkg/bookmarks"
 	"github.com/laubstein/mongo-express-go/pkg/client"
 	"github.com/laubstein/mongo-express-go/pkg/command"
 	"github.com/laubstein/mongo-express-go/pkg/session"
@@ -31,11 +32,21 @@ func main() {
 		log.Fatalf("parse flags: %v", err)
 	}
 
+	bookmarksDir, err := bookmarks.DefaultDir()
+	if err != nil {
+		log.Fatalf("resolve bookmarks directory: %v", err)
+	}
+
 	registry := session.NewRegistry()
 
 	if !opts.Sessions {
+		uri, err := resolveURI(opts, bookmarksDir)
+		if err != nil {
+			log.Fatalf("resolve connection: %v", err)
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		cl, err := client.Connect(ctx, opts.MongoURI())
+		cl, err := client.Connect(ctx, uri)
 		cancel()
 		if err != nil {
 			log.Fatalf("connect to mongodb: %v", err)
@@ -44,13 +55,14 @@ func main() {
 	}
 
 	app := api.New(api.Config{
-		Registry: registry,
-		Sessions: opts.Sessions,
-		Readonly: opts.Readonly,
-		AuthUser: opts.AuthUser,
-		AuthPass: opts.AuthPass,
-		Assets:   assetsFS(),
-		DevProxy: opts.DevProxy,
+		Registry:     registry,
+		Sessions:     opts.Sessions,
+		Readonly:     opts.Readonly,
+		AuthUser:     opts.AuthUser,
+		AuthPass:     opts.AuthPass,
+		Assets:       assetsFS(),
+		DevProxy:     opts.DevProxy,
+		BookmarksDir: bookmarksDir,
 	})
 
 	addr := fmt.Sprintf("%s:%d", opts.Bind, opts.HTTPPort)
@@ -58,6 +70,18 @@ func main() {
 	if err := app.Listen(addr); err != nil {
 		log.Fatalf("serve: %v", err)
 	}
+}
+
+// resolveURI prefers a saved --bookmark over discrete flags/--url.
+func resolveURI(opts *command.Options, bookmarksDir string) (string, error) {
+	if opts.Bookmark == "" {
+		return opts.MongoURI(), nil
+	}
+	b, err := bookmarks.Load(bookmarksDir, opts.Bookmark)
+	if err != nil {
+		return "", fmt.Errorf("load bookmark %q: %w", opts.Bookmark, err)
+	}
+	return b.URL, nil
 }
 
 // assetsFS strips the "web/dist" embed prefix so paths inside it match

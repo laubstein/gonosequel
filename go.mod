@@ -3,6 +3,7 @@ module github.com/laubstein/mongo-express-go
 go 1.26.5
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/gofiber/fiber/v3 v3.5.0
 	github.com/google/uuid v1.6.0
 	github.com/testcontainers/testcontainers-go v0.44.0

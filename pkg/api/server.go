@@ -39,13 +39,18 @@ type Config struct {
 	// DevProxy, if set, reverse-proxies non-API routes to a Vite dev
 	// server instead of serving Assets, enabling hot reload.
 	DevProxy string
+
+	// BookmarksDir is where saved connection bookmarks live (see
+	// pkg/bookmarks). Empty disables the /api/bookmarks endpoint.
+	BookmarksDir string
 }
 
 // deps bundles the dependencies handlers need, avoiding globals.
 type deps struct {
-	registry *session.Registry
-	history  *history.Store
-	sessions bool
+	registry     *session.Registry
+	history      *history.Store
+	sessions     bool
+	bookmarksDir string
 }
 
 // New builds a *fiber.App with middleware and routes registered, but does
@@ -71,9 +76,10 @@ func New(cfg Config) *fiber.App {
 	}
 
 	d := &deps{
-		registry: cfg.Registry,
-		history:  history.NewStore(),
-		sessions: cfg.Sessions,
+		registry:     cfg.Registry,
+		history:      history.NewStore(),
+		sessions:     cfg.Sessions,
+		bookmarksDir: cfg.BookmarksDir,
 	}
 	registerRoutes(app, d)
 	registerAssets(app, cfg.Assets, cfg.DevProxy)

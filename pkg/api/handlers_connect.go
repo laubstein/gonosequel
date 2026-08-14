@@ -9,13 +9,19 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
+	"github.com/laubstein/mongo-express-go/pkg/bookmarks"
 	"github.com/laubstein/mongo-express-go/pkg/client"
 	"github.com/laubstein/mongo-express-go/pkg/session"
 )
 
 type connectRequest struct {
-	URL  string `json:"url"`
-	Name string `json:"name"`
+	// URL is a full mongodb:// connection string, used as-is.
+	URL string `json:"url"`
+	// Bookmark, if set instead of URL, is resolved server-side from
+	// bookmarksDir — the saved URL (password included) never round-trips
+	// through the browser, unlike URL above which the client typed in.
+	Bookmark string `json:"bookmark"`
+	Name     string `json:"name"`
 }
 
 // handleConnect opens a new MongoDB connection and registers it as a
@@ -27,14 +33,27 @@ func (d *deps) handleConnect(c fiber.Ctx) error {
 	if err := c.Bind().Body(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
 	}
-	if req.URL == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "url is required")
+
+	targetURL := req.URL
+	displayName := req.Name
+	if req.Bookmark != "" {
+		b, err := bookmarks.Load(d.bookmarksDir, req.Bookmark)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "unknown bookmark: "+req.Bookmark)
+		}
+		targetURL = b.URL
+		if displayName == "" {
+			displayName = b.Name
+		}
+	}
+	if targetURL == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "url or bookmark is required")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	cl, err := client.Connect(ctx, req.URL)
+	cl, err := client.Connect(ctx, targetURL)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("connect: %v", err))
 	}
@@ -44,12 +63,11 @@ func (d *deps) handleConnect(c fiber.Ctx) error {
 		id = uuid.NewString()
 	}
 
-	name := req.Name
-	if name == "" {
-		name = redactURI(req.URL)
+	if displayName == "" {
+		displayName = redactURI(targetURL)
 	}
 
-	d.registry.Put(id, cl, session.Info{ID: id, URI: redactURI(req.URL), Name: name})
+	d.registry.Put(id, cl, session.Info{ID: id, URI: redactURI(targetURL), Name: displayName})
 
 	return c.JSON(fiber.Map{"sessionId": id})
 }
@@ -108,4 +126,21 @@ func redactURI(raw string) string {
 		}
 	}
 	return u.String()
+}
+
+// handleListBookmarks lists saved connection bookmarks (name and redacted
+// URI only — never the raw file, which may embed credentials).
+func (d *deps) handleListBookmarks(c fiber.Ctx) error {
+	if d.bookmarksDir == "" {
+		return c.JSON([]fiber.Map{})
+	}
+	saved, err := bookmarks.List(d.bookmarksDir)
+	if err != nil {
+		return fmt.Errorf("list bookmarks: %w", err)
+	}
+	out := make([]fiber.Map, len(saved))
+	for i, b := range saved {
+		out[i] = fiber.Map{"name": b.Name, "uri": redactURI(b.URL)}
+	}
+	return c.JSON(out)
 }

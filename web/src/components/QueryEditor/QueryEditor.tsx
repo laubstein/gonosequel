@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { autocompletion } from '@codemirror/autocomplete'
@@ -57,8 +57,32 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
     }
   }
 
+  // A native, window-level capture-phase listener — not a CodeMirror
+  // keymap extension, and not a React onKeyDownCapture prop either.
+  // CodeMirror 6 installs its own native keydown handler directly on its
+  // content DOM node, which fires and calls stopPropagation before a
+  // React synthetic capture handler (attached at the React root, not
+  // document) ever sees the event; a keymap.of([...]) extension has the
+  // same problem competing against autocomplete's/basicSetup's own
+  // keymaps for facet precedence. Capturing at `window` runs before both.
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const runRef = useRef(run)
+  runRef.current = run
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey) || e.key !== 'Enter') return
+      if (!wrapperRef.current?.contains(e.target as Node)) return
+      e.preventDefault()
+      e.stopPropagation()
+      runRef.current()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [])
+
   return (
-    <div className={styles.editor}>
+    <div className={styles.editor} ref={wrapperRef}>
       <CodeMirror
         value={filterText}
         height="80px"

@@ -16,8 +16,11 @@ export const api = {
   info: () => apiGet<{ app: string; version: string }>('/api/info'),
 
   sessions: () => apiGet<SessionInfo[]>('/api/sessions'),
+  bookmarks: () => apiGet<{ name: string; uri: string }[]>('/api/bookmarks'),
   connect: (url: string, name?: string) =>
     apiSend<{ sessionId: string }>('POST', '/api/connect', { url, name }),
+  connectBookmark: (bookmark: string) =>
+    apiSend<{ sessionId: string }>('POST', '/api/connect', { bookmark }),
   disconnect: () => apiSend<{ ok: true }>('POST', '/api/disconnect'),
   connectionInfo: () => apiGet<SessionInfo>('/api/connection'),
   serverStatus: () => apiGet<{ version: string }>('/api/server_status'),

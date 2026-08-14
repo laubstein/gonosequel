@@ -9,6 +9,7 @@ func registerRoutes(app *fiber.App, d *deps) {
 
 	api.Get("/info", handleInfo)
 	api.Get("/sessions", d.handleListSessions)
+	api.Get("/bookmarks", d.handleListBookmarks)
 	api.Post("/connect", d.handleConnect)
 	api.Post("/disconnect", d.handleDisconnect)
 
