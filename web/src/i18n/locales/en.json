@@ -5,7 +5,8 @@
       "schema": "Schema",
       "indexes": "Indexes",
       "history": "History",
-      "server": "Server"
+      "server": "Server",
+      "tools": "Tools"
     },
     "selectCollectionHint": "Select a collection in the sidebar.",
     "themeToggle": "Toggle theme",
@@ -47,7 +48,8 @@
     "modeAggregate": "Aggregate",
     "pipelinePlaceholder": "[ { \"$match\": { \"status\": \"active\" } } ]",
     "aggregating": "Running…",
-    "presetPlaceholder": "Useful queries…"
+    "presetPlaceholder": "Useful queries…",
+    "collscanWarning": "Full collection scan — no index was used for this query."
   },
   "results": {
     "loading": "Loading…",
@@ -142,5 +144,27 @@
     "sortByFieldDesc": "Sort by {{field}} (descending)",
     "fieldLast24h": "{{field}} in the last 24 hours",
     "countGroupedByField": "Count grouped by {{field}}"
+  },
+  "toolsPanel": {
+    "collectionsOverview": "Collections overview",
+    "indexUsage": "Index usage",
+    "currentOps": "Running operations",
+    "loading": "Loading…",
+    "noCollections": "No collections",
+    "noIndexes": "No indexes",
+    "noCurrentOps": "No operations running longer than 1 second",
+    "collection": "Collection",
+    "documents": "Documents",
+    "dataSize": "Data size",
+    "storageSize": "Storage size",
+    "indexSize": "Index size",
+    "indexCount": "Indexes",
+    "index": "Index",
+    "ops": "Ops",
+    "since": "Since",
+    "namespace": "Namespace",
+    "operation": "Operation",
+    "secsRunning": "Seconds running",
+    "client": "Client"
   }
 }

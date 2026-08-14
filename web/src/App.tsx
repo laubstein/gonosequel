@@ -10,6 +10,7 @@ import { IndexPanel } from './components/IndexPanel/IndexPanel'
 import { SchemaPanel } from './components/SchemaPanel/SchemaPanel'
 import { HistoryPanel } from './components/HistoryPanel/HistoryPanel'
 import { ServerPanel } from './components/ServerPanel/ServerPanel'
+import { ToolsPanel } from './components/ToolsPanel/ToolsPanel'
 import { DocumentEditor, type EditorTarget } from './components/DocumentEditor/DocumentEditor'
 import { ConnectionModal } from './components/ConnectionModal/ConnectionModal'
 import { useDocuments } from './hooks/useDocuments'
@@ -21,9 +22,9 @@ import type { ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
 const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
 
-type Tab = 'documents' | 'schema' | 'indexes' | 'history' | 'server'
+type Tab = 'documents' | 'schema' | 'indexes' | 'tools' | 'history' | 'server'
 
-const TAB_IDS: Tab[] = ['documents', 'schema', 'indexes', 'history', 'server']
+const TAB_IDS: Tab[] = ['documents', 'schema', 'indexes', 'tools', 'history', 'server']
 
 const DEFAULT_QUERY: FindQuery = { filter: '{}', sort: '', skip: 0, limit: 50 }
 
@@ -150,6 +151,7 @@ export default function App() {
           )}
           {selection && tab === 'schema' && <SchemaPanel db={selection.db} coll={selection.coll} />}
           {selection && tab === 'indexes' && <IndexPanel db={selection.db} coll={selection.coll} />}
+          {selection && tab === 'tools' && <ToolsPanel db={selection.db} />}
           {tab === 'history' && <HistoryPanel onReplay={replayHistory} />}
           {tab === 'server' && <ServerPanel />}
         </div>

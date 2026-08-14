@@ -13,11 +13,29 @@ export interface CollectionInfo {
 }
 
 export interface CollectionStats {
+  name?: string
   count: number
   sizeBytes: number
   storageBytes: number
+  indexBytes: number
   avgObjSize: number
   indexCount: number
+}
+
+export interface IndexUsageStat {
+  collection: string
+  index: string
+  ops: number
+  since: string
+}
+
+export interface CurrentOp {
+  opid: number
+  namespace: string
+  op: string
+  secsRunning: number
+  client: string
+  description: string
 }
 
 export interface IndexInfo {

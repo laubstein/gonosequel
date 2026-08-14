@@ -11,6 +11,8 @@ import type {
   FindQuery,
   AppInfo,
   ServerStatus,
+  IndexUsageStat,
+  CurrentOp,
 } from '../types'
 import { apiGet, apiSend } from './http'
 
@@ -101,4 +103,10 @@ export const api = {
       'DELETE',
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/indexes/${encodeURIComponent(name)}`,
     ),
+
+  collectionsOverview: (db: string) =>
+    apiGet<CollectionStats[]>(`/api/databases/${encodeURIComponent(db)}/tools/collections-overview`),
+  indexUsage: (db: string) =>
+    apiGet<IndexUsageStat[]>(`/api/databases/${encodeURIComponent(db)}/tools/index-usage`),
+  currentOps: (minSecs: number) => apiGet<CurrentOp[]>('/api/tools/current-ops', { minSecs }),
 }

@@ -5,7 +5,8 @@
       "schema": "Schema",
       "indexes": "Índices",
       "history": "Histórico",
-      "server": "Servidor"
+      "server": "Servidor",
+      "tools": "Ferramentas"
     },
     "selectCollectionHint": "Selecione uma coleção na barra lateral.",
     "themeToggle": "Alternar tema",
@@ -47,7 +48,8 @@
     "modeAggregate": "Aggregate",
     "pipelinePlaceholder": "[ { \"$match\": { \"status\": \"ativo\" } } ]",
     "aggregating": "Executando…",
-    "presetPlaceholder": "Queries úteis…"
+    "presetPlaceholder": "Queries úteis…",
+    "collscanWarning": "Varredura completa da coleção — nenhum índice foi usado nesta consulta."
   },
   "results": {
     "loading": "Carregando…",
@@ -142,5 +144,27 @@
     "sortByFieldDesc": "Ordenar por {{field}} (decrescente)",
     "fieldLast24h": "{{field}} nas últimas 24 horas",
     "countGroupedByField": "Contar agrupado por {{field}}"
+  },
+  "toolsPanel": {
+    "collectionsOverview": "Visão geral das coleções",
+    "indexUsage": "Uso de índices",
+    "currentOps": "Operações em execução",
+    "loading": "Carregando…",
+    "noCollections": "Nenhuma coleção",
+    "noIndexes": "Nenhum índice",
+    "noCurrentOps": "Nenhuma operação rodando há mais de 1 segundo",
+    "collection": "Coleção",
+    "documents": "Documentos",
+    "dataSize": "Tamanho dos dados",
+    "storageSize": "Tamanho em disco",
+    "indexSize": "Tamanho dos índices",
+    "indexCount": "Índices",
+    "index": "Índice",
+    "ops": "Operações",
+    "since": "Desde",
+    "namespace": "Namespace",
+    "operation": "Operação",
+    "secsRunning": "Segundos rodando",
+    "client": "Cliente"
   }
 }

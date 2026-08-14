@@ -14,6 +14,21 @@ import type { Preset } from '../../types'
 
 type Mode = 'find' | 'aggregate'
 
+// containsCollscan walks an explain result looking for a COLLSCAN stage
+// anywhere in the plan tree — recursing into every object/array rather
+// than only checking queryPlanner.winningPlan.stage, since the stage can
+// be nested under inputStage (e.g. behind a SORT or PROJECTION stage) or,
+// on a sharded cluster, under a per-shard entry instead of at the top level.
+function containsCollscan(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(containsCollscan)
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    if (obj.stage === 'COLLSCAN') return true
+    return Object.values(obj).some(containsCollscan)
+  }
+  return false
+}
+
 interface Props {
   db: string
   coll: string
@@ -31,6 +46,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
   const [pipelineText, setPipelineText] = useState('[]')
   const [error, setError] = useState<string | null>(null)
   const [explainResult, setExplainResult] = useState<string | null>(null)
+  const [explainCollscan, setExplainCollscan] = useState(false)
   const [explaining, setExplaining] = useState(false)
   const [aggregating, setAggregating] = useState(false)
   const [presetIndex, setPresetIndex] = useState('')
@@ -52,6 +68,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
     setMode(preset.mode)
     setError(null)
     setExplainResult(null)
+    setExplainCollscan(false)
     if (preset.mode === 'find') {
       setFilterText(preset.filter ?? '{}')
       setSortText(preset.sort ?? '')
@@ -64,6 +81,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
     setMode(next)
     setError(null)
     setExplainResult(null)
+    setExplainCollscan(false)
     if (next === 'find') onAggregateResult(null)
   }
 
@@ -77,6 +95,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
       if (sortText.trim()) JSON.parse(sortText)
       setError(null)
       setExplainResult(null)
+    setExplainCollscan(false)
       onAggregateResult(null)
       onRun(filterText.trim() || '{}', sortText.trim())
     } catch (e) {
@@ -105,6 +124,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
       setExplaining(true)
       const result = await api.explain(db, coll, filterText.trim() || '{}')
       setExplainResult(JSON.stringify(result, null, 2))
+      setExplainCollscan(containsCollscan(result))
     } catch (e) {
       setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
     } finally {
@@ -227,7 +247,10 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
         )}
       </div>
       {explainResult && (
-        <pre className={styles.explainOutput}>{explainResult}</pre>
+        <>
+          {explainCollscan && <div className={styles.collscanWarning}>{t('queryEditor.collscanWarning')}</div>}
+          <pre className={styles.explainOutput}>{explainResult}</pre>
+        </>
       )}
     </div>
   )

@@ -85,6 +85,15 @@
   max-width: 100%;
 }
 
+.collscanWarning {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--color-danger);
+  color: var(--color-accent-fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .explainOutput {
   max-height: 260px;
   overflow: auto;
