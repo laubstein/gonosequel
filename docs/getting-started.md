@@ -1,5 +1,8 @@
 # Getting started
 
+Go NoSequel currently connects to MongoDB — see [Supported databases](/#supported-databases)
+for where it's headed next.
+
 ## Requirements
 
 - Go 1.26+
