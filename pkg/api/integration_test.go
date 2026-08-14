@@ -325,3 +325,62 @@ func TestAPIAggregateRejectedInReadonlyMode(t *testing.T) {
 		t.Fatalf("status = %d, want 403", resp.StatusCode)
 	}
 }
+
+func TestAPIToolsEndpoints(t *testing.T) {
+	app := newTestApp(t, false)
+
+	if resp, body := doJSON(t, app, http.MethodPost, "/api/databases/api_test_tools/collections", map[string]string{"name": "items"}); resp.StatusCode != http.StatusCreated {
+		t.Fatalf("create collection: status=%d body=%v", resp.StatusCode, body)
+	}
+
+	insertBody := []byte(`{"n":1}`)
+	insertReq := httptest.NewRequest(http.MethodPost, "/api/databases/api_test_tools/collections/items/documents", bytes.NewReader(insertBody))
+	insertReq.Header.Set("Content-Type", "application/json")
+	insertResp, err := app.Test(insertReq)
+	if err != nil {
+		t.Fatalf("insert document: %v", err)
+	}
+	insertResp.Body.Close()
+	if insertResp.StatusCode != http.StatusCreated {
+		t.Fatalf("insert document: status=%d", insertResp.StatusCode)
+	}
+
+	overviewReq := httptest.NewRequest(http.MethodGet, "/api/databases/api_test_tools/tools/collections-overview", nil)
+	overviewResp, err := app.Test(overviewReq)
+	if err != nil {
+		t.Fatalf("collections-overview: %v", err)
+	}
+	defer overviewResp.Body.Close()
+	overviewBody, _ := io.ReadAll(overviewResp.Body)
+	if overviewResp.StatusCode != http.StatusOK {
+		t.Fatalf("collections-overview: status=%d body=%s", overviewResp.StatusCode, overviewBody)
+	}
+	if !bytes.Contains(overviewBody, []byte(`"name":"items"`)) {
+		t.Errorf("expected items collection in overview, got: %s", overviewBody)
+	}
+
+	usageReq := httptest.NewRequest(http.MethodGet, "/api/databases/api_test_tools/tools/index-usage", nil)
+	usageResp, err := app.Test(usageReq)
+	if err != nil {
+		t.Fatalf("index-usage: %v", err)
+	}
+	defer usageResp.Body.Close()
+	usageBody, _ := io.ReadAll(usageResp.Body)
+	if usageResp.StatusCode != http.StatusOK {
+		t.Fatalf("index-usage: status=%d body=%s", usageResp.StatusCode, usageBody)
+	}
+	if !bytes.Contains(usageBody, []byte(`"_id_"`)) {
+		t.Errorf("expected _id_ index in usage report, got: %s", usageBody)
+	}
+
+	opsReq := httptest.NewRequest(http.MethodGet, "/api/tools/current-ops?minSecs=3600", nil)
+	opsResp, err := app.Test(opsReq)
+	if err != nil {
+		t.Fatalf("current-ops: %v", err)
+	}
+	defer opsResp.Body.Close()
+	if opsResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(opsResp.Body)
+		t.Fatalf("current-ops: status=%d body=%s", opsResp.StatusCode, body)
+	}
+}

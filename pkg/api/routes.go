@@ -19,9 +19,14 @@ func registerRoutes(app *fiber.App, d *deps) {
 	scoped.Get("/server_status", d.handleServerStatus)
 	scoped.Get("/history", d.handleHistory)
 
+	scoped.Get("/tools/current-ops", d.handleCurrentOps)
+
 	scoped.Get("/databases", d.handleListDatabases)
 	scoped.Post("/databases", d.handleCreateDatabase)
 	scoped.Delete("/databases/:db", d.handleDropDatabase)
+
+	scoped.Get("/databases/:db/tools/collections-overview", d.handleCollectionsOverview)
+	scoped.Get("/databases/:db/tools/index-usage", d.handleIndexUsage)
 
 	scoped.Get("/databases/:db/collections", d.handleListCollections)
 	scoped.Post("/databases/:db/collections", d.handleCreateCollection)

@@ -18,11 +18,13 @@ type CollectionInfo struct {
 // CollectionStats reports size and document count metrics for a
 // collection, as returned by the collStats command.
 type CollectionStats struct {
-	Count        int64 `json:"count"`
-	SizeBytes    int64 `json:"sizeBytes"`
-	StorageBytes int64 `json:"storageBytes"`
-	AvgObjSize   int64 `json:"avgObjSize"`
-	IndexCount   int64 `json:"indexCount"`
+	Name         string `json:"name,omitempty"`
+	Count        int64  `json:"count"`
+	SizeBytes    int64  `json:"sizeBytes"`
+	StorageBytes int64  `json:"storageBytes"`
+	IndexBytes   int64  `json:"indexBytes"`
+	AvgObjSize   int64  `json:"avgObjSize"`
+	IndexCount   int64  `json:"indexCount"`
 }
 
 // CreateCollectionOptions configures collection creation.
@@ -101,6 +103,7 @@ func (c *Client) Stats(ctx context.Context, dbName, collName string) (Collection
 		StorageSz  int64 `bson:"storageSize"`
 		AvgObjSize int64 `bson:"avgObjSize"`
 		NIndexes   int64 `bson:"nindexes"`
+		TotalIdxSz int64 `bson:"totalIndexSize"`
 	}
 	cmd := bson.D{{Key: "collStats", Value: collName}}
 	if err := c.mongo.Database(dbName).RunCommand(ctx, cmd).Decode(&raw); err != nil {
@@ -110,6 +113,7 @@ func (c *Client) Stats(ctx context.Context, dbName, collName string) (Collection
 		Count:        raw.Count,
 		SizeBytes:    raw.Size,
 		StorageBytes: raw.StorageSz,
+		IndexBytes:   raw.TotalIdxSz,
 		AvgObjSize:   raw.AvgObjSize,
 		IndexCount:   raw.NIndexes,
 	}, nil
