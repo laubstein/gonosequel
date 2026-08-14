@@ -1,6 +1,13 @@
-.PHONY: build build-web dev test test-short lint clean
+.PHONY: build dev dev-down test test-short lint clean
 
 GOFLAGS :=
+MONGO_PORT ?= 27017
+HTTP_PORT ?= 8081
+VITE_PORT ?= 5173
+
+# gofmt lives in $GOROOT/bin, which isn't always on PATH even when `go`
+# itself is (e.g. a bare toolchain install without its bin dir exported).
+export PATH := $(PATH):$(shell go env GOROOT)/bin
 
 build: web/dist
 	go build -o mongo-express-go .
@@ -8,9 +15,18 @@ build: web/dist
 web/dist:
 	cd web && npm ci && npm run build
 
+# Brings up a full local dev environment: a MongoDB (reusing one already
+# listening on MONGO_PORT, otherwise starting one in Docker), the Go API
+# server, and the Vite dev server — open the URL it prints, not the API
+# server's port. See scripts/dev.sh for the details.
 dev:
-	@echo "run 'cd web && npm run dev' in one shell, then:"
-	go run . --dev-proxy http://localhost:5173
+	@MONGO_PORT=$(MONGO_PORT) HTTP_PORT=$(HTTP_PORT) VITE_PORT=$(VITE_PORT) ./scripts/dev.sh
+
+# Removes the MongoDB container make dev may have started, if any. `docker
+# rm -f` on a name that doesn't exist still exits 0 on this Docker version,
+# so there's no reliable way to report whether anything was actually there.
+dev-down:
+	@docker rm -f mongo-express-go-dev-mongo >/dev/null 2>&1; echo "dev MongoDB container removed if it existed"
 
 test:
 	go test $(GOFLAGS) -race ./...

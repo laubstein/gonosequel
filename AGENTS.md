@@ -22,7 +22,8 @@ make build       # cd web && npm run build  →  go build -o mongo-express-go .
 make test        # unidade + integração; sobe e derruba o Mongo em Docker sozinho
 make test-short  # só unidade (go test ./... -short); não precisa de Docker
 make lint        # gofmt -l . && go vet ./... && staticcheck ./... && errcheck ./...
-make dev         # Vite em :5173 + binário com --dev-proxy, hot reload
+make dev         # sobe Mongo (Docker se preciso), API Go e Vite; abra a URL do Vite
+make dev-down    # remove o container Mongo que `make dev` possa ter criado
 ```
 
 Rode `make lint` e `make test` antes de dar qualquer trabalho por concluído. Se o Docker não
