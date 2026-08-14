@@ -19,14 +19,15 @@ func (d *deps) handleExport(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "format must be json or csv")
 	}
 
-	opts, err := parseFindOptions(c)
+	codec := currentClient(c)
+	opts, err := parseFindOptions(c, codec)
 	if err != nil {
 		return err
 	}
 	opts.Skip = 0
 	opts.Limit = 0 // export ignores pagination: it exports every matching document
 
-	result, err := currentClient(c).Find(c.Context(), db, coll, opts)
+	result, err := codec.Find(c.Context(), db, coll, opts)
 	if err != nil {
 		return fmt.Errorf("export query: %w", err)
 	}
@@ -37,12 +38,12 @@ func (d *deps) handleExport(c fiber.Ctx) error {
 	if format == "csv" {
 		c.Type("csv")
 		return c.SendStreamWriter(func(w *bufio.Writer) {
-			_ = export.CSV(w, result.Documents)
+			_ = export.CSV(w, result.Documents, codec)
 		})
 	}
 
 	c.Type("json")
 	return c.SendStreamWriter(func(w *bufio.Writer) {
-		_ = export.JSON(w, result.Documents)
+		_ = export.JSON(w, result.Documents, codec)
 	})
 }

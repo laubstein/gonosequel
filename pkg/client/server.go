@@ -5,39 +5,13 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
-
-// ServerConnections reports the server's current connection pool usage.
-type ServerConnections struct {
-	Current   int64 `json:"current"`
-	Available int64 `json:"available"`
-}
-
-// ServerOpCounters reports cumulative operation counts since the server
-// started.
-type ServerOpCounters struct {
-	Insert  int64 `json:"insert"`
-	Query   int64 `json:"query"`
-	Update  int64 `json:"update"`
-	Delete  int64 `json:"delete"`
-	Getmore int64 `json:"getmore"`
-	Command int64 `json:"command"`
-}
-
-// ServerStatus summarizes the target MongoDB server's identity and
-// runtime state, as reported by the serverStatus command.
-type ServerStatus struct {
-	Version     string            `json:"version"`
-	Host        string            `json:"host"`
-	Process     string            `json:"process"`
-	UptimeSecs  int64             `json:"uptimeSeconds"`
-	Connections ServerConnections `json:"connections"`
-	Opcounters  ServerOpCounters  `json:"opcounters"`
-}
 
 // ServerStatus reports version, host, uptime, connection pool usage, and
 // cumulative operation counters for the connected server.
-func (c *Client) ServerStatus(ctx context.Context) (ServerStatus, error) {
+func (c *Client) ServerStatus(ctx context.Context) (driver.ServerStatus, error) {
 	var raw struct {
 		Version     string  `bson:"version"`
 		Host        string  `bson:"host"`
@@ -59,19 +33,19 @@ func (c *Client) ServerStatus(ctx context.Context) (ServerStatus, error) {
 
 	cmd := bson.D{{Key: "serverStatus", Value: 1}}
 	if err := c.mongo.Database("admin").RunCommand(ctx, cmd).Decode(&raw); err != nil {
-		return ServerStatus{}, fmt.Errorf("serverStatus: %w", err)
+		return driver.ServerStatus{}, fmt.Errorf("serverStatus: %w", err)
 	}
 
-	return ServerStatus{
+	return driver.ServerStatus{
 		Version:    raw.Version,
 		Host:       raw.Host,
 		Process:    raw.Process,
 		UptimeSecs: int64(raw.Uptime),
-		Connections: ServerConnections{
+		Connections: driver.ServerConnections{
 			Current:   raw.Connections.Current,
 			Available: raw.Connections.Available,
 		},
-		Opcounters: ServerOpCounters{
+		Opcounters: driver.ServerOpCounters{
 			Insert:  raw.Opcounters.Insert,
 			Query:   raw.Opcounters.Query,
 			Update:  raw.Opcounters.Update,

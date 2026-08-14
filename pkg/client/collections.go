@@ -7,42 +7,19 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
-// CollectionInfo summarizes a single collection.
-type CollectionInfo struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
-// CollectionStats reports size and document count metrics for a
-// collection, as returned by the collStats command.
-type CollectionStats struct {
-	Name         string `json:"name,omitempty"`
-	Count        int64  `json:"count"`
-	SizeBytes    int64  `json:"sizeBytes"`
-	StorageBytes int64  `json:"storageBytes"`
-	IndexBytes   int64  `json:"indexBytes"`
-	AvgObjSize   int64  `json:"avgObjSize"`
-	IndexCount   int64  `json:"indexCount"`
-}
-
-// CreateCollectionOptions configures collection creation.
-type CreateCollectionOptions struct {
-	Capped      bool
-	MaxSizeByte int64
-	MaxDocs     int64
-}
-
 // ListCollections returns every collection (and view) in a database.
-func (c *Client) ListCollections(ctx context.Context, dbName string) ([]CollectionInfo, error) {
+func (c *Client) ListCollections(ctx context.Context, dbName string) ([]driver.CollectionInfo, error) {
 	cur, err := c.mongo.Database(dbName).ListCollections(ctx, bson.D{})
 	if err != nil {
 		return nil, fmt.Errorf("list collections in %q: %w", dbName, err)
 	}
 	defer cur.Close(ctx)
 
-	var out []CollectionInfo
+	var out []driver.CollectionInfo
 	for cur.Next(ctx) {
 		var raw struct {
 			Name string `bson:"name"`
@@ -51,7 +28,7 @@ func (c *Client) ListCollections(ctx context.Context, dbName string) ([]Collecti
 		if err := cur.Decode(&raw); err != nil {
 			return nil, fmt.Errorf("decode collection info: %w", err)
 		}
-		out = append(out, CollectionInfo{Name: raw.Name, Type: raw.Type})
+		out = append(out, driver.CollectionInfo{Name: raw.Name, Type: raw.Type})
 	}
 	if err := cur.Err(); err != nil {
 		return nil, fmt.Errorf("iterate collections: %w", err)
@@ -60,7 +37,7 @@ func (c *Client) ListCollections(ctx context.Context, dbName string) ([]Collecti
 }
 
 // CreateCollection creates a collection with the given options.
-func (c *Client) CreateCollection(ctx context.Context, dbName, collName string, opts CreateCollectionOptions) error {
+func (c *Client) CreateCollection(ctx context.Context, dbName, collName string, opts driver.CreateCollectionOptions) error {
 	createOpts := options.CreateCollection()
 	if opts.Capped {
 		createOpts.SetCapped(true).SetSizeInBytes(opts.MaxSizeByte)
@@ -96,7 +73,7 @@ func (c *Client) RenameCollection(ctx context.Context, dbName, oldName, newName 
 }
 
 // Stats reports size and count metrics for a collection.
-func (c *Client) Stats(ctx context.Context, dbName, collName string) (CollectionStats, error) {
+func (c *Client) Stats(ctx context.Context, dbName, collName string) (driver.CollectionStats, error) {
 	var raw struct {
 		Count      int64 `bson:"count"`
 		Size       int64 `bson:"size"`
@@ -107,9 +84,9 @@ func (c *Client) Stats(ctx context.Context, dbName, collName string) (Collection
 	}
 	cmd := bson.D{{Key: "collStats", Value: collName}}
 	if err := c.mongo.Database(dbName).RunCommand(ctx, cmd).Decode(&raw); err != nil {
-		return CollectionStats{}, fmt.Errorf("collStats %q.%q: %w", dbName, collName, err)
+		return driver.CollectionStats{}, fmt.Errorf("collStats %q.%q: %w", dbName, collName, err)
 	}
-	return CollectionStats{
+	return driver.CollectionStats{
 		Count:        raw.Count,
 		SizeBytes:    raw.Size,
 		StorageBytes: raw.StorageSz,

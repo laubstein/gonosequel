@@ -83,7 +83,7 @@ func main() {
 // resolveURI prefers a saved --bookmark over discrete flags/--url.
 func resolveURI(opts *command.Options, bookmarksDir string) (string, error) {
 	if opts.Bookmark == "" {
-		return opts.MongoURI(), nil
+		return opts.URI(), nil
 	}
 	b, err := bookmarks.Load(bookmarksDir, opts.Bookmark)
 	if err != nil {

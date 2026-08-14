@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 // maxAggregateResults caps how many documents a single aggregate call
@@ -16,20 +18,25 @@ const maxAggregateResults = 1000
 
 // Aggregate runs an aggregation pipeline and returns up to
 // maxAggregateResults resulting documents.
-func (c *Client) Aggregate(ctx context.Context, dbName, collName string, pipeline bson.A) ([]bson.M, error) {
-	cur, err := c.collection(dbName, collName).Aggregate(ctx, pipeline)
+func (c *Client) Aggregate(ctx context.Context, dbName, collName string, pipeline []driver.Doc) ([]driver.Doc, error) {
+	bsonPipeline := make(bson.A, len(pipeline))
+	for i, stage := range pipeline {
+		bsonPipeline[i] = toBSON(stage)
+	}
+
+	cur, err := c.collection(dbName, collName).Aggregate(ctx, bsonPipeline)
 	if err != nil {
 		return nil, fmt.Errorf("aggregate %q.%q: %w", dbName, collName, err)
 	}
 	defer cur.Close(ctx)
 
-	docs := []bson.M{}
+	docs := []driver.Doc{}
 	for cur.Next(ctx) && len(docs) < maxAggregateResults {
 		var doc bson.M
 		if err := cur.Decode(&doc); err != nil {
 			return nil, fmt.Errorf("decode aggregate result: %w", err)
 		}
-		docs = append(docs, doc)
+		docs = append(docs, toDoc(doc))
 	}
 	if err := cur.Err(); err != nil {
 		return nil, fmt.Errorf("iterate aggregate results: %w", err)

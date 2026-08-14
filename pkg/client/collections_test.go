@@ -4,12 +4,14 @@ import (
 	"testing"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 func TestCollectionLifecycle(t *testing.T) {
 	c, ctx := newTestClient(t, "test_coll_lifecycle")
 
-	if err := c.CreateCollection(ctx, "test_coll_lifecycle", "widgets", CreateCollectionOptions{}); err != nil {
+	if err := c.CreateCollection(ctx, "test_coll_lifecycle", "widgets", driver.CreateCollectionOptions{}); err != nil {
 		t.Fatalf("CreateCollection: %v", err)
 	}
 

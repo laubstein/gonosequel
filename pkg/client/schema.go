@@ -5,32 +5,17 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
-
-// FieldType describes one observed BSON type at a field path, with how
-// often it was seen in the sample.
-type FieldType struct {
-	Type  string `json:"type"`
-	Count int    `json:"count"`
-}
-
-// SchemaField summarizes a single field path across the sampled documents.
-type SchemaField struct {
-	Path  string      `json:"path"`
-	Types []FieldType `json:"types"`
-}
-
-// DefaultSchemaSampleSize is the number of documents sampled by
-// InferSchema when the caller does not specify a size.
-const DefaultSchemaSampleSize = 100
 
 // InferSchema samples up to sampleSize documents from a collection and
 // aggregates BSON types observed at each field path. There is no
 // declared schema in MongoDB, so this drives autocomplete and the
 // frontend's Schema tab instead of an authoritative source of truth.
-func (c *Client) InferSchema(ctx context.Context, dbName, collName string, sampleSize int64) ([]SchemaField, error) {
+func (c *Client) InferSchema(ctx context.Context, dbName, collName string, sampleSize int64) ([]driver.SchemaField, error) {
 	if sampleSize <= 0 {
-		sampleSize = DefaultSchemaSampleSize
+		sampleSize = driver.DefaultSchemaSampleSize
 	}
 
 	pipeline := bson.A{
@@ -62,13 +47,13 @@ func (c *Client) InferSchema(ctx context.Context, dbName, collName string, sampl
 		return nil, fmt.Errorf("iterate sampled documents: %w", err)
 	}
 
-	fields := make([]SchemaField, 0, len(order))
+	fields := make([]driver.SchemaField, 0, len(order))
 	for _, path := range order {
-		types := make([]FieldType, 0, len(counts[path]))
+		types := make([]driver.FieldType, 0, len(counts[path]))
 		for t, n := range counts[path] {
-			types = append(types, FieldType{Type: t, Count: n})
+			types = append(types, driver.FieldType{Type: t, Count: n})
 		}
-		fields = append(fields, SchemaField{Path: path, Types: types})
+		fields = append(fields, driver.SchemaField{Path: path, Types: types})
 	}
 	return fields, nil
 }

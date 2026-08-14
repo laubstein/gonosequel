@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 func TestAggregate(t *testing.T) {
@@ -20,12 +22,12 @@ func TestAggregate(t *testing.T) {
 		}
 	}
 
-	pipeline := bson.A{
-		bson.M{"$group": bson.M{
+	pipeline := []driver.Doc{
+		{"$group": bson.M{
 			"_id":   "$category",
 			"total": bson.M{"$sum": "$price"},
 		}},
-		bson.M{"$sort": bson.M{"_id": 1}},
+		{"$sort": bson.M{"_id": 1}},
 	}
 
 	results, err := c.Aggregate(ctx, "test_aggregate", "items", pipeline)
@@ -56,7 +58,7 @@ func TestAggregateCapsResults(t *testing.T) {
 		}
 	}
 
-	pipeline := bson.A{bson.M{"$limit": int32(3)}}
+	pipeline := []driver.Doc{{"$limit": int32(3)}}
 	results, err := c.Aggregate(ctx, "test_aggregate_cap", "items", pipeline)
 	if err != nil {
 		t.Fatalf("Aggregate: %v", err)

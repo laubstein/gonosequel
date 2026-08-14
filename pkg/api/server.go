@@ -1,7 +1,8 @@
 // Package api wires the HTTP server: route registration, handlers, and
-// middleware. It never talks to the MongoDB driver directly — that lives in
-// pkg/client — and it declares only the narrow interfaces it needs from its
-// dependencies.
+// middleware. It never talks to a concrete database driver directly — it
+// depends only on the pkg/driver.Driver interface, resolved per request by
+// pkg/session.Registry, so it has no idea whether the connection behind it
+// is MongoDB or something else entirely.
 package api
 
 import (
@@ -14,7 +15,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 
-	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/driver"
 	"github.com/laubstein/gonosequel/pkg/history"
 	"github.com/laubstein/gonosequel/pkg/session"
 )
@@ -109,9 +110,9 @@ func errorHandler(c fiber.Ctx, err error) error {
 
 	code := fiber.StatusInternalServerError
 	switch {
-	case errors.Is(err, client.ErrNotFound):
+	case errors.Is(err, driver.ErrNotFound):
 		code = fiber.StatusNotFound
-	case errors.Is(err, client.ErrAlreadyExists):
+	case errors.Is(err, driver.ErrAlreadyExists):
 		code = fiber.StatusConflict
 	case errors.Is(err, session.ErrNotFound):
 		code = fiber.StatusBadRequest

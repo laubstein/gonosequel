@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 func TestIndexLifecycle(t *testing.T) {
@@ -13,7 +15,7 @@ func TestIndexLifecycle(t *testing.T) {
 		t.Fatalf("InsertOne: %v", err)
 	}
 
-	name, err := c.CreateIndex(ctx, "test_index_lifecycle", "products", bson.D{{Key: "sku", Value: 1}}, true)
+	name, err := c.CreateIndex(ctx, "test_index_lifecycle", "products", driver.OrderedDoc{{Key: "sku", Value: 1}}, true)
 	if err != nil {
 		t.Fatalf("CreateIndex: %v", err)
 	}

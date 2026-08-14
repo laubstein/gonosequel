@@ -1,4 +1,4 @@
-// Package session tracks active MongoDB connections, keyed by session ID.
+// Package session tracks active database connections, keyed by session ID.
 // In single-connection mode there is exactly one entry, created at
 // startup; in --sessions mode, the API layer creates and destroys entries
 // as users connect and disconnect from the UI.
@@ -9,7 +9,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 // ErrNotFound is returned when looking up a session ID that has no active
@@ -35,7 +35,7 @@ type Registry struct {
 }
 
 type entry struct {
-	client *client.Client
+	client driver.Driver
 	info   Info
 }
 
@@ -44,15 +44,15 @@ func NewRegistry() *Registry {
 	return &Registry{sessions: map[string]*entry{}}
 }
 
-// Put registers a connected client under id, replacing any existing entry.
-func (r *Registry) Put(id string, c *client.Client, info Info) {
+// Put registers a connected driver under id, replacing any existing entry.
+func (r *Registry) Put(id string, d driver.Driver, info Info) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.sessions[id] = &entry{client: c, info: info}
+	r.sessions[id] = &entry{client: d, info: info}
 }
 
-// Get returns the client registered under id.
-func (r *Registry) Get(id string) (*client.Client, error) {
+// Get returns the driver registered under id.
+func (r *Registry) Get(id string) (driver.Driver, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	e, ok := r.sessions[id]

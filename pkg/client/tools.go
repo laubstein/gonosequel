@@ -9,18 +9,20 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 // CollectionsOverview reports size and count stats for every collection in
 // a database, so bloat (storage size far exceeding data size) or unusually
 // large collections stand out without inspecting them one at a time.
-func (c *Client) CollectionsOverview(ctx context.Context, dbName string) ([]CollectionStats, error) {
+func (c *Client) CollectionsOverview(ctx context.Context, dbName string) ([]driver.CollectionStats, error) {
 	colls, err := c.ListCollections(ctx, dbName)
 	if err != nil {
 		return nil, fmt.Errorf("collections overview: %w", err)
 	}
 
-	out := make([]CollectionStats, 0, len(colls))
+	out := make([]driver.CollectionStats, 0, len(colls))
 	for _, coll := range colls {
 		stats, err := c.Stats(ctx, dbName, coll.Name)
 		if err != nil {
@@ -32,27 +34,18 @@ func (c *Client) CollectionsOverview(ctx context.Context, dbName string) ([]Coll
 	return out, nil
 }
 
-// IndexUsageStat reports how many operations have used a single index
-// since the server last restarted.
-type IndexUsageStat struct {
-	Collection string    `json:"collection"`
-	Index      string    `json:"index"`
-	Ops        int64     `json:"ops"`
-	Since      time.Time `json:"since"`
-}
-
 // IndexUsage reports $indexStats for every index in every collection of a
 // database. An index with Ops == 0 has not been used by any operation
 // since the server started — a candidate for dropping.
-func (c *Client) IndexUsage(ctx context.Context, dbName string) ([]IndexUsageStat, error) {
+func (c *Client) IndexUsage(ctx context.Context, dbName string) ([]driver.IndexUsageStat, error) {
 	colls, err := c.ListCollections(ctx, dbName)
 	if err != nil {
 		return nil, fmt.Errorf("index usage: %w", err)
 	}
 
-	var out []IndexUsageStat
+	var out []driver.IndexUsageStat
 	for _, coll := range colls {
-		docs, err := c.Aggregate(ctx, dbName, coll.Name, bson.A{bson.M{"$indexStats": bson.M{}}})
+		docs, err := c.Aggregate(ctx, dbName, coll.Name, []driver.Doc{{"$indexStats": driver.Doc{}}})
 		if err != nil {
 			return nil, fmt.Errorf("index usage: $indexStats for %q: %w", coll.Name, err)
 		}
@@ -64,14 +57,14 @@ func (c *Client) IndexUsage(ctx context.Context, dbName string) ([]IndexUsageSta
 					Since time.Time `bson:"since"`
 				} `bson:"accesses"`
 			}
-			b, err := bson.Marshal(doc)
+			b, err := bson.Marshal(toBSON(doc))
 			if err != nil {
 				return nil, fmt.Errorf("index usage: marshal $indexStats result: %w", err)
 			}
 			if err := bson.Unmarshal(b, &raw); err != nil {
 				return nil, fmt.Errorf("index usage: decode $indexStats result: %w", err)
 			}
-			out = append(out, IndexUsageStat{
+			out = append(out, driver.IndexUsageStat{
 				Collection: coll.Name,
 				Index:      raw.Name,
 				Ops:        raw.Accesses.Ops,
@@ -82,20 +75,10 @@ func (c *Client) IndexUsage(ctx context.Context, dbName string) ([]IndexUsageSta
 	return out, nil
 }
 
-// CurrentOp describes a single in-progress server operation.
-type CurrentOp struct {
-	OpID        int64  `json:"opid"`
-	Namespace   string `json:"namespace"`
-	Op          string `json:"op"`
-	SecsRunning int64  `json:"secsRunning"`
-	Client      string `json:"client"`
-	Description string `json:"description"`
-}
-
 // CurrentOps lists active operations that have been running for at least
 // minSecs, filtered server-side by the currentOp command itself rather
 // than in Go, so idle/background operations never cross the wire.
-func (c *Client) CurrentOps(ctx context.Context, minSecs int64) ([]CurrentOp, error) {
+func (c *Client) CurrentOps(ctx context.Context, minSecs int64) ([]driver.CurrentOp, error) {
 	cmd := bson.D{
 		{Key: "currentOp", Value: 1},
 		{Key: "active", Value: true},
@@ -116,9 +99,9 @@ func (c *Client) CurrentOps(ctx context.Context, minSecs int64) ([]CurrentOp, er
 		return nil, fmt.Errorf("currentOp: %w", err)
 	}
 
-	out := make([]CurrentOp, 0, len(raw.InProg))
+	out := make([]driver.CurrentOp, 0, len(raw.InProg))
 	for _, op := range raw.InProg {
-		out = append(out, CurrentOp{
+		out = append(out, driver.CurrentOp{
 			OpID:        op.OpID,
 			Namespace:   op.NS,
 			Op:          op.Op,

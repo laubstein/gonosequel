@@ -48,6 +48,7 @@ func extJSONEqualBase64(t *testing.T, a, b string) bool {
 // with the concrete Go type preserved. This is the suite most likely to
 // catch a regression that silently corrupts user data.
 func TestExtJSONRoundTrip(t *testing.T) {
+	codec := &Client{}
 	oid := bson.NewObjectID()
 	dec128, err := bson.ParseDecimal128("123.456")
 	if err != nil {
@@ -80,12 +81,12 @@ func TestExtJSONRoundTrip(t *testing.T) {
 
 			original := bson.M{"_id": oid, "value": tc.value}
 
-			canonical, err := ToCanonicalExtJSON(original)
+			canonical, err := codec.MarshalCanonical(original)
 			if err != nil {
 				t.Fatalf("ToCanonicalExtJSON: %v", err)
 			}
 
-			roundTripped, err := FromExtJSON(canonical)
+			roundTripped, err := codec.UnmarshalDoc(canonical)
 			if err != nil {
 				t.Fatalf("FromExtJSON: %v", err)
 			}
@@ -94,7 +95,7 @@ func TestExtJSONRoundTrip(t *testing.T) {
 			// is type-sensitive (unlike reflect.DeepEqual on the raw
 			// bson.M, which can't tell int32 from int64 apart reliably
 			// once boxed in `any`).
-			again, err := ToCanonicalExtJSON(roundTripped)
+			again, err := codec.MarshalCanonical(roundTripped)
 			if err != nil {
 				t.Fatalf("re-marshal ToCanonicalExtJSON: %v", err)
 			}
@@ -110,13 +111,14 @@ func TestExtJSONRoundTrip(t *testing.T) {
 // (dates as ISO strings, not $date wrappers) while canonical mode
 // preserves exact numeric types.
 func TestExtJSONRelaxedIsReadable(t *testing.T) {
+	codec := &Client{}
 	doc := bson.M{"count": int64(5)}
 
-	relaxed, err := ToRelaxedExtJSON(doc)
+	relaxed, err := codec.MarshalRelaxed(doc)
 	if err != nil {
 		t.Fatalf("ToRelaxedExtJSON: %v", err)
 	}
-	canonical, err := ToCanonicalExtJSON(doc)
+	canonical, err := codec.MarshalCanonical(doc)
 	if err != nil {
 		t.Fatalf("ToCanonicalExtJSON: %v", err)
 	}
@@ -129,6 +131,7 @@ func TestExtJSONRelaxedIsReadable(t *testing.T) {
 // TestDocIDRoundTrip covers _id values of every BSON type, not just
 // ObjectID hex strings — a common trap when building document routes.
 func TestDocIDRoundTrip(t *testing.T) {
+	codec := &Client{}
 	oid := bson.NewObjectID()
 	dec128, err := bson.ParseDecimal128("42")
 	if err != nil {
@@ -150,19 +153,19 @@ func TestDocIDRoundTrip(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			encoded, err := EncodeDocID(tc.id)
+			encoded, err := codec.EncodeDocID(tc.id)
 			if err != nil {
 				t.Fatalf("EncodeDocID: %v", err)
 			}
 
-			decoded, err := DecodeDocID(encoded)
+			decoded, err := codec.DecodeDocID(encoded)
 			if err != nil {
 				t.Fatalf("DecodeDocID: %v", err)
 			}
 
 			// Compare by re-encoding: same trick as above, sidesteps
 			// interface{} comparison pitfalls between equivalent types.
-			reencoded, err := EncodeDocID(decoded)
+			reencoded, err := codec.EncodeDocID(decoded)
 			if err != nil {
 				t.Fatalf("re-encode EncodeDocID: %v", err)
 			}
@@ -174,7 +177,7 @@ func TestDocIDRoundTrip(t *testing.T) {
 }
 
 func TestDecodeDocIDInvalidInput(t *testing.T) {
-	if _, err := DecodeDocID("not-valid-base64url!!!"); err == nil {
+	if _, err := (&Client{}).DecodeDocID("not-valid-base64url!!!"); err == nil {
 		t.Error("expected an error decoding invalid base64url input, got nil")
 	}
 }

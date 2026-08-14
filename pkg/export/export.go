@@ -1,5 +1,5 @@
-// Package export streams query results out of MongoDB in JSON or CSV
-// form without materializing the whole result set in memory.
+// Package export streams query results out of a database backend in JSON
+// or CSV form without materializing the whole result set in memory.
 package export
 
 import (
@@ -9,14 +9,12 @@ import (
 	"sort"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
-
-	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 // JSON writes each document from docs to w as a single JSON array of
 // relaxed Extended JSON objects, one document at a time.
-func JSON(w *bufio.Writer, docs []bson.M) error {
+func JSON(w *bufio.Writer, docs []driver.Doc, codec driver.DocCodec) error {
 	if _, err := w.WriteString("["); err != nil {
 		return err
 	}
@@ -26,7 +24,7 @@ func JSON(w *bufio.Writer, docs []bson.M) error {
 				return err
 			}
 		}
-		raw, err := client.ToRelaxedExtJSON(doc)
+		raw, err := codec.MarshalRelaxed(doc)
 		if err != nil {
 			return fmt.Errorf("marshal document %d: %w", i, err)
 		}
@@ -41,8 +39,8 @@ func JSON(w *bufio.Writer, docs []bson.M) error {
 // CSV writes docs to w as CSV, flattening nested paths into dotted column
 // names (e.g. address.city) and deriving the column set from the union of
 // fields across all documents, sorted for a stable column order.
-func CSV(w *bufio.Writer, docs []bson.M) error {
-	columns := csvColumns(docs)
+func CSV(w *bufio.Writer, docs []driver.Doc, codec driver.DocCodec) error {
+	columns := csvColumns(docs, codec)
 
 	cw := csv.NewWriter(w)
 	if err := cw.Write(columns); err != nil {
@@ -50,7 +48,7 @@ func CSV(w *bufio.Writer, docs []bson.M) error {
 	}
 
 	for _, doc := range docs {
-		flat := flatten(doc, "")
+		flat := flatten(doc, "", codec)
 		row := make([]string, len(columns))
 		for i, col := range columns {
 			row[i] = flat[col]
@@ -63,10 +61,10 @@ func CSV(w *bufio.Writer, docs []bson.M) error {
 	return cw.Error()
 }
 
-func csvColumns(docs []bson.M) []string {
+func csvColumns(docs []driver.Doc, codec driver.DocCodec) []string {
 	set := map[string]struct{}{}
 	for _, doc := range docs {
-		for k := range flatten(doc, "") {
+		for k := range flatten(doc, "", codec) {
 			set[k] = struct{}{}
 		}
 	}
@@ -78,9 +76,9 @@ func csvColumns(docs []bson.M) []string {
 	return cols
 }
 
-// flatten converts a nested BSON document into a flat map of dotted paths
-// to string representations, suitable for a CSV row.
-func flatten(doc bson.M, prefix string) map[string]string {
+// flatten converts a nested document into a flat map of dotted paths to
+// string representations, suitable for a CSV row.
+func flatten(doc driver.Doc, prefix string, codec driver.DocCodec) map[string]string {
 	out := map[string]string{}
 	for k, v := range doc {
 		path := k
@@ -88,25 +86,25 @@ func flatten(doc bson.M, prefix string) map[string]string {
 			path = prefix + "." + k
 		}
 		switch val := v.(type) {
-		case bson.M:
-			for nk, nv := range flatten(val, path) {
+		case driver.Doc:
+			for nk, nv := range flatten(val, path, codec) {
 				out[nk] = nv
 			}
 		default:
-			out[path] = stringify(v)
+			out[path] = stringify(v, codec)
 		}
 	}
 	return out
 }
 
-func stringify(v any) string {
+func stringify(v any, codec driver.DocCodec) string {
 	if v == nil {
 		return ""
 	}
 	if s, ok := v.(string); ok {
 		return s
 	}
-	if raw, err := client.ToRelaxedExtJSON(bson.M{"v": v}); err == nil {
+	if raw, err := codec.MarshalRelaxed(driver.Doc{"v": v}); err == nil {
 		s := string(raw)
 		return strings.TrimSuffix(strings.TrimPrefix(s, `{"v":`), "}")
 	}

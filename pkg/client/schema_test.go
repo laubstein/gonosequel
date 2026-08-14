@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 func TestInferSchema(t *testing.T) {
@@ -25,7 +27,7 @@ func TestInferSchema(t *testing.T) {
 		t.Fatalf("InferSchema: %v", err)
 	}
 
-	byPath := map[string]SchemaField{}
+	byPath := map[string]driver.SchemaField{}
 	for _, f := range fields {
 		byPath[f.Path] = f
 	}

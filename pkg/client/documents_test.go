@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 func TestDocumentCRUD(t *testing.T) {
@@ -61,7 +63,7 @@ func TestDocumentCRUD(t *testing.T) {
 		t.Fatalf("DeleteOne: %v", err)
 	}
 	_, err = c.FindOne(ctx, "test_doc_crud", "users", id)
-	if !errors.Is(err, ErrNotFound) {
+	if !errors.Is(err, driver.ErrNotFound) {
 		t.Errorf("expected ErrNotFound after delete, got %v", err)
 	}
 }
@@ -75,8 +77,8 @@ func TestFindPagination(t *testing.T) {
 		}
 	}
 
-	page1, err := c.Find(ctx, "test_find_pagination", "items", FindOptions{
-		Sort:  bson.D{{Key: "n", Value: 1}},
+	page1, err := c.Find(ctx, "test_find_pagination", "items", driver.FindOptions{
+		Sort:  driver.OrderedDoc{{Key: "n", Value: 1}},
 		Skip:  0,
 		Limit: 10,
 	})
@@ -93,8 +95,8 @@ func TestFindPagination(t *testing.T) {
 		t.Errorf("expected first doc n=0, got %v", page1.Documents[0]["n"])
 	}
 
-	page3, err := c.Find(ctx, "test_find_pagination", "items", FindOptions{
-		Sort:  bson.D{{Key: "n", Value: 1}},
+	page3, err := c.Find(ctx, "test_find_pagination", "items", driver.FindOptions{
+		Sort:  driver.OrderedDoc{{Key: "n", Value: 1}},
 		Skip:  20,
 		Limit: 10,
 	})
@@ -105,7 +107,7 @@ func TestFindPagination(t *testing.T) {
 		t.Fatalf("expected 5 docs on page3 (25 total, skip 20), got %d", len(page3.Documents))
 	}
 
-	filtered, err := c.Find(ctx, "test_find_pagination", "items", FindOptions{
+	filtered, err := c.Find(ctx, "test_find_pagination", "items", driver.FindOptions{
 		Filter: bson.M{"n": bson.M{"$gte": int32(20)}},
 	})
 	if err != nil {

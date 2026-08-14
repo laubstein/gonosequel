@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
-	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 type createIndexRequest struct {
@@ -31,9 +32,9 @@ func (d *deps) handleCreateIndex(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "keys is required")
 	}
 
-	keys := bson.D{}
+	keys := driver.OrderedDoc{}
 	for field, dir := range req.Keys {
-		keys = append(keys, bson.E{Key: field, Value: dir})
+		keys = append(keys, driver.Entry{Key: field, Value: dir})
 	}
 
 	name, err := currentClient(c).CreateIndex(c.Context(), c.Params("db"), c.Params("coll"), keys, req.Unique)

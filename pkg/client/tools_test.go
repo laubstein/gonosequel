@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 func TestCollectionsOverview(t *testing.T) {
@@ -42,7 +44,7 @@ func TestIndexUsage(t *testing.T) {
 	if _, err := c.InsertOne(ctx, "test_tools_indexusage", "items", bson.M{"sku": "abc"}); err != nil {
 		t.Fatalf("InsertOne: %v", err)
 	}
-	if _, err := c.CreateIndex(ctx, "test_tools_indexusage", "items", bson.D{{Key: "sku", Value: 1}}, false); err != nil {
+	if _, err := c.CreateIndex(ctx, "test_tools_indexusage", "items", driver.OrderedDoc{{Key: "sku", Value: 1}}, false); err != nil {
 		t.Fatalf("CreateIndex: %v", err)
 	}
 

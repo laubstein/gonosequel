@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 type createCollectionRequest struct {
@@ -35,7 +35,7 @@ func (d *deps) handleCreateCollection(c fiber.Ctx) error {
 	if req.Name == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "name is required")
 	}
-	opts := client.CreateCollectionOptions{Capped: req.Capped, MaxSizeByte: req.MaxSizeByte, MaxDocs: req.MaxDocs}
+	opts := driver.CreateCollectionOptions{Capped: req.Capped, MaxSizeByte: req.MaxSizeByte, MaxDocs: req.MaxDocs}
 	if err := currentClient(c).CreateCollection(c.Context(), c.Params("db"), req.Name, opts); err != nil {
 		return fmt.Errorf("create collection: %w", err)
 	}

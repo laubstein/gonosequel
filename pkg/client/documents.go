@@ -7,36 +7,15 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
-// FindOptions controls a document query: filter, projection, sort, and
-// pagination.
-type FindOptions struct {
-	Filter     bson.M
-	Projection bson.M
-	Sort       bson.D
-	Skip       int64
-	Limit      int64
-}
-
-// FindResult holds a page of documents plus the total matching count.
-type FindResult struct {
-	Documents []bson.M
-	// Total is the number of documents matching Filter. When Filter is
-	// empty, this is an estimate (EstimatedDocumentCount) rather than an
-	// exact count, since counting the whole collection on every page
-	// load does not scale.
-	Total int64
-	// TotalIsEstimate is true when Total came from
-	// EstimatedDocumentCount rather than an exact count.
-	TotalIsEstimate bool
-}
-
 // Find runs a query against a collection with pagination.
-func (c *Client) Find(ctx context.Context, dbName, collName string, opts FindOptions) (FindResult, error) {
+func (c *Client) Find(ctx context.Context, dbName, collName string, opts driver.FindOptions) (driver.FindResult, error) {
 	coll := c.collection(dbName, collName)
 
-	filter := opts.Filter
+	filter := toBSON(opts.Filter)
 	if filter == nil {
 		filter = bson.M{}
 	}
@@ -46,36 +25,36 @@ func (c *Client) Find(ctx context.Context, dbName, collName string, opts FindOpt
 		findOpts.SetLimit(opts.Limit)
 	}
 	if opts.Sort != nil {
-		findOpts.SetSort(opts.Sort)
+		findOpts.SetSort(toBSOND(opts.Sort))
 	}
 	if opts.Projection != nil {
-		findOpts.SetProjection(opts.Projection)
+		findOpts.SetProjection(toBSON(opts.Projection))
 	}
 
 	cur, err := coll.Find(ctx, filter, findOpts)
 	if err != nil {
-		return FindResult{}, fmt.Errorf("find %q.%q: %w", dbName, collName, err)
+		return driver.FindResult{}, fmt.Errorf("find %q.%q: %w", dbName, collName, err)
 	}
 	defer cur.Close(ctx)
 
-	docs := []bson.M{}
+	docs := []driver.Doc{}
 	for cur.Next(ctx) {
 		var doc bson.M
 		if err := cur.Decode(&doc); err != nil {
-			return FindResult{}, fmt.Errorf("decode document: %w", err)
+			return driver.FindResult{}, fmt.Errorf("decode document: %w", err)
 		}
-		docs = append(docs, doc)
+		docs = append(docs, toDoc(doc))
 	}
 	if err := cur.Err(); err != nil {
-		return FindResult{}, fmt.Errorf("iterate documents: %w", err)
+		return driver.FindResult{}, fmt.Errorf("iterate documents: %w", err)
 	}
 
 	total, estimate, err := c.count(ctx, coll, filter)
 	if err != nil {
-		return FindResult{}, err
+		return driver.FindResult{}, err
 	}
 
-	return FindResult{Documents: docs, Total: total, TotalIsEstimate: estimate}, nil
+	return driver.FindResult{Documents: docs, Total: total, TotalIsEstimate: estimate}, nil
 }
 
 // count returns the total matching document count. An empty filter uses
@@ -97,21 +76,21 @@ func (c *Client) count(ctx context.Context, coll *mongo.Collection, filter bson.
 }
 
 // FindOne fetches a single document by its _id.
-func (c *Client) FindOne(ctx context.Context, dbName, collName string, id any) (bson.M, error) {
+func (c *Client) FindOne(ctx context.Context, dbName, collName string, id any) (driver.Doc, error) {
 	var doc bson.M
 	err := c.collection(dbName, collName).FindOne(ctx, bson.M{"_id": id}).Decode(&doc)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, ErrNotFound
+			return nil, driver.ErrNotFound
 		}
 		return nil, fmt.Errorf("find one %q.%q: %w", dbName, collName, err)
 	}
-	return doc, nil
+	return toDoc(doc), nil
 }
 
 // InsertOne inserts a document and returns its assigned _id.
-func (c *Client) InsertOne(ctx context.Context, dbName, collName string, doc bson.M) (any, error) {
-	res, err := c.collection(dbName, collName).InsertOne(ctx, doc)
+func (c *Client) InsertOne(ctx context.Context, dbName, collName string, doc driver.Doc) (any, error) {
+	res, err := c.collection(dbName, collName).InsertOne(ctx, toBSON(doc))
 	if err != nil {
 		return nil, fmt.Errorf("insert into %q.%q: %w", dbName, collName, err)
 	}
@@ -120,14 +99,15 @@ func (c *Client) InsertOne(ctx context.Context, dbName, collName string, doc bso
 
 // ReplaceOne replaces a document identified by _id with a new body. The _id
 // in doc, if present, is ignored in favor of id.
-func (c *Client) ReplaceOne(ctx context.Context, dbName, collName string, id any, doc bson.M) error {
-	delete(doc, "_id")
-	res, err := c.collection(dbName, collName).ReplaceOne(ctx, bson.M{"_id": id}, doc)
+func (c *Client) ReplaceOne(ctx context.Context, dbName, collName string, id any, doc driver.Doc) error {
+	body := toBSON(doc)
+	delete(body, "_id")
+	res, err := c.collection(dbName, collName).ReplaceOne(ctx, bson.M{"_id": id}, body)
 	if err != nil {
 		return fmt.Errorf("replace in %q.%q: %w", dbName, collName, err)
 	}
 	if res.MatchedCount == 0 {
-		return ErrNotFound
+		return driver.ErrNotFound
 	}
 	return nil
 }
@@ -139,7 +119,7 @@ func (c *Client) DeleteOne(ctx context.Context, dbName, collName string, id any)
 		return fmt.Errorf("delete from %q.%q: %w", dbName, collName, err)
 	}
 	if res.DeletedCount == 0 {
-		return ErrNotFound
+		return driver.ErrNotFound
 	}
 	return nil
 }

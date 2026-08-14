@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/driver"
 	"github.com/laubstein/gonosequel/pkg/session"
 )
 
@@ -33,14 +33,14 @@ func withSession(d *deps) fiber.Handler {
 			return fiber.NewError(fiber.StatusBadRequest, "no active connection for this session; connect first")
 		}
 
-		fiber.Locals[*client.Client](c, clientLocalKey, cl)
+		fiber.Locals[driver.Driver](c, clientLocalKey, cl)
 		fiber.Locals[string](c, sessionIDLocalKey, id)
 		return c.Next()
 	}
 }
 
-func currentClient(c fiber.Ctx) *client.Client {
-	return fiber.Locals[*client.Client](c, clientLocalKey)
+func currentClient(c fiber.Ctx) driver.Driver {
+	return fiber.Locals[driver.Driver](c, clientLocalKey)
 }
 
 func currentSessionID(c fiber.Ctx) string {

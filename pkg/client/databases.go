@@ -5,25 +5,21 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
-)
 
-// DatabaseInfo summarizes a single database.
-type DatabaseInfo struct {
-	Name      string `json:"name"`
-	SizeBytes int64  `json:"sizeBytes"`
-}
+	"github.com/laubstein/gonosequel/pkg/driver"
+)
 
 // ListDatabases returns every database on the server, with its on-disk
 // size.
-func (c *Client) ListDatabases(ctx context.Context) ([]DatabaseInfo, error) {
+func (c *Client) ListDatabases(ctx context.Context) ([]driver.DatabaseInfo, error) {
 	result, err := c.mongo.ListDatabases(ctx, bson.D{})
 	if err != nil {
 		return nil, fmt.Errorf("list databases: %w", err)
 	}
 
-	dbs := make([]DatabaseInfo, 0, len(result.Databases))
+	dbs := make([]driver.DatabaseInfo, 0, len(result.Databases))
 	for _, d := range result.Databases {
-		dbs = append(dbs, DatabaseInfo{Name: d.Name, SizeBytes: d.SizeOnDisk})
+		dbs = append(dbs, driver.DatabaseInfo{Name: d.Name, SizeBytes: d.SizeOnDisk})
 	}
 	return dbs, nil
 }

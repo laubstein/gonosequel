@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"go.mongodb.org/mongo-driver/v2/bson"
 
-	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/driver"
 	"github.com/laubstein/gonosequel/pkg/history"
 )
 
@@ -25,12 +24,13 @@ const (
 func (d *deps) handleListDocuments(c fiber.Ctx) error {
 	db, coll := c.Params("db"), c.Params("coll")
 
-	opts, err := parseFindOptions(c)
+	codec := currentClient(c)
+	opts, err := parseFindOptions(c, codec)
 	if err != nil {
 		return err
 	}
 
-	result, err := currentClient(c).Find(c.Context(), db, coll, opts)
+	result, err := codec.Find(c.Context(), db, coll, opts)
 	if err != nil {
 		return fmt.Errorf("list documents: %w", err)
 	}
@@ -46,37 +46,37 @@ func (d *deps) handleListDocuments(c fiber.Ctx) error {
 		})
 	}
 
-	body, err := marshalListResponse(result)
+	body, err := marshalListResponse(codec, result)
 	if err != nil {
 		return fmt.Errorf("marshal documents: %w", err)
 	}
 	return c.Type("json").Send(body)
 }
 
-func parseFindOptions(c fiber.Ctx) (client.FindOptions, error) {
-	var opts client.FindOptions
+func parseFindOptions(c fiber.Ctx, codec driver.DocCodec) (driver.FindOptions, error) {
+	var opts driver.FindOptions
 
 	if raw := c.Query("filter"); raw != "" {
-		filter, err := client.FromExtJSON([]byte(raw))
+		filter, err := codec.UnmarshalDoc([]byte(raw))
 		if err != nil {
 			return opts, fiber.NewError(fiber.StatusBadRequest, "invalid filter: "+err.Error())
 		}
 		opts.Filter = filter
 	}
 	if raw := c.Query("projection"); raw != "" {
-		proj, err := client.FromExtJSON([]byte(raw))
+		proj, err := codec.UnmarshalDoc([]byte(raw))
 		if err != nil {
 			return opts, fiber.NewError(fiber.StatusBadRequest, "invalid projection: "+err.Error())
 		}
 		opts.Projection = proj
 	}
 	if raw := c.Query("sort"); raw != "" {
-		sortDoc, err := client.FromExtJSON([]byte(raw))
+		sortDoc, err := codec.UnmarshalDoc([]byte(raw))
 		if err != nil {
 			return opts, fiber.NewError(fiber.StatusBadRequest, "invalid sort: "+err.Error())
 		}
 		for k, v := range sortDoc {
-			opts.Sort = append(opts.Sort, bson.E{Key: k, Value: v})
+			opts.Sort = append(opts.Sort, driver.Entry{Key: k, Value: v})
 		}
 	}
 
@@ -101,32 +101,33 @@ func queryInt64(c fiber.Ctx, key string, def int64) int64 {
 	return n
 }
 
-func marshalListResponse(result client.FindResult) ([]byte, error) {
-	docs := make([]bson.M, len(result.Documents))
+func marshalListResponse(codec driver.DocCodec, result driver.FindResult) ([]byte, error) {
+	docs := make([]driver.Doc, len(result.Documents))
 	copy(docs, result.Documents)
-	wrapper := bson.M{
+	wrapper := driver.Doc{
 		"documents":       docs,
 		"total":           result.Total,
 		"totalIsEstimate": result.TotalIsEstimate,
 	}
-	return client.ToRelaxedExtJSON(wrapper)
+	return codec.MarshalRelaxed(wrapper)
 }
 
 func (d *deps) handleGetDocument(c fiber.Ctx) error {
 	db, coll := c.Params("db"), c.Params("coll")
-	id, err := client.DecodeDocID(c.Params("id"))
+	codec := currentClient(c)
+	id, err := codec.DecodeDocID(c.Params("id"))
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid document id")
 	}
 
-	doc, err := currentClient(c).FindOne(c.Context(), db, coll, id)
+	doc, err := codec.FindOne(c.Context(), db, coll, id)
 	if err != nil {
 		return fmt.Errorf("get document: %w", err)
 	}
 
 	// Editing form: canonical, so a save round-trip cannot change a
 	// value's BSON type (e.g. Long silently becoming Double).
-	body, err := client.ToCanonicalExtJSON(doc)
+	body, err := codec.MarshalCanonical(doc)
 	if err != nil {
 		return fmt.Errorf("marshal document: %w", err)
 	}
@@ -135,18 +136,19 @@ func (d *deps) handleGetDocument(c fiber.Ctx) error {
 
 func (d *deps) handleInsertDocument(c fiber.Ctx) error {
 	db, coll := c.Params("db"), c.Params("coll")
+	codec := currentClient(c)
 
-	doc, err := client.FromExtJSON(c.Body())
+	doc, err := codec.UnmarshalDoc(c.Body())
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid document: "+err.Error())
 	}
 
-	id, err := currentClient(c).InsertOne(c.Context(), db, coll, doc)
+	id, err := codec.InsertOne(c.Context(), db, coll, doc)
 	if err != nil {
 		return fmt.Errorf("insert document: %w", err)
 	}
 
-	encodedID, err := client.EncodeDocID(id)
+	encodedID, err := codec.EncodeDocID(id)
 	if err != nil {
 		return fmt.Errorf("encode inserted id: %w", err)
 	}
@@ -155,17 +157,18 @@ func (d *deps) handleInsertDocument(c fiber.Ctx) error {
 
 func (d *deps) handleReplaceDocument(c fiber.Ctx) error {
 	db, coll := c.Params("db"), c.Params("coll")
-	id, err := client.DecodeDocID(c.Params("id"))
+	codec := currentClient(c)
+	id, err := codec.DecodeDocID(c.Params("id"))
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid document id")
 	}
 
-	doc, err := client.FromExtJSON(c.Body())
+	doc, err := codec.UnmarshalDoc(c.Body())
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid document: "+err.Error())
 	}
 
-	if err := currentClient(c).ReplaceOne(c.Context(), db, coll, id, doc); err != nil {
+	if err := codec.ReplaceOne(c.Context(), db, coll, id, doc); err != nil {
 		return fmt.Errorf("replace document: %w", err)
 	}
 	return c.JSON(fiber.Map{"ok": true})
@@ -173,12 +176,13 @@ func (d *deps) handleReplaceDocument(c fiber.Ctx) error {
 
 func (d *deps) handleDeleteDocument(c fiber.Ctx) error {
 	db, coll := c.Params("db"), c.Params("coll")
-	id, err := client.DecodeDocID(c.Params("id"))
+	codec := currentClient(c)
+	id, err := codec.DecodeDocID(c.Params("id"))
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid document id")
 	}
 
-	if err := currentClient(c).DeleteOne(c.Context(), db, coll, id); err != nil {
+	if err := codec.DeleteOne(c.Context(), db, coll, id); err != nil {
 		return fmt.Errorf("delete document: %w", err)
 	}
 	return c.JSON(fiber.Map{"ok": true})
@@ -188,22 +192,23 @@ func (d *deps) handleDeleteDocument(c fiber.Ctx) error {
 // returns the raw explain document as relaxed Extended JSON.
 func (d *deps) handleExplainQuery(c fiber.Ctx) error {
 	db, coll := c.Params("db"), c.Params("coll")
+	codec := currentClient(c)
 
-	var filter bson.M
+	var filter driver.Doc
 	if raw := c.Query("filter"); raw != "" {
-		f, err := client.FromExtJSON([]byte(raw))
+		f, err := codec.UnmarshalDoc([]byte(raw))
 		if err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid filter: "+err.Error())
 		}
 		filter = f
 	}
 
-	result, err := currentClient(c).Explain(c.Context(), db, coll, filter)
+	result, err := codec.Explain(c.Context(), db, coll, filter)
 	if err != nil {
 		return fmt.Errorf("explain: %w", err)
 	}
 
-	body, err := client.ToRelaxedExtJSON(result)
+	body, err := codec.MarshalRelaxed(result)
 	if err != nil {
 		return fmt.Errorf("marshal explain result: %w", err)
 	}

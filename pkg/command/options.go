@@ -6,12 +6,21 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 	"time"
 )
+
+// SupportedDrivers lists the backend values --driver currently accepts.
+// MongoDB is the only one implemented today; the flag exists so choosing a
+// backend is already part of the CLI surface once Valkey/CouchDB support
+// lands, instead of being a breaking addition at that point.
+var SupportedDrivers = []string{"mongodb"}
 
 // Options holds every runtime setting the application accepts, sourced from
 // CLI flags with environment variable fallbacks.
 type Options struct {
+	Driver   string
 	URL      string
 	Host     string
 	Port     int
@@ -37,6 +46,7 @@ func Parse(args []string) (*Options, error) {
 	fs := flag.NewFlagSet("gonosequel", flag.ContinueOnError)
 
 	opts := &Options{}
+	fs.StringVar(&opts.Driver, "driver", envOr("ME_DRIVER", "mongodb"), "database backend to connect to ("+strings.Join(SupportedDrivers, ", ")+")")
 	fs.StringVar(&opts.URL, "url", envOr("ME_URL", ""), "MongoDB connection URL (mongodb://...)")
 	fs.StringVar(&opts.Host, "host", envOr("ME_HOST", ""), "MongoDB host")
 	fs.IntVar(&opts.Port, "port", envIntOr("ME_MONGO_PORT", 27017), "MongoDB port")
@@ -61,15 +71,23 @@ func Parse(args []string) (*Options, error) {
 		return nil, err
 	}
 
+	if !slices.Contains(SupportedDrivers, opts.Driver) {
+		return nil, fmt.Errorf("unsupported --driver %q (supported: %s)", opts.Driver, strings.Join(SupportedDrivers, ", "))
+	}
+
 	opts.ReadTimeout = *readTimeout
 	opts.WriteTimeout = *writeTimeout
 
 	return opts, nil
 }
 
-// MongoURI builds a mongodb:// connection string from Opts, preferring the
-// explicit --url flag when set.
-func (o *Options) MongoURI() string {
+// URI builds the connection string for the selected --driver, preferring
+// the explicit --url flag when set. Today only mongodb:// is supported —
+// --driver has one valid value — so this always builds a MongoDB URI; it
+// exists as its own method (rather than being inlined at the call site) so
+// a future driver can plug in a different URI/DSN shape here without
+// touching callers.
+func (o *Options) URI() string {
 	if o.URL != "" {
 		return o.URL
 	}

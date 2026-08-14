@@ -1,22 +1,17 @@
+// Package client is the MongoDB implementation of pkg/driver.Driver: it
+// wraps the mongo-driver, converting between BSON and the generic
+// pkg/driver types at every exported method's boundary so no caller
+// outside this package needs to know MongoDB is behind the connection.
 package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-)
 
-// Sentinel errors returned by client operations, checked with errors.Is.
-var (
-	// ErrNotFound is returned when a requested database, collection, or
-	// document does not exist.
-	ErrNotFound = errors.New("not found")
-	// ErrAlreadyExists is returned when creating a collection or index
-	// that already exists under that name.
-	ErrAlreadyExists = errors.New("already exists")
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 // Client wraps a *mongo.Client, providing the operations the API layer
@@ -24,6 +19,9 @@ var (
 type Client struct {
 	mongo *mongo.Client
 }
+
+// var _ documents, at compile time, that *Client satisfies driver.Driver.
+var _ driver.Driver = (*Client)(nil)
 
 // Connect dials the given MongoDB URI and verifies connectivity with a
 // ping. Callers must call Close when done.

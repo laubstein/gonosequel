@@ -4,9 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
-	"go.mongodb.org/mongo-driver/v2/bson"
 
-	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/driver"
 )
 
 // handleAggregate runs an aggregation pipeline and returns the resulting
@@ -21,18 +20,19 @@ import (
 func (d *deps) handleAggregate(c fiber.Ctx) error {
 	db, coll := c.Params("db"), c.Params("coll")
 
-	pipeline, err := client.FromExtJSONArray(c.Body())
+	codec := currentClient(c)
+	pipeline, err := codec.UnmarshalDocArray(c.Body())
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid pipeline: "+err.Error())
 	}
 
-	docs, err := currentClient(c).Aggregate(c.Context(), db, coll, pipeline)
+	docs, err := codec.Aggregate(c.Context(), db, coll, pipeline)
 	if err != nil {
 		return fmt.Errorf("aggregate: %w", err)
 	}
 
-	wrapper := bson.M{"documents": docs}
-	body, err := client.ToRelaxedExtJSON(wrapper)
+	wrapper := driver.Doc{"documents": docs}
+	body, err := codec.MarshalRelaxed(wrapper)
 	if err != nil {
 		return fmt.Errorf("marshal aggregate results: %w", err)
 	}
