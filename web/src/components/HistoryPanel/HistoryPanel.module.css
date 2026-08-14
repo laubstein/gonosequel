@@ -1,0 +1,31 @@
+.panel {
+  padding: 16px;
+  overflow: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+th {
+  background: var(--color-bg-alt);
+}
+
+tbody tr:hover {
+  background: var(--color-bg-inset);
+  cursor: pointer;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  padding: 16px;
+}

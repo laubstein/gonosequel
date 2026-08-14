@@ -233,3 +233,37 @@ func TestAPIUnknownSessionRejected(t *testing.T) {
 		t.Fatalf("status = %d, want 400", resp.StatusCode)
 	}
 }
+
+func TestAPIExplainReturnsQueryPlan(t *testing.T) {
+	app := newTestApp(t, false)
+
+	if resp, body := doJSON(t, app, http.MethodPost, "/api/databases/api_test_explain/collections", map[string]string{"name": "items"}); resp.StatusCode != http.StatusCreated {
+		t.Fatalf("create collection: status=%d body=%v", resp.StatusCode, body)
+	}
+
+	insertBody := []byte(`{"n":1}`)
+	insertReq := httptest.NewRequest(http.MethodPost, "/api/databases/api_test_explain/collections/items/documents", bytes.NewReader(insertBody))
+	insertReq.Header.Set("Content-Type", "application/json")
+	insertResp, err := app.Test(insertReq)
+	if err != nil {
+		t.Fatalf("insert document: %v", err)
+	}
+	insertResp.Body.Close()
+	if insertResp.StatusCode != http.StatusCreated {
+		t.Fatalf("insert document: status=%d", insertResp.StatusCode)
+	}
+
+	explainReq := httptest.NewRequest(http.MethodGet, `/api/databases/api_test_explain/collections/items/explain?filter=%7B%22n%22%3A1%7D`, nil)
+	explainResp, err := app.Test(explainReq)
+	if err != nil {
+		t.Fatalf("explain: %v", err)
+	}
+	defer explainResp.Body.Close()
+	body, _ := io.ReadAll(explainResp.Body)
+	if explainResp.StatusCode != http.StatusOK {
+		t.Fatalf("explain: status=%d body=%s", explainResp.StatusCode, body)
+	}
+	if !bytes.Contains(body, []byte("queryPlanner")) {
+		t.Errorf("expected queryPlanner in explain response, got: %s", body)
+	}
+}

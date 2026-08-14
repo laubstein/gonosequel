@@ -10,7 +10,7 @@ import { HistoryPanel } from './components/HistoryPanel/HistoryPanel'
 import { DocumentEditor, type EditorTarget } from './components/DocumentEditor/DocumentEditor'
 import { useDocuments } from './hooks/useDocuments'
 import { docId } from './api/extjson'
-import type { ExtJSONDocument, FindQuery } from './types'
+import type { ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
 type Tab = 'documents' | 'schema' | 'indexes' | 'history' | 'server'
 
@@ -29,6 +29,7 @@ export default function App() {
   const [selection, setSelection] = useState<{ db: string; coll: string } | null>(null)
   const [query, setQuery] = useState<FindQuery>(DEFAULT_QUERY)
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
+  const [replayNonce, setReplayNonce] = useState(0)
 
   const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query)
 
@@ -47,6 +48,13 @@ export default function App() {
 
   function openDocument(doc: ExtJSONDocument) {
     setEditorTarget({ mode: 'edit', encodedId: docId(doc) })
+  }
+
+  function replayHistory(entry: HistoryEntry) {
+    setSelection({ db: entry.database, coll: entry.collection })
+    setQuery({ ...DEFAULT_QUERY, filter: entry.filter, skip: 0 })
+    setReplayNonce((n) => n + 1)
+    setTab('documents')
   }
 
   return (
@@ -77,6 +85,7 @@ export default function App() {
           {selection && tab === 'documents' && (
             <>
               <QueryEditor
+                key={`${selection.db}:${selection.coll}:${replayNonce}`}
                 db={selection.db}
                 coll={selection.coll}
                 query={query}
@@ -94,7 +103,7 @@ export default function App() {
           )}
           {selection && tab === 'schema' && <SchemaPanel db={selection.db} coll={selection.coll} />}
           {selection && tab === 'indexes' && <IndexPanel db={selection.db} coll={selection.coll} />}
-          {tab === 'history' && <HistoryPanel />}
+          {tab === 'history' && <HistoryPanel onReplay={replayHistory} />}
           {selection && tab === 'server' && <div style={{ padding: 16 }}>Informações do servidor</div>}
         </div>
       </div>

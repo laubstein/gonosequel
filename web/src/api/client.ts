@@ -50,6 +50,11 @@ export const api = {
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/documents`,
       query as Record<string, string | number | undefined>,
     ),
+  explain: (db: string, coll: string, filter: string) =>
+    apiGet<ExtJSONDocument>(
+      `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/explain`,
+      { filter },
+    ),
   getDocument: (db: string, coll: string, encodedId: string) =>
     apiGet<ExtJSONDocument>(
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/documents/${encodedId}`,

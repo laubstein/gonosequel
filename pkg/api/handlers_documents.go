@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -34,11 +35,16 @@ func (d *deps) handleListDocuments(c fiber.Ctx) error {
 		return fmt.Errorf("list documents: %w", err)
 	}
 
-	d.history.Add(currentSessionID(c), history.Entry{
-		Database:   db,
-		Collection: coll,
-		Filter:     fmt.Sprintf("%v", opts.Filter),
-	})
+	// Only log queries with an actual filter; recording every unfiltered
+	// page load would drown out queries worth replaying.
+	if rawFilter := c.Query("filter"); rawFilter != "" && rawFilter != "{}" {
+		d.history.Add(currentSessionID(c), history.Entry{
+			Database:   db,
+			Collection: coll,
+			Filter:     rawFilter,
+			At:         time.Now().Format(time.RFC3339),
+		})
+	}
 
 	body, err := marshalListResponse(result)
 	if err != nil {
@@ -176,4 +182,30 @@ func (d *deps) handleDeleteDocument(c fiber.Ctx) error {
 		return fmt.Errorf("delete document: %w", err)
 	}
 	return c.JSON(fiber.Map{"ok": true})
+}
+
+// handleExplainQuery runs the current filter through the query planner and
+// returns the raw explain document as relaxed Extended JSON.
+func (d *deps) handleExplainQuery(c fiber.Ctx) error {
+	db, coll := c.Params("db"), c.Params("coll")
+
+	var filter bson.M
+	if raw := c.Query("filter"); raw != "" {
+		f, err := client.FromExtJSON([]byte(raw))
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid filter: "+err.Error())
+		}
+		filter = f
+	}
+
+	result, err := currentClient(c).Explain(c.Context(), db, coll, filter)
+	if err != nil {
+		return fmt.Errorf("explain: %w", err)
+	}
+
+	body, err := client.ToRelaxedExtJSON(result)
+	if err != nil {
+		return fmt.Errorf("marshal explain result: %w", err)
+	}
+	return c.Type("json").Send(body)
 }

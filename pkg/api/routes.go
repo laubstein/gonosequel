@@ -30,6 +30,7 @@ func registerRoutes(app *fiber.App, d *deps) {
 	scoped.Get("/databases/:db/collections/:coll/schema", d.handleCollectionSchema)
 
 	scoped.Get("/databases/:db/collections/:coll/documents", d.handleListDocuments)
+	scoped.Get("/databases/:db/collections/:coll/explain", d.handleExplainQuery)
 	scoped.Post("/databases/:db/collections/:coll/documents", d.handleInsertDocument)
 	scoped.Get("/databases/:db/collections/:coll/documents/:id", d.handleGetDocument)
 	scoped.Put("/databases/:db/collections/:coll/documents/:id", d.handleReplaceDocument)

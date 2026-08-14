@@ -1,7 +1,13 @@
 import { useState } from 'react'
+import CodeMirror from '@uiw/react-codemirror'
+import { json } from '@codemirror/lang-json'
+import { autocompletion } from '@codemirror/autocomplete'
 import styles from './QueryEditor.module.css'
 import type { FindQuery } from '../../types'
 import { exportURL } from '../../api/http'
+import { api } from '../../api/client'
+import { useCollectionSchema } from '../../hooks/useCollectionSchema'
+import { fieldCompletionSource } from './fieldCompletion'
 
 interface Props {
   db: string
@@ -12,35 +18,54 @@ interface Props {
   standalone?: boolean
 }
 
-// A plain textarea today; step 8 of the build plan swaps this for
-// CodeMirror with schema-driven autocomplete without changing the
-// filter/sort contract this component exposes to App.
 export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
   const [filterText, setFilterText] = useState(query.filter ?? '{}')
   const [sortText, setSortText] = useState(query.sort ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [explainResult, setExplainResult] = useState<string | null>(null)
+  const [explaining, setExplaining] = useState(false)
+
+  const { data: schemaFields } = useCollectionSchema(db, coll)
+  const extensions = [
+    json(),
+    autocompletion({ override: [fieldCompletionSource(schemaFields ?? [])] }),
+  ]
 
   function run() {
     try {
       if (filterText.trim()) JSON.parse(filterText)
       if (sortText.trim()) JSON.parse(sortText)
       setError(null)
+      setExplainResult(null)
       onRun(filterText.trim() || '{}', sortText.trim())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'JSON inválido')
     }
   }
 
+  async function explain() {
+    try {
+      if (filterText.trim()) JSON.parse(filterText)
+      setError(null)
+      setExplaining(true)
+      const result = await api.explain(db, coll, filterText.trim() || '{}')
+      setExplainResult(JSON.stringify(result, null, 2))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'JSON inválido')
+    } finally {
+      setExplaining(false)
+    }
+  }
+
   return (
     <div className={styles.editor}>
-      <textarea
-        className={styles.textarea}
+      <CodeMirror
         value={filterText}
-        onChange={(e) => setFilterText(e.target.value)}
+        height="80px"
+        extensions={extensions}
+        onChange={(value) => setFilterText(value)}
         placeholder='{ "status": "ativo" }'
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run()
-        }}
+        basicSetup={{ lineNumbers: false, foldGutter: false }}
       />
       <div className={styles.row}>
         <input
@@ -55,6 +80,9 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
         <button className={styles.button} onClick={run}>
           Executar
         </button>
+        <button className={styles.button} onClick={() => void explain()} disabled={explaining}>
+          {explaining ? 'Explicando…' : 'Explain'}
+        </button>
         <button className={styles.button} onClick={onNewDocument}>
           + Novo documento
         </button>
@@ -67,6 +95,9 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
           Exportar CSV
         </a>
       </div>
+      {explainResult && (
+        <pre className={styles.explainOutput}>{explainResult}</pre>
+      )}
     </div>
   )
 }
