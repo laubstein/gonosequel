@@ -1,0 +1,58 @@
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+
+.tabbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  height: 44px;
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: var(--color-bg-inset);
+}
+
+.tabActive {
+  composes: tab;
+  color: var(--color-text);
+  background: var(--color-bg-inset);
+  font-weight: 600;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.connectionLabel {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 0;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}

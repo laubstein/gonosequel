@@ -6,6 +6,7 @@ package api
 
 import (
 	"errors"
+	"io/fs"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/basicauth"
@@ -31,6 +32,13 @@ type Config struct {
 	Readonly bool
 	AuthUser string
 	AuthPass string
+
+	// Assets, if non-nil, is the built frontend (web/dist) served for
+	// every non-API route. Nil in tests that only exercise /api routes.
+	Assets fs.FS
+	// DevProxy, if set, reverse-proxies non-API routes to a Vite dev
+	// server instead of serving Assets, enabling hot reload.
+	DevProxy string
 }
 
 // deps bundles the dependencies handlers need, avoiding globals.
@@ -68,6 +76,7 @@ func New(cfg Config) *fiber.App {
 		sessions: cfg.Sessions,
 	}
 	registerRoutes(app, d)
+	registerAssets(app, cfg.Assets, cfg.DevProxy)
 
 	return app
 }
