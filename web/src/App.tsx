@@ -22,6 +22,16 @@ import type { ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
 const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
 
+// Display names for the --driver values the server reports via /api/info.
+// Falls back to the raw value for anything not listed here, so a future
+// backend shows up correctly even before this map is updated for it.
+const DRIVER_LABEL: Record<string, string> = {
+  mongodb: 'MongoDB',
+  redis: 'Redis',
+  valkey: 'Valkey',
+  couchdb: 'CouchDB',
+}
+
 type Tab = 'documents' | 'schema' | 'indexes' | 'tools' | 'history' | 'server'
 
 const TAB_IDS: Tab[] = ['documents', 'schema', 'indexes', 'tools', 'history', 'server']
@@ -111,6 +121,11 @@ export default function App() {
           </button>
         ))}
         <div className={styles.spacer} />
+        {info?.driver && (
+          <span className={styles.connectionLabel} title={t('app.driverTitle')}>
+            {DRIVER_LABEL[info.driver] ?? info.driver}
+          </span>
+        )}
         <button
           className={styles.tab}
           onClick={cycle}

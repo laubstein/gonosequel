@@ -63,6 +63,7 @@ func main() {
 
 	app := api.New(api.Config{
 		Registry:     registry,
+		Driver:       opts.Driver,
 		Sessions:     opts.Sessions,
 		Readonly:     opts.Readonly,
 		AuthUser:     opts.AuthUser,

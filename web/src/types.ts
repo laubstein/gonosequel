@@ -63,6 +63,7 @@ export interface SessionInfo {
 export interface AppInfo {
   app: string
   version: string
+  driver: string
   readonly: boolean
 }
 

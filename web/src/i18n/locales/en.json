@@ -12,6 +12,7 @@
     "themeToggle": "Toggle theme",
     "themeTitle": "Theme: {{theme}}",
     "helpTitle": "Documentation",
+    "driverTitle": "Connected database backend",
     "readonlyBanner": "Read-only mode — write actions are disabled on the server",
     "selectDatabaseHint": "Select a database in the sidebar."
   },

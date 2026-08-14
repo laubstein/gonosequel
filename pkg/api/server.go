@@ -29,6 +29,10 @@ var Version = "dev"
 // calling New.
 type Config struct {
 	Registry *session.Registry
+	// Driver is the backend the server was started against (e.g.
+	// "mongodb"), reported by /api/info so the UI can show what it's
+	// connected to.
+	Driver   string
 	Sessions bool // whether the UI may open additional connections
 	Readonly bool
 	AuthUser string
@@ -54,6 +58,7 @@ type Config struct {
 type deps struct {
 	registry     *session.Registry
 	history      *history.Store
+	driver       string
 	sessions     bool
 	readonly     bool
 	bookmarksDir string
@@ -84,6 +89,7 @@ func New(cfg Config) *fiber.App {
 	d := &deps{
 		registry:     cfg.Registry,
 		history:      history.NewStore(),
+		driver:       cfg.Driver,
 		sessions:     cfg.Sessions,
 		readonly:     cfg.Readonly,
 		bookmarksDir: cfg.BookmarksDir,
