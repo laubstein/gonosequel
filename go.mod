@@ -2,7 +2,10 @@ module github.com/laubstein/mongo-express-go
 
 go 1.26.5
 
-require github.com/gofiber/fiber/v3 v3.5.0
+require (
+	github.com/gofiber/fiber/v3 v3.5.0
+	go.mongodb.org/mongo-driver/v2 v2.8.0
+)
 
 require (
 	github.com/andybalholm/brotli v1.2.2 // indirect
