@@ -6,10 +6,12 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+
+	"github.com/laubstein/mongo-express-go/pkg/session"
 )
 
 func TestInfoEndpoint(t *testing.T) {
-	app := New(Config{})
+	app := New(Config{Registry: session.NewRegistry()})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/info", nil)
 	resp, err := app.Test(req)
@@ -24,7 +26,7 @@ func TestInfoEndpoint(t *testing.T) {
 }
 
 func TestReadonlyRejectsWrites(t *testing.T) {
-	app := New(Config{Readonly: true})
+	app := New(Config{Readonly: true, Registry: session.NewRegistry()})
 	app.Post("/api/_test-write", func(c fiber.Ctx) error { return nil })
 
 	req := httptest.NewRequest(http.MethodPost, "/api/_test-write", nil)

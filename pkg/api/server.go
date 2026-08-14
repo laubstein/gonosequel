@@ -5,20 +5,39 @@
 package api
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/basicauth"
 	"github.com/gofiber/fiber/v3/middleware/compress"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+
+	"github.com/laubstein/mongo-express-go/pkg/client"
+	"github.com/laubstein/mongo-express-go/pkg/history"
+	"github.com/laubstein/mongo-express-go/pkg/session"
 )
 
 // Version is the application version, set at build time via -ldflags.
 var Version = "dev"
 
-// Config holds the settings needed to build the Fiber app.
+// Config holds the settings and shared state needed to build the Fiber
+// app. Registry must be non-nil; in single-connection mode the caller
+// connects at startup and registers it under session.DefaultID before
+// calling New.
 type Config struct {
+	Registry *session.Registry
+	Sessions bool // whether the UI may open additional connections
 	Readonly bool
 	AuthUser string
 	AuthPass string
+}
+
+// deps bundles the dependencies handlers need, avoiding globals.
+type deps struct {
+	registry *session.Registry
+	history  *history.Store
+	sessions bool
 }
 
 // New builds a *fiber.App with middleware and routes registered, but does
@@ -33,21 +52,44 @@ func New(cfg Config) *fiber.App {
 	app.Use(logger.New())
 	app.Use(compress.New())
 
+	if cfg.AuthUser != "" {
+		app.Use(basicauth.New(basicauth.Config{
+			Users: map[string]string{cfg.AuthUser: cfg.AuthPass},
+		}))
+	}
+
 	if cfg.Readonly {
 		app.Use(rejectWrites)
 	}
 
-	registerRoutes(app)
+	d := &deps{
+		registry: cfg.Registry,
+		history:  history.NewStore(),
+		sessions: cfg.Sessions,
+	}
+	registerRoutes(app, d)
 
 	return app
 }
 
 // errorHandler converts any error returned by a handler into a uniform JSON
-// body, so individual handlers never write error responses by hand.
+// body, so individual handlers never write error responses by hand. Known
+// domain errors from pkg/client and pkg/session are mapped to the
+// appropriate HTTP status.
 func errorHandler(c fiber.Ctx, err error) error {
+	var fe *fiber.Error
+	if errors.As(err, &fe) {
+		return c.Status(fe.Code).JSON(fiber.Map{"error": fe.Message})
+	}
+
 	code := fiber.StatusInternalServerError
-	if fe, ok := err.(*fiber.Error); ok {
-		code = fe.Code
+	switch {
+	case errors.Is(err, client.ErrNotFound):
+		code = fiber.StatusNotFound
+	case errors.Is(err, client.ErrAlreadyExists):
+		code = fiber.StatusConflict
+	case errors.Is(err, session.ErrNotFound):
+		code = fiber.StatusBadRequest
 	}
 	return c.Status(code).JSON(fiber.Map{"error": err.Error()})
 }

@@ -4,12 +4,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/laubstein/mongo-express-go/pkg/api"
+	"github.com/laubstein/mongo-express-go/pkg/client"
 	"github.com/laubstein/mongo-express-go/pkg/command"
+	"github.com/laubstein/mongo-express-go/pkg/session"
 )
 
 func main() {
@@ -18,7 +22,21 @@ func main() {
 		log.Fatalf("parse flags: %v", err)
 	}
 
+	registry := session.NewRegistry()
+
+	if !opts.Sessions {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		cl, err := client.Connect(ctx, opts.MongoURI())
+		cancel()
+		if err != nil {
+			log.Fatalf("connect to mongodb: %v", err)
+		}
+		registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "default"})
+	}
+
 	app := api.New(api.Config{
+		Registry: registry,
+		Sessions: opts.Sessions,
 		Readonly: opts.Readonly,
 		AuthUser: opts.AuthUser,
 		AuthPass: opts.AuthPass,

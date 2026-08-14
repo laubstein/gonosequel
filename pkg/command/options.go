@@ -71,6 +71,30 @@ func Parse(args []string) (*Options, error) {
 	return opts, nil
 }
 
+// MongoURI builds a mongodb:// connection string from Opts, preferring the
+// explicit --url flag when set.
+func (o *Options) MongoURI() string {
+	if o.URL != "" {
+		return o.URL
+	}
+
+	host := o.Host
+	if host == "" {
+		host = "localhost"
+	}
+
+	auth := ""
+	if o.User != "" {
+		auth = fmt.Sprintf("%s:%s@", o.User, o.Pass)
+	}
+
+	uri := fmt.Sprintf("mongodb://%s%s:%d", auth, host, o.Port)
+	if o.DB != "" {
+		uri += "/" + o.DB
+	}
+	return uri
+}
+
 func envOr(key, def string) string {
 	if v, ok := os.LookupEnv(key); ok {
 		return v
