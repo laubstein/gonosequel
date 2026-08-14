@@ -1,0 +1,5 @@
+/mongo-express-go
+/web/dist
+/web/node_modules
+*.log
+.DS_Store
