@@ -88,3 +88,49 @@
   color: var(--color-text-muted);
   font-size: 13px;
 }
+
+.newCollectionRow {
+  padding: 0 10px 8px;
+}
+
+.newCollectionButton {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.newCollectionButton:hover {
+  background: var(--color-bg-inset);
+  color: var(--color-text);
+}
+
+.collectionRow {
+  display: flex;
+  align-items: center;
+}
+
+.collectionRow .collectionItem,
+.collectionRow .collectionItemActive {
+  flex: 1;
+}
+
+.dropButton {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  visibility: hidden;
+}
+
+.collectionRow:hover .dropButton {
+  visibility: visible;
+}
+
+.dropButton:hover {
+  color: var(--color-danger);
+}

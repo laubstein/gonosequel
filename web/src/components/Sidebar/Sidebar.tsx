@@ -3,7 +3,8 @@ import styles from './Sidebar.module.css'
 import { useDatabases } from '../../hooks/useDatabases'
 import { useCollections } from '../../hooks/useCollections'
 import { useCollectionStats } from '../../hooks/useCollectionStats'
-import { useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '../../api/client'
 
 interface Props {
   selection: { db: string; coll: string } | null
@@ -43,6 +44,56 @@ export function Sidebar({ selection, onSelect }: Props) {
     void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] })
   }
 
+  const createDatabase = useMutation({
+    mutationFn: (name: string) => api.createDatabase(name),
+    onSuccess: (_r, name) => {
+      void queryClient.invalidateQueries({ queryKey: ['databases'] })
+      setCurrentDb(name)
+    },
+  })
+
+  const dropDatabase = useMutation({
+    mutationFn: (name: string) => api.dropDatabase(name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['databases'] })
+      setCurrentDb(null)
+    },
+  })
+
+  const createCollection = useMutation({
+    mutationFn: (name: string) => api.createCollection(currentDb as string, name),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] }),
+  })
+
+  const dropCollection = useMutation({
+    mutationFn: (name: string) => api.dropCollection(currentDb as string, name),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] }),
+  })
+
+  function handleCreateDatabase() {
+    const name = window.prompt('Nome do novo banco:')
+    if (name) createDatabase.mutate(name)
+  }
+
+  function handleDropDatabase() {
+    if (!currentDb) return
+    if (window.confirm(`Apagar o banco "${currentDb}" e todas as suas coleções?`)) {
+      dropDatabase.mutate(currentDb)
+    }
+  }
+
+  function handleCreateCollection() {
+    if (!currentDb) return
+    const name = window.prompt('Nome da nova coleção:')
+    if (name) createCollection.mutate(name)
+  }
+
+  function handleDropCollection(name: string) {
+    if (window.confirm(`Apagar a coleção "${name}"?`)) {
+      dropCollection.mutate(name)
+    }
+  }
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.dbRow}>
@@ -60,6 +111,18 @@ export function Sidebar({ selection, onSelect }: Props) {
             </option>
           ))}
         </select>
+        <button className={styles.iconButton} onClick={handleCreateDatabase} title="Novo banco" aria-label="Novo banco">
+          +
+        </button>
+        <button
+          className={styles.iconButton}
+          onClick={handleDropDatabase}
+          title="Apagar banco"
+          aria-label="Apagar banco"
+          disabled={!currentDb}
+        >
+          −
+        </button>
         <button className={styles.iconButton} onClick={refresh} title="Atualizar" aria-label="Atualizar">
           ⟳
         </button>
@@ -72,22 +135,39 @@ export function Sidebar({ selection, onSelect }: Props) {
         onChange={(e) => setFilter(e.target.value)}
       />
 
+      {currentDb && (
+        <div className={styles.newCollectionRow}>
+          <button className={styles.newCollectionButton} onClick={handleCreateCollection}>
+            + Nova coleção
+          </button>
+        </div>
+      )}
+
       <ul className={styles.collectionList}>
         {collsLoading && <li className={styles.empty}>Carregando…</li>}
         {!collsLoading && currentDb && filtered.length === 0 && (
           <li className={styles.empty}>Nenhuma coleção</li>
         )}
         {filtered.map((c) => (
-          <li
-            key={c.name}
-            className={
-              selection?.db === currentDb && selection?.coll === c.name
-                ? styles.collectionItemActive
-                : styles.collectionItem
-            }
-            onClick={() => currentDb && onSelect(currentDb, c.name)}
-          >
-            {c.name}
+          <li key={c.name} className={styles.collectionRow}>
+            <span
+              className={
+                selection?.db === currentDb && selection?.coll === c.name
+                  ? styles.collectionItemActive
+                  : styles.collectionItem
+              }
+              onClick={() => currentDb && onSelect(currentDb, c.name)}
+            >
+              {c.name}
+            </span>
+            <button
+              className={styles.dropButton}
+              onClick={() => handleDropCollection(c.name)}
+              title={`Apagar ${c.name}`}
+              aria-label={`Apagar ${c.name}`}
+            >
+              ✕
+            </button>
           </li>
         ))}
       </ul>

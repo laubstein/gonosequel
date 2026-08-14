@@ -8,13 +8,14 @@ interface Props {
   coll: string
   query: FindQuery
   onRun: (filter: string, sort: string) => void
+  onNewDocument: () => void
   standalone?: boolean
 }
 
 // A plain textarea today; step 8 of the build plan swaps this for
 // CodeMirror with schema-driven autocomplete without changing the
 // filter/sort contract this component exposes to App.
-export function QueryEditor({ db, coll, query, onRun }: Props) {
+export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {
   const [filterText, setFilterText] = useState(query.filter ?? '{}')
   const [sortText, setSortText] = useState(query.sort ?? '')
   const [error, setError] = useState<string | null>(null)
@@ -53,6 +54,9 @@ export function QueryEditor({ db, coll, query, onRun }: Props) {
       <div className={styles.row}>
         <button className={styles.button} onClick={run}>
           Executar
+        </button>
+        <button className={styles.button} onClick={onNewDocument}>
+          + Novo documento
         </button>
         {error && <span className={styles.error}>{error}</span>}
         <div className={styles.spacer} />

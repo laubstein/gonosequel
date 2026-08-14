@@ -7,7 +7,9 @@ import { Pagination } from './components/Pagination/Pagination'
 import { IndexPanel } from './components/IndexPanel/IndexPanel'
 import { SchemaPanel } from './components/SchemaPanel/SchemaPanel'
 import { HistoryPanel } from './components/HistoryPanel/HistoryPanel'
+import { DocumentEditor, type EditorTarget } from './components/DocumentEditor/DocumentEditor'
 import { useDocuments } from './hooks/useDocuments'
+import { docId } from './api/extjson'
 import type { ExtJSONDocument, FindQuery } from './types'
 
 type Tab = 'documents' | 'schema' | 'indexes' | 'history' | 'server'
@@ -26,7 +28,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('documents')
   const [selection, setSelection] = useState<{ db: string; coll: string } | null>(null)
   const [query, setQuery] = useState<FindQuery>(DEFAULT_QUERY)
-  const [, setOpenDocument] = useState<ExtJSONDocument | null>(null)
+  const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
 
   const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query)
 
@@ -41,6 +43,10 @@ export default function App() {
 
   function paginate(skip: number, limit: number) {
     setQuery((q) => ({ ...q, skip, limit }))
+  }
+
+  function openDocument(doc: ExtJSONDocument) {
+    setEditorTarget({ mode: 'edit', encodedId: docId(doc) })
   }
 
   return (
@@ -70,8 +76,14 @@ export default function App() {
 
           {selection && tab === 'documents' && (
             <>
-              <QueryEditor db={selection.db} coll={selection.coll} query={query} onRun={runQuery} />
-              <Results db={selection.db} coll={selection.coll} query={query} onOpenDocument={setOpenDocument} />
+              <QueryEditor
+                db={selection.db}
+                coll={selection.coll}
+                query={query}
+                onRun={runQuery}
+                onNewDocument={() => setEditorTarget({ mode: 'new' })}
+              />
+              <Results db={selection.db} coll={selection.coll} query={query} onOpenDocument={openDocument} />
               <Pagination
                 query={query}
                 total={data?.total ?? 0}
@@ -86,6 +98,15 @@ export default function App() {
           {selection && tab === 'server' && <div style={{ padding: 16 }}>Informações do servidor</div>}
         </div>
       </div>
+
+      {selection && editorTarget && (
+        <DocumentEditor
+          db={selection.db}
+          coll={selection.coll}
+          target={editorTarget}
+          onClose={() => setEditorTarget(null)}
+        />
+      )}
     </div>
   )
 }
