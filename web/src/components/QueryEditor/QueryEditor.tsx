@@ -9,6 +9,7 @@ import { exportURL } from '../../api/http'
 import { api } from '../../api/client'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
 import { fieldCompletionSource } from './fieldCompletion'
+import { buildPresets } from './presets'
 import type { Preset } from '../../types'
 
 type Mode = 'find' | 'aggregate'
@@ -20,10 +21,9 @@ interface Props {
   onRun: (filter: string, sort: string) => void
   onNewDocument: () => void
   onAggregateResult: (documents: ExtJSONDocument[] | null) => void
-  preset?: Preset | null
 }
 
-export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregateResult, preset }: Props) {
+export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregateResult }: Props) {
   const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>('find')
   const [filterText, setFilterText] = useState(query.filter ?? '{}')
@@ -33,6 +33,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
   const [explainResult, setExplainResult] = useState<string | null>(null)
   const [explaining, setExplaining] = useState(false)
   const [aggregating, setAggregating] = useState(false)
+  const [presetIndex, setPresetIndex] = useState('')
 
   const { data: schemaFields } = useCollectionSchema(db, coll)
   const extensions = [
@@ -40,8 +41,14 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
     autocompletion({ override: [fieldCompletionSource(schemaFields ?? [])] }),
   ]
 
-  useEffect(() => {
+  const presets = buildPresets(schemaFields ?? [])
+
+  function applyPreset(index: string) {
+    setPresetIndex(index)
+    if (index === '') return
+    const preset: Preset | undefined = presets[Number(index)]
     if (!preset) return
+
     setMode(preset.mode)
     setError(null)
     setExplainResult(null)
@@ -51,8 +58,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
     } else {
       setPipelineText(preset.pipeline ?? '[]')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preset])
+  }
 
   function switchMode(next: Mode) {
     setMode(next)
@@ -134,6 +140,20 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
 
   return (
     <div className={styles.editor} ref={wrapperRef}>
+      <div className={styles.row}>
+        <select
+          className={styles.presetSelect}
+          value={presetIndex}
+          onChange={(e) => applyPreset(e.target.value)}
+        >
+          <option value="">{t('queryEditor.presetPlaceholder')}</option>
+          {presets.map((preset, i) => (
+            <option key={i} value={i}>
+              {t(preset.labelKey, preset.labelParams)}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className={styles.row}>
         <button
           className={mode === 'find' ? styles.modeButtonActive : styles.modeButton}

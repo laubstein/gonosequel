@@ -46,7 +46,8 @@
     "modeFind": "Find",
     "modeAggregate": "Aggregate",
     "pipelinePlaceholder": "[ { \"$match\": { \"status\": \"ativo\" } } ]",
-    "aggregating": "Executando…"
+    "aggregating": "Executando…",
+    "presetPlaceholder": "Queries úteis…"
   },
   "results": {
     "loading": "Carregando…",
@@ -129,5 +130,17 @@
     "getmore": "Getmore",
     "command": "Comando",
     "loading": "Carregando…"
+  },
+  "presets": {
+    "allDocuments": "Todos os documentos",
+    "sortByIdDesc": "Ordenar por _id (mais recentes primeiro)",
+    "findById": "Buscar por _id",
+    "sample10": "Amostra de 10 documentos",
+    "countAll": "Contar todos os documentos",
+    "findFieldEquals": "Buscar onde {{field}} = ...",
+    "whereFieldTrue": "Onde {{field}} é verdadeiro",
+    "sortByFieldDesc": "Ordenar por {{field}} (decrescente)",
+    "fieldLast24h": "{{field}} nas últimas 24 horas",
+    "countGroupedByField": "Contar agrupado por {{field}}"
   }
 }

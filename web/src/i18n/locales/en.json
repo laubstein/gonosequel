@@ -46,7 +46,8 @@
     "modeFind": "Find",
     "modeAggregate": "Aggregate",
     "pipelinePlaceholder": "[ { \"$match\": { \"status\": \"active\" } } ]",
-    "aggregating": "Running…"
+    "aggregating": "Running…",
+    "presetPlaceholder": "Useful queries…"
   },
   "results": {
     "loading": "Loading…",
@@ -129,5 +130,17 @@
     "getmore": "Getmore",
     "command": "Command",
     "loading": "Loading…"
+  },
+  "presets": {
+    "allDocuments": "All documents",
+    "sortByIdDesc": "Sort by _id (newest first)",
+    "findById": "Find by _id",
+    "sample10": "Sample 10 documents",
+    "countAll": "Count all documents",
+    "findFieldEquals": "Find where {{field}} = ...",
+    "whereFieldTrue": "Where {{field}} is true",
+    "sortByFieldDesc": "Sort by {{field}} (descending)",
+    "fieldLast24h": "{{field}} in the last 24 hours",
+    "countGroupedByField": "Count grouped by {{field}}"
   }
 }

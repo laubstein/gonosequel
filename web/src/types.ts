@@ -101,9 +101,12 @@ export interface FindQuery {
 // Preset is a ready-made query offered above the query editor, generated
 // from the selected collection's inferred schema (see
 // components/QueryEditor/presets.ts). find presets fill the filter/sort
-// fields; aggregate presets fill the pipeline editor.
+// fields; aggregate presets fill the pipeline editor. The label is a
+// translation key (+ params for field-specific presets) rather than
+// literal text, so presets render in whichever language the UI is in.
 export interface Preset {
-  label: string
+  labelKey: string
+  labelParams?: Record<string, string>
   mode: 'find' | 'aggregate'
   filter?: string
   sort?: string

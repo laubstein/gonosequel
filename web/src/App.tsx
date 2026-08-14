@@ -17,7 +17,7 @@ import { useTheme } from './hooks/useTheme'
 import { useSessions } from './hooks/useSessions'
 import { useInfo } from './hooks/useInfo'
 import { docId } from './api/extjson'
-import type { ExtJSONDocument, FindQuery, HistoryEntry, Preset } from './types'
+import type { ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
 const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
 
@@ -40,7 +40,6 @@ export default function App() {
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
   const [replayNonce, setReplayNonce] = useState(0)
   const [aggregateResult, setAggregateResult] = useState<ExtJSONDocument[] | null>(null)
-  const [preset, setPreset] = useState<Preset | null>(null)
 
   const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query)
 
@@ -48,7 +47,6 @@ export default function App() {
     setSelection({ db, coll })
     setQuery(DEFAULT_QUERY)
     setAggregateResult(null)
-    setPreset(null)
   }
 
   function collectionRenamed(oldName: string, newName: string) {
@@ -71,7 +69,6 @@ export default function App() {
     setSelection({ db: entry.database, coll: entry.collection })
     setQuery({ ...DEFAULT_QUERY, filter: entry.filter, skip: 0 })
     setAggregateResult(null)
-    setPreset(null)
     setReplayNonce((n) => n + 1)
     setTab('documents')
   }
@@ -133,7 +130,6 @@ export default function App() {
                 onRun={runQuery}
                 onNewDocument={() => setEditorTarget({ mode: 'new' })}
                 onAggregateResult={setAggregateResult}
-                preset={preset}
               />
               <Results
                 db={selection.db}
