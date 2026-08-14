@@ -1,7 +1,7 @@
 # Read-only mode
 
 ```bash
-./mongo-express-go --url mongodb://localhost:27017 --readonly
+./gonosequel --url mongodb://localhost:27017 --readonly
 ```
 
 `--readonly` is enforced by server-side middleware, not by hiding buttons in the UI: every

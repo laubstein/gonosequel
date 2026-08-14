@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/laubstein/mongo-express-go/pkg/session"
+	"github.com/laubstein/gonosequel/pkg/session"
 )
 
 func TestDocsServedUnderPrefixAndDoNotShadowAPI(t *testing.T) {

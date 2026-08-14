@@ -1,4 +1,4 @@
-# mongo-express-go
+# Go NoSequel
 
 A web-based MongoDB explorer, in the spirit of [pgweb](https://github.com/sosedoff/pgweb)'s
 interface and [mongo-express](https://github.com/mongo-express/mongo-express)'s feature set.
@@ -9,6 +9,13 @@ Browse databases and collections, view/create/edit/delete documents as Extended 
 indexes, run filter queries with schema-aware autocomplete and `explain()`, export results as
 JSON/CSV, and connect to multiple MongoDB instances at once via saved bookmarks. The UI is in
 English by default and switches to Portuguese automatically when the browser asks for it.
+
+## Credits
+
+Go NoSequel exists thanks to two projects it borrows heavily from: [pgweb](https://github.com/sosedoff/pgweb)
+for the interface and overall usability, and [mongo-express](https://github.com/mongo-express/mongo-express)
+for the feature set it aims to cover. Both are MIT-licensed, and this project is grateful for
+the ideas and is released under the same terms — see [License](#license).
 
 ## Requirements
 
@@ -48,11 +55,11 @@ make dev MONGO_PORT=27018 HTTP_PORT=8082 VITE_PORT=5174
 make build
 ```
 
-Builds the frontend (`web/dist`) and embeds it into a single `mongo-express-go` binary via
+Builds the frontend (`web/dist`) and embeds it into a single `gonosequel` binary via
 `go:embed`. Run it against any MongoDB:
 
 ```bash
-./mongo-express-go --url mongodb://user:pass@host:27017
+./gonosequel --url mongodb://user:pass@host:27017
 ```
 
 ## CLI flags
@@ -77,12 +84,12 @@ Builds the frontend (`web/dist`) and embeds it into a single `mongo-express-go` 
 Save a named connection so you don't have to retype it:
 
 ```toml
-# ~/.mongo-express-go/bookmarks/prod.toml
+# ~/.gonosequel/bookmarks/prod.toml
 url = "mongodb://user:pass@prod.example.com:27017"
 ```
 
 ```bash
-./mongo-express-go --bookmark prod
+./gonosequel --bookmark prod
 ```
 
 In `--sessions` mode, saved bookmarks also show up as one-click options in the connection
@@ -102,3 +109,9 @@ make lint           # gofmt, go vet, staticcheck, errcheck
 See [`AGENTS.md`](AGENTS.md) for the package layout, coding conventions, and the invariants
 around Extended JSON handling that matter most if you're changing `pkg/client` or `pkg/api`.
 [`PLAN.md`](PLAN.md) has the original design rationale and phased build order.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE). Same license as [pgweb](https://github.com/sosedoff/pgweb)
+and [mongo-express](https://github.com/mongo-express/mongo-express), the two projects this
+one is built on top of.

@@ -1,4 +1,4 @@
-module github.com/laubstein/mongo-express-go
+module github.com/laubstein/gonosequel
 
 go 1.26.5
 

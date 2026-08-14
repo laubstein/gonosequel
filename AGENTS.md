@@ -6,7 +6,7 @@ fazer.
 
 ## O que é
 
-`mongo-express-go` é um explorador web de MongoDB em Go: a interface e a usabilidade do
+`Go NoSequel` é um explorador web de MongoDB em Go: a interface e a usabilidade do
 [pgweb](https://github.com/sosedoff/pgweb) com as funcionalidades do
 [mongo-express](https://github.com/mongo-express/mongo-express). Compila para um binário único com
 o frontend embutido.
@@ -18,7 +18,7 @@ base de correção do resto.
 ## Comandos
 
 ```bash
-make build       # cd web && npm run build  →  go build -o mongo-express-go .
+make build       # cd web && npm run build  →  go build -o gonosequel .
 make test        # unidade + integração; sobe e derruba o Mongo em Docker sozinho
 make test-short  # só unidade (go test ./... -short); não precisa de Docker
 make lint        # gofmt -l . && go vet ./... && staticcheck ./... && errcheck ./...
@@ -49,7 +49,7 @@ objetivo é binário único e enxuto.
 ```
 main.go              flags, bootstrap, ciclo de vida — e nada mais
 pkg/command/         flags CLI + env vars
-pkg/bookmarks/       ~/.mongo-express-go/bookmarks/*.toml
+pkg/bookmarks/       ~/.gonosequel/bookmarks/*.toml
 pkg/client/          toda a interação com o MongoDB
 pkg/session/         registro de sessões (modo --sessions)
 pkg/history/         histórico de queries, em memória, por sessão

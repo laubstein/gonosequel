@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'mongo-express-go',
+  title: 'Go NoSequel',
   description: 'A web-based MongoDB explorer — usage and configuration',
   // Served under /doc by the Go binary (pkg/api/assets.go), embedded via
   // go:embed alongside the main React app served at /.

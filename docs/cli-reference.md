@@ -23,7 +23,7 @@ binary itself.
 ## Example: read-only, bound to all interfaces, behind basic auth
 
 ```bash
-./mongo-express-go \
+./gonosequel \
   --url mongodb://localhost:27017 \
   --bind 0.0.0.0 --http-port 8081 \
   --readonly \

@@ -14,9 +14,9 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 
-	"github.com/laubstein/mongo-express-go/pkg/client"
-	"github.com/laubstein/mongo-express-go/pkg/history"
-	"github.com/laubstein/mongo-express-go/pkg/session"
+	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/history"
+	"github.com/laubstein/gonosequel/pkg/session"
 )
 
 // Version is the application version, set at build time via -ldflags.
@@ -62,7 +62,7 @@ type deps struct {
 // not start listening.
 func New(cfg Config) *fiber.App {
 	app := fiber.New(fiber.Config{
-		AppName:      "mongo-express-go",
+		AppName:      "gonosequel",
 		ErrorHandler: errorHandler,
 	})
 

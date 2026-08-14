@@ -18,7 +18,7 @@ cd "$ROOT_DIR"
 MONGO_PORT="${MONGO_PORT:-27017}"
 HTTP_PORT="${HTTP_PORT:-8081}"
 VITE_PORT="${VITE_PORT:-5173}"
-MONGO_CONTAINER="mongo-express-go-dev-mongo"
+MONGO_CONTAINER="gonosequel-dev-mongo"
 
 mongo_reachable() {
   timeout 2 bash -c "exec 3<>/dev/tcp/127.0.0.1/${MONGO_PORT}" 2>/dev/null
@@ -65,7 +65,7 @@ fi
 if [ ! -f web/dist/index.html ]; then
   echo "==> Creating placeholder web/dist (go:embed needs it to exist; dev mode serves the frontend from Vite, not this)"
   mkdir -p web/dist
-  echo '<!doctype html><title>mongo-express-go (dev placeholder)</title>' > web/dist/index.html
+  echo '<!doctype html><title>gonosequel (dev placeholder)</title>' > web/dist/index.html
 fi
 
 if [ ! -d web/node_modules ]; then
@@ -73,11 +73,11 @@ if [ ! -d web/node_modules ]; then
   (cd web && npm ci)
 fi
 
-echo "==> Building mongo-express-go"
-API_BIN="$(mktemp -d)/mongo-express-go-dev"
+echo "==> Building gonosequel"
+API_BIN="$(mktemp -d)/gonosequel-dev"
 go build -o "$API_BIN" .
 
-echo "==> Starting mongo-express-go API on :${HTTP_PORT}"
+echo "==> Starting gonosequel API on :${HTTP_PORT}"
 # A real binary, not `go run .`: go run's own process never execs into
 # the compiled binary, it runs it as a child, so killing go run's PID
 # leaves that child running behind — confirmed while testing this script.

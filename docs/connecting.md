@@ -3,7 +3,7 @@
 ## By URL
 
 ```bash
-./mongo-express-go --url "mongodb://user:pass@host:27017/mydb"
+./gonosequel --url "mongodb://user:pass@host:27017/mydb"
 ```
 
 ## By discrete flags
@@ -12,7 +12,7 @@ If you don't pass `--url`, the connection string is built from `--host` (default
 `localhost`), `--port` (default `27017`), `--user`/`--pass`, and `--db`:
 
 ```bash
-./mongo-express-go --host db.internal --port 27018 --user admin --pass secret --db mydb
+./gonosequel --host db.internal --port 27018 --user admin --pass secret --db mydb
 ```
 
 `--url` always wins if both are given.
@@ -20,15 +20,15 @@ If you don't pass `--url`, the connection string is built from `--host` (default
 ## Bookmarks
 
 Save a named connection so you don't have to retype it. Bookmarks are TOML files under
-`~/.mongo-express-go/bookmarks/`:
+`~/.gonosequel/bookmarks/`:
 
 ```toml
-# ~/.mongo-express-go/bookmarks/prod.toml
+# ~/.gonosequel/bookmarks/prod.toml
 url = "mongodb://user:pass@prod.example.com:27017"
 ```
 
 ```bash
-./mongo-express-go --bookmark prod
+./gonosequel --bookmark prod
 ```
 
 `--bookmark` takes priority over `--url` and the discrete flags.

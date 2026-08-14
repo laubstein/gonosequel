@@ -41,11 +41,11 @@ make build
 ```
 
 Builds the frontend (`web/dist`) and this documentation site (`docs/.vitepress/dist`), then
-embeds both into a single `mongo-express-go` binary via `go:embed`. Run it against any
+embeds both into a single `gonosequel` binary via `go:embed`. Run it against any
 MongoDB:
 
 ```bash
-./mongo-express-go --url mongodb://user:pass@host:27017
+./gonosequel --url mongodb://user:pass@host:27017
 ```
 
 The app is served at `/`, this documentation at `/doc`.

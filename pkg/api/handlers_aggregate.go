@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
-	"github.com/laubstein/mongo-express-go/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/client"
 )
 
 // handleAggregate runs an aggregation pipeline and returns the resulting

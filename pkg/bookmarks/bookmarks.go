@@ -1,5 +1,5 @@
 // Package bookmarks loads and saves named MongoDB connection strings as
-// TOML files under a directory (by default ~/.mongo-express-go/bookmarks/),
+// TOML files under a directory (by default ~/.gonosequel/bookmarks/),
 // so a URL doesn't have to be retyped or kept in shell history.
 package bookmarks
 
@@ -19,14 +19,14 @@ type Bookmark struct {
 	URL  string `toml:"url"`
 }
 
-// DefaultDir returns ~/.mongo-express-go/bookmarks, creating no
+// DefaultDir returns ~/.gonosequel/bookmarks, creating no
 // directories itself — callers create it on first Save.
 func DefaultDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve home directory: %w", err)
 	}
-	return filepath.Join(home, ".mongo-express-go", "bookmarks"), nil
+	return filepath.Join(home, ".gonosequel", "bookmarks"), nil
 }
 
 // Load reads a single bookmark by name from dir.

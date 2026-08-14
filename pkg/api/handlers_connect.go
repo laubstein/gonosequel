@@ -9,9 +9,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
-	"github.com/laubstein/mongo-express-go/pkg/bookmarks"
-	"github.com/laubstein/mongo-express-go/pkg/client"
-	"github.com/laubstein/mongo-express-go/pkg/session"
+	"github.com/laubstein/gonosequel/pkg/bookmarks"
+	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/session"
 )
 
 type connectRequest struct {

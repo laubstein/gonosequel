@@ -8,7 +8,7 @@ import "github.com/gofiber/fiber/v3"
 // unauthenticated and also serves as a liveness check.
 func (d *deps) handleInfo(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
-		"app":      "mongo-express-go",
+		"app":      "gonosequel",
 		"version":  Version,
 		"readonly": d.readonly,
 	})

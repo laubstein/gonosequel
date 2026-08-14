@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: mongo-express-go
+  name: Go NoSequel
   text: A web-based MongoDB explorer
   tagline: pgweb's interface, mongo-express's feature set, one self-contained binary.
   actions:

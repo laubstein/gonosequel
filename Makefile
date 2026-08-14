@@ -10,7 +10,7 @@ VITE_PORT ?= 5173
 export PATH := $(PATH):$(shell go env GOROOT)/bin
 
 build: web/dist docs/.vitepress/dist
-	go build -o mongo-express-go .
+	go build -o gonosequel .
 
 web/dist:
 	cd web && npm ci && npm run build
@@ -35,7 +35,7 @@ dev:
 # rm -f` on a name that doesn't exist still exits 0 on this Docker version,
 # so there's no reliable way to report whether anything was actually there.
 dev-down:
-	@docker rm -f mongo-express-go-dev-mongo >/dev/null 2>&1; echo "dev MongoDB container removed if it existed"
+	@docker rm -f gonosequel-dev-mongo >/dev/null 2>&1; echo "dev MongoDB container removed if it existed"
 
 test:
 	go test $(GOFLAGS) -race ./...
@@ -50,6 +50,6 @@ lint:
 	command -v errcheck >/dev/null && errcheck ./... || echo "errcheck not installed, skipping"
 
 clean:
-	rm -f mongo-express-go
+	rm -f gonosequel
 	rm -rf web/dist
 	rm -rf docs/.vitepress/dist docs/.vitepress/cache

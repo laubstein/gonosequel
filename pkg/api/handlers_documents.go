@@ -8,8 +8,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
-	"github.com/laubstein/mongo-express-go/pkg/client"
-	"github.com/laubstein/mongo-express-go/pkg/history"
+	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/history"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/laubstein/mongo-express-go/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/client"
 )
 
 // ErrNotFound is returned when looking up a session ID that has no active

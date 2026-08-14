@@ -34,7 +34,7 @@ type Options struct {
 // Parse builds an Options value from the given CLI arguments (typically
 // os.Args[1:]), falling back to environment variables when a flag is unset.
 func Parse(args []string) (*Options, error) {
-	fs := flag.NewFlagSet("mongo-express-go", flag.ContinueOnError)
+	fs := flag.NewFlagSet("gonosequel", flag.ContinueOnError)
 
 	opts := &Options{}
 	fs.StringVar(&opts.URL, "url", envOr("ME_URL", ""), "MongoDB connection URL (mongodb://...)")

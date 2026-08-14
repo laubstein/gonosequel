@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 type Theme = 'light' | 'dark' | 'system'
 
-const STORAGE_KEY = 'mongo-express-go:theme'
+const STORAGE_KEY = 'gonosequel:theme'
 
 function apply(theme: Theme) {
   const root = document.documentElement

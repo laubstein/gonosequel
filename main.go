@@ -1,4 +1,4 @@
-// Command mongo-express-go serves a web UI for exploring a MongoDB
+// Command gonosequel serves a web UI for exploring a MongoDB
 // deployment. main only handles flag parsing, process lifecycle, and
 // embedding the built frontend; the server itself is built in pkg/api.
 package main
@@ -12,11 +12,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/laubstein/mongo-express-go/pkg/api"
-	"github.com/laubstein/mongo-express-go/pkg/bookmarks"
-	"github.com/laubstein/mongo-express-go/pkg/client"
-	"github.com/laubstein/mongo-express-go/pkg/command"
-	"github.com/laubstein/mongo-express-go/pkg/session"
+	"github.com/laubstein/gonosequel/pkg/api"
+	"github.com/laubstein/gonosequel/pkg/bookmarks"
+	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/command"
+	"github.com/laubstein/gonosequel/pkg/session"
 )
 
 // distFS embeds the built frontend. It is empty until `cd web && npm run
@@ -74,7 +74,7 @@ func main() {
 	})
 
 	addr := fmt.Sprintf("%s:%d", opts.Bind, opts.HTTPPort)
-	log.Printf("mongo-express-go listening on %s", addr)
+	log.Printf("gonosequel listening on %s", addr)
 	if err := app.Listen(addr); err != nil {
 		log.Fatalf("serve: %v", err)
 	}

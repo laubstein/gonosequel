@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/laubstein/mongo-express-go/pkg/export"
+	"github.com/laubstein/gonosequel/pkg/export"
 )
 
 // handleExport streams the full (unpaginated) result of a filter as JSON

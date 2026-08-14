@@ -3,8 +3,8 @@ package api
 import (
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/laubstein/mongo-express-go/pkg/client"
-	"github.com/laubstein/mongo-express-go/pkg/session"
+	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/session"
 )
 
 // sessionIDHeader is how the frontend selects which connection a request

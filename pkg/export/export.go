@@ -11,7 +11,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 
-	"github.com/laubstein/mongo-express-go/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/client"
 )
 
 // JSON writes each document from docs to w as a single JSON array of
