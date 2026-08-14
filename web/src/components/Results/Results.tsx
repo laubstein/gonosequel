@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import styles from './Results.module.css'
 import { useDocuments } from '../../hooks/useDocuments'
 import { summarizeValue, docId } from '../../api/extjson'
+import { JsonView } from '../JsonView/JsonView'
 import type { ExtJSONDocument, FindQuery } from '../../types'
 
 type ViewMode = 'table' | 'json'
@@ -78,8 +79,8 @@ export function Results({ db, coll, query, onOpenDocument }: Props) {
       ) : (
         <div className={styles.jsonView}>
           {data.documents.map((doc) => (
-            <div key={docId(doc)} className={styles.jsonDoc} onClick={() => onOpenDocument(doc)}>
-              {JSON.stringify(doc, null, 2)}
+            <div key={docId(doc)} className={styles.jsonDoc}>
+              <JsonView value={doc} onClick={() => onOpenDocument(doc)} />
             </div>
           ))}
         </div>

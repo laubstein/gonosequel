@@ -1,0 +1,25 @@
+.pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.key {
+  color: var(--color-json-key);
+}
+
+.string {
+  color: var(--color-json-string);
+}
+
+.number {
+  color: var(--color-json-number);
+}
+
+.boolean {
+  color: var(--color-json-boolean);
+}
+
+.null {
+  color: var(--color-json-null);
+}

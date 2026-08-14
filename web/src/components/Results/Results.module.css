@@ -81,6 +81,11 @@ tbody tr:hover {
 .jsonDoc {
   padding: 8px;
   border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.jsonDoc:hover {
+  background: var(--color-bg-inset);
 }
 
 .empty {
