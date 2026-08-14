@@ -36,6 +36,7 @@ export default function App() {
   const { data: info } = useInfo()
 
   const [tab, setTab] = useState<Tab>('documents')
+  const [selectedDb, setSelectedDb] = useState<string | null>(null)
   const [selection, setSelection] = useState<{ db: string; coll: string } | null>(null)
   const [query, setQuery] = useState<FindQuery>(DEFAULT_QUERY)
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
@@ -44,7 +45,15 @@ export default function App() {
 
   const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query)
 
+  function selectDatabase(db: string | null) {
+    setSelectedDb(db)
+    setSelection(null)
+    setQuery(DEFAULT_QUERY)
+    setAggregateResult(null)
+  }
+
   function selectCollection(db: string, coll: string) {
+    setSelectedDb(db)
     setSelection({ db, coll })
     setQuery(DEFAULT_QUERY)
     setAggregateResult(null)
@@ -67,6 +76,7 @@ export default function App() {
   }
 
   function replayHistory(entry: HistoryEntry) {
+    setSelectedDb(entry.database)
     setSelection({ db: entry.database, coll: entry.collection })
     setQuery({ ...DEFAULT_QUERY, filter: entry.filter, skip: 0 })
     setAggregateResult(null)
@@ -112,10 +122,21 @@ export default function App() {
       </div>
 
       <div className={styles.layout}>
-        <Sidebar selection={selection} onSelect={selectCollection} onCollectionRenamed={collectionRenamed} />
+        <Sidebar
+          selectedDb={selectedDb}
+          onSelectDb={selectDatabase}
+          selection={selection}
+          onSelect={selectCollection}
+          onCollectionRenamed={collectionRenamed}
+        />
 
         <div className={styles.main}>
-          {!selection && tab !== 'history' && tab !== 'server' && (
+          {!selectedDb && tab === 'tools' && (
+            <div style={{ padding: 16, color: 'var(--color-text-muted)' }}>
+              {t('app.selectDatabaseHint')}
+            </div>
+          )}
+          {!selection && tab !== 'history' && tab !== 'server' && tab !== 'tools' && (
             <div style={{ padding: 16, color: 'var(--color-text-muted)' }}>
               {t('app.selectCollectionHint')}
             </div>
@@ -151,7 +172,7 @@ export default function App() {
           )}
           {selection && tab === 'schema' && <SchemaPanel db={selection.db} coll={selection.coll} />}
           {selection && tab === 'indexes' && <IndexPanel db={selection.db} coll={selection.coll} />}
-          {selection && tab === 'tools' && <ToolsPanel db={selection.db} />}
+          {selectedDb && tab === 'tools' && <ToolsPanel db={selectedDb} />}
           {tab === 'history' && <HistoryPanel onReplay={replayHistory} />}
           {tab === 'server' && <ServerPanel />}
         </div>

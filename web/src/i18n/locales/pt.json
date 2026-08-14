@@ -11,7 +11,8 @@
     "selectCollectionHint": "Selecione uma coleção na barra lateral.",
     "themeToggle": "Alternar tema",
     "themeTitle": "Tema: {{theme}}",
-    "readonlyBanner": "Modo somente leitura — ações de escrita estão desabilitadas no servidor"
+    "readonlyBanner": "Modo somente leitura — ações de escrita estão desabilitadas no servidor",
+    "selectDatabaseHint": "Selecione um banco na barra lateral."
   },
   "sidebar": {
     "loading": "Carregando…",

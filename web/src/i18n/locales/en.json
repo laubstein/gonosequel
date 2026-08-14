@@ -11,7 +11,8 @@
     "selectCollectionHint": "Select a collection in the sidebar.",
     "themeToggle": "Toggle theme",
     "themeTitle": "Theme: {{theme}}",
-    "readonlyBanner": "Read-only mode — write actions are disabled on the server"
+    "readonlyBanner": "Read-only mode — write actions are disabled on the server",
+    "selectDatabaseHint": "Select a database in the sidebar."
   },
   "sidebar": {
     "loading": "Loading…",

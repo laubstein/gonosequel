@@ -8,6 +8,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
 
 interface Props {
+  selectedDb: string | null
+  onSelectDb: (db: string | null) => void
   selection: { db: string; coll: string } | null
   onSelect: (db: string, coll: string) => void
   onCollectionRenamed?: (oldName: string, newName: string) => void
@@ -25,15 +27,14 @@ function formatBytes(n: number): string {
   return `${value.toFixed(1)} ${units[i]}`
 }
 
-export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
+export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollectionRenamed }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: databases, isLoading: dbsLoading } = useDatabases()
-  const [currentDb, setCurrentDb] = useState<string | null>(selection?.db ?? null)
   const [filter, setFilter] = useState('')
 
-  const { data: collections, isLoading: collsLoading } = useCollections(currentDb)
-  const { data: stats } = useCollectionStats(currentDb, selection?.coll ?? null)
+  const { data: collections, isLoading: collsLoading } = useCollections(selectedDb)
+  const { data: stats } = useCollectionStats(selectedDb, selection?.coll ?? null)
 
   const filtered = useMemo(() => {
     if (!collections) return []
@@ -44,14 +45,14 @@ export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ['databases'] })
-    void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] })
+    void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] })
   }
 
   const createDatabase = useMutation({
     mutationFn: (name: string) => api.createDatabase(name),
     onSuccess: (_r, name) => {
       void queryClient.invalidateQueries({ queryKey: ['databases'] })
-      setCurrentDb(name)
+      onSelectDb(name)
     },
   })
 
@@ -59,25 +60,25 @@ export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
     mutationFn: (name: string) => api.dropDatabase(name),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['databases'] })
-      setCurrentDb(null)
+      onSelectDb(null)
     },
   })
 
   const createCollection = useMutation({
-    mutationFn: (name: string) => api.createCollection(currentDb as string, name),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] }),
+    mutationFn: (name: string) => api.createCollection(selectedDb as string, name),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] }),
   })
 
   const dropCollection = useMutation({
-    mutationFn: (name: string) => api.dropCollection(currentDb as string, name),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] }),
+    mutationFn: (name: string) => api.dropCollection(selectedDb as string, name),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] }),
   })
 
   const renameCollection = useMutation({
     mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
-      api.renameCollection(currentDb as string, oldName, newName),
+      api.renameCollection(selectedDb as string, oldName, newName),
     onSuccess: (_r, { oldName, newName }) => {
-      void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] })
+      void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] })
       onCollectionRenamed?.(oldName, newName)
     },
   })
@@ -88,14 +89,14 @@ export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
   }
 
   function handleDropDatabase() {
-    if (!currentDb) return
-    if (window.confirm(t('sidebar.confirmDropDatabase', { name: currentDb }))) {
-      dropDatabase.mutate(currentDb)
+    if (!selectedDb) return
+    if (window.confirm(t('sidebar.confirmDropDatabase', { name: selectedDb }))) {
+      dropDatabase.mutate(selectedDb)
     }
   }
 
   function handleCreateCollection() {
-    if (!currentDb) return
+    if (!selectedDb) return
     const name = window.prompt(t('sidebar.promptNewCollectionName'))
     if (name) createCollection.mutate(name)
   }
@@ -118,8 +119,8 @@ export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
       <div className={styles.dbRow}>
         <select
           className={styles.dbSelect}
-          value={currentDb ?? ''}
-          onChange={(e) => setCurrentDb(e.target.value || null)}
+          value={selectedDb ?? ''}
+          onChange={(e) => onSelectDb(e.target.value || null)}
         >
           <option value="" disabled>
             {dbsLoading ? t('sidebar.loading') : t('sidebar.selectDatabase')}
@@ -138,7 +139,7 @@ export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
           onClick={handleDropDatabase}
           title={t('sidebar.dropDatabase')}
           aria-label={t('sidebar.dropDatabase')}
-          disabled={!currentDb}
+          disabled={!selectedDb}
         >
           −
         </button>
@@ -154,7 +155,7 @@ export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
         onChange={(e) => setFilter(e.target.value)}
       />
 
-      {currentDb && (
+      {selectedDb && (
         <div className={styles.newCollectionRow}>
           <button className={styles.newCollectionButton} onClick={handleCreateCollection}>
             {t('sidebar.newCollection')}
@@ -164,18 +165,18 @@ export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
 
       <ul className={styles.collectionList}>
         {collsLoading && <li className={styles.empty}>{t('sidebar.loading')}</li>}
-        {!collsLoading && currentDb && filtered.length === 0 && (
+        {!collsLoading && selectedDb && filtered.length === 0 && (
           <li className={styles.empty}>{t('sidebar.noCollections')}</li>
         )}
         {filtered.map((c) => (
           <li key={c.name} className={styles.collectionRow}>
             <span
               className={
-                selection?.db === currentDb && selection?.coll === c.name
+                selection?.db === selectedDb && selection?.coll === c.name
                   ? styles.collectionItemActive
                   : styles.collectionItem
               }
-              onClick={() => currentDb && onSelect(currentDb, c.name)}
+              onClick={() => selectedDb && onSelect(selectedDb, c.name)}
             >
               {c.name}
             </span>
