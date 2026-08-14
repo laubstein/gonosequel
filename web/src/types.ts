@@ -42,6 +42,35 @@ export interface SessionInfo {
   name: string
 }
 
+export interface AppInfo {
+  app: string
+  version: string
+  readonly: boolean
+}
+
+export interface ServerConnections {
+  current: number
+  available: number
+}
+
+export interface ServerOpCounters {
+  insert: number
+  query: number
+  update: number
+  delete: number
+  getmore: number
+  command: number
+}
+
+export interface ServerStatus {
+  version: string
+  host: string
+  process: string
+  uptimeSeconds: number
+  connections: ServerConnections
+  opcounters: ServerOpCounters
+}
+
 // ExtJSONDocument is a MongoDB document represented as parsed Extended
 // JSON: values are either primitives or wrapper objects like
 // {"$oid": "..."} / {"$numberLong": "..."}. Rendered opaquely by the UI's

@@ -16,7 +16,6 @@ interface Props {
   query: FindQuery
   onRun: (filter: string, sort: string) => void
   onNewDocument: () => void
-  standalone?: boolean
 }
 
 export function QueryEditor({ db, coll, query, onRun, onNewDocument }: Props) {

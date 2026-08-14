@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import styles from './App.module.css'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { QueryEditor } from './components/QueryEditor/QueryEditor'
@@ -9,12 +9,14 @@ import { Pagination } from './components/Pagination/Pagination'
 import { IndexPanel } from './components/IndexPanel/IndexPanel'
 import { SchemaPanel } from './components/SchemaPanel/SchemaPanel'
 import { HistoryPanel } from './components/HistoryPanel/HistoryPanel'
+import { ServerPanel } from './components/ServerPanel/ServerPanel'
 import { DocumentEditor, type EditorTarget } from './components/DocumentEditor/DocumentEditor'
 import { ConnectionModal } from './components/ConnectionModal/ConnectionModal'
 import { useDocuments } from './hooks/useDocuments'
 import { useTheme } from './hooks/useTheme'
+import { useSessions } from './hooks/useSessions'
+import { useInfo } from './hooks/useInfo'
 import { docId } from './api/extjson'
-import { api } from './api/client'
 import type { ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
 const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
@@ -29,10 +31,8 @@ export default function App() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { theme, cycle } = useTheme()
-  const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ['sessions'],
-    queryFn: api.sessions,
-  })
+  const { data: sessions, isLoading: sessionsLoading } = useSessions()
+  const { data: info } = useInfo()
 
   const [tab, setTab] = useState<Tab>('documents')
   const [selection, setSelection] = useState<{ db: string; coll: string } | null>(null)
@@ -45,6 +45,10 @@ export default function App() {
   function selectCollection(db: string, coll: string) {
     setSelection({ db, coll })
     setQuery(DEFAULT_QUERY)
+  }
+
+  function collectionRenamed(oldName: string, newName: string) {
+    setSelection((s) => (s && s.coll === oldName ? { ...s, coll: newName } : s))
   }
 
   function runQuery(filter: string, sort: string) {
@@ -69,7 +73,9 @@ export default function App() {
   // In --sessions mode the server starts with no active connection, so
   // GET /api/sessions comes back empty until the user connects through
   // this modal. In single-connection mode a "default" session is always
-  // pre-registered at startup, so this never renders.
+  // pre-registered at startup, so this never renders — except right after
+  // disconnecting from the Server tab, which drops back to zero sessions
+  // in either mode and reuses this same gate to reconnect.
   if (!sessionsLoading && sessions && sessions.length === 0) {
     return (
       <ConnectionModal onConnected={() => void queryClient.invalidateQueries({ queryKey: ['sessions'] })} />
@@ -78,6 +84,8 @@ export default function App() {
 
   return (
     <div className={styles.app}>
+      {info?.readonly && <div className={styles.readonlyBanner}>{t('app.readonlyBanner')}</div>}
+
       <div className={styles.tabbar}>
         {TAB_IDS.map((id) => (
           <button
@@ -100,10 +108,10 @@ export default function App() {
       </div>
 
       <div className={styles.layout}>
-        <Sidebar selection={selection} onSelect={selectCollection} />
+        <Sidebar selection={selection} onSelect={selectCollection} onCollectionRenamed={collectionRenamed} />
 
         <div className={styles.main}>
-          {!selection && tab !== 'history' && (
+          {!selection && tab !== 'history' && tab !== 'server' && (
             <div style={{ padding: 16, color: 'var(--color-text-muted)' }}>
               {t('app.selectCollectionHint')}
             </div>
@@ -131,7 +139,7 @@ export default function App() {
           {selection && tab === 'schema' && <SchemaPanel db={selection.db} coll={selection.coll} />}
           {selection && tab === 'indexes' && <IndexPanel db={selection.db} coll={selection.coll} />}
           {tab === 'history' && <HistoryPanel onReplay={replayHistory} />}
-          {selection && tab === 'server' && <div style={{ padding: 16 }}>{t('app.serverInfoPlaceholder')}</div>}
+          {tab === 'server' && <ServerPanel />}
         </div>
       </div>
 

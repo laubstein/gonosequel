@@ -8,6 +8,13 @@
   z-index: 100;
 }
 
+/* Used instead of .overlay when the modal sits on top of the app (add a
+   connection) rather than replacing it (the blocking initial gate). */
+.overlayDialog {
+  composes: overlay;
+  background: rgba(0, 0, 0, 0.4);
+}
+
 .card {
   width: min(420px, 92vw);
   border: 1px solid var(--color-border);
@@ -17,9 +24,20 @@
 }
 
 .title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-weight: 600;
   font-size: 16px;
   margin-bottom: 16px;
+}
+
+.closeButton {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 14px;
 }
 
 .field {

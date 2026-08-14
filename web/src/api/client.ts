@@ -9,11 +9,13 @@ import type {
   FindResult,
   HistoryEntry,
   FindQuery,
+  AppInfo,
+  ServerStatus,
 } from '../types'
 import { apiGet, apiSend } from './http'
 
 export const api = {
-  info: () => apiGet<{ app: string; version: string }>('/api/info'),
+  info: () => apiGet<AppInfo>('/api/info'),
 
   sessions: () => apiGet<SessionInfo[]>('/api/sessions'),
   bookmarks: () => apiGet<{ name: string; uri: string }[]>('/api/bookmarks'),
@@ -23,7 +25,7 @@ export const api = {
     apiSend<{ sessionId: string }>('POST', '/api/connect', { bookmark }),
   disconnect: () => apiSend<{ ok: true }>('POST', '/api/disconnect'),
   connectionInfo: () => apiGet<SessionInfo>('/api/connection'),
-  serverStatus: () => apiGet<{ version: string }>('/api/server_status'),
+  serverStatus: () => apiGet<ServerStatus>('/api/server_status'),
   history: () => apiGet<HistoryEntry[]>('/api/history'),
 
   listDatabases: () => apiGet<DatabaseInfo[]>('/api/databases'),

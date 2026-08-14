@@ -8,9 +8,9 @@
       "server": "Server"
     },
     "selectCollectionHint": "Select a collection in the sidebar.",
-    "serverInfoPlaceholder": "Server information",
     "themeToggle": "Toggle theme",
-    "themeTitle": "Theme: {{theme}}"
+    "themeTitle": "Theme: {{theme}}",
+    "readonlyBanner": "Read-only mode — write actions are disabled on the server"
   },
   "sidebar": {
     "loading": "Loading…",
@@ -29,7 +29,9 @@
     "documentCount_one": "{{formattedCount}} document",
     "documentCount_other": "{{formattedCount}} documents",
     "indexCount_one": "{{count}} index",
-    "indexCount_other": "{{count}} indexes"
+    "indexCount_other": "{{count}} indexes",
+    "renameCollection": "Rename {{name}}",
+    "promptRenameCollection": "New name for \"{{name}}\":"
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"active\" }",
@@ -98,6 +100,30 @@
     "urlPlaceholder": "mongodb://user:password@host:27017",
     "connect": "Connect",
     "connecting": "Connecting…",
-    "savedConnections": "Saved connections"
+    "savedConnections": "Saved connections",
+    "cancel": "Cancel"
+  },
+  "serverPanel": {
+    "connection": "Connection",
+    "disconnect": "Disconnect",
+    "addConnection": "+ Add connection",
+    "activeConnections": "Active connections",
+    "useConnection": "Use this connection",
+    "active": "Active",
+    "version": "Version",
+    "host": "Host",
+    "process": "Process",
+    "uptime": "Uptime",
+    "connections": "Connections",
+    "current": "Current",
+    "available": "Available",
+    "opcounters": "Operation counters",
+    "insert": "Insert",
+    "query": "Query",
+    "update": "Update",
+    "delete": "Delete",
+    "getmore": "Getmore",
+    "command": "Command",
+    "loading": "Loading…"
   }
 }

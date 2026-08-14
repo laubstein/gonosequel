@@ -8,9 +8,9 @@
       "server": "Servidor"
     },
     "selectCollectionHint": "Selecione uma coleção na barra lateral.",
-    "serverInfoPlaceholder": "Informações do servidor",
     "themeToggle": "Alternar tema",
-    "themeTitle": "Tema: {{theme}}"
+    "themeTitle": "Tema: {{theme}}",
+    "readonlyBanner": "Modo somente leitura — ações de escrita estão desabilitadas no servidor"
   },
   "sidebar": {
     "loading": "Carregando…",
@@ -29,7 +29,9 @@
     "documentCount_one": "{{formattedCount}} documento",
     "documentCount_other": "{{formattedCount}} documentos",
     "indexCount_one": "{{count}} índice",
-    "indexCount_other": "{{count}} índices"
+    "indexCount_other": "{{count}} índices",
+    "renameCollection": "Renomear {{name}}",
+    "promptRenameCollection": "Novo nome para \"{{name}}\":"
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"ativo\" }",
@@ -98,6 +100,30 @@
     "urlPlaceholder": "mongodb://usuário:senha@host:27017",
     "connect": "Conectar",
     "connecting": "Conectando…",
-    "savedConnections": "Conexões salvas"
+    "savedConnections": "Conexões salvas",
+    "cancel": "Cancelar"
+  },
+  "serverPanel": {
+    "connection": "Conexão",
+    "disconnect": "Desconectar",
+    "addConnection": "+ Nova conexão",
+    "activeConnections": "Conexões ativas",
+    "useConnection": "Usar esta conexão",
+    "active": "Ativa",
+    "version": "Versão",
+    "host": "Host",
+    "process": "Processo",
+    "uptime": "Tempo ativo",
+    "connections": "Conexões",
+    "current": "Atuais",
+    "available": "Disponíveis",
+    "opcounters": "Contadores de operação",
+    "insert": "Inserção",
+    "query": "Consulta",
+    "update": "Atualização",
+    "delete": "Exclusão",
+    "getmore": "Getmore",
+    "command": "Comando",
+    "loading": "Carregando…"
   }
 }

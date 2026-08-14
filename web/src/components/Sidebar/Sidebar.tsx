@@ -10,6 +10,7 @@ import { api } from '../../api/client'
 interface Props {
   selection: { db: string; coll: string } | null
   onSelect: (db: string, coll: string) => void
+  onCollectionRenamed?: (oldName: string, newName: string) => void
 }
 
 function formatBytes(n: number): string {
@@ -24,7 +25,7 @@ function formatBytes(n: number): string {
   return `${value.toFixed(1)} ${units[i]}`
 }
 
-export function Sidebar({ selection, onSelect }: Props) {
+export function Sidebar({ selection, onSelect, onCollectionRenamed }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: databases, isLoading: dbsLoading } = useDatabases()
@@ -72,6 +73,15 @@ export function Sidebar({ selection, onSelect }: Props) {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] }),
   })
 
+  const renameCollection = useMutation({
+    mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
+      api.renameCollection(currentDb as string, oldName, newName),
+    onSuccess: (_r, { oldName, newName }) => {
+      void queryClient.invalidateQueries({ queryKey: ['collections', currentDb] })
+      onCollectionRenamed?.(oldName, newName)
+    },
+  })
+
   function handleCreateDatabase() {
     const name = window.prompt(t('sidebar.promptNewDatabaseName'))
     if (name) createDatabase.mutate(name)
@@ -93,6 +103,13 @@ export function Sidebar({ selection, onSelect }: Props) {
   function handleDropCollection(name: string) {
     if (window.confirm(t('sidebar.confirmDropCollection', { name }))) {
       dropCollection.mutate(name)
+    }
+  }
+
+  function handleRenameCollection(name: string) {
+    const newName = window.prompt(t('sidebar.promptRenameCollection', { name }), name)
+    if (newName && newName !== name) {
+      renameCollection.mutate({ oldName: name, newName })
     }
   }
 
@@ -162,6 +179,14 @@ export function Sidebar({ selection, onSelect }: Props) {
             >
               {c.name}
             </span>
+            <button
+              className={styles.dropButton}
+              onClick={() => handleRenameCollection(c.name)}
+              title={t('sidebar.renameCollection', { name: c.name })}
+              aria-label={t('sidebar.renameCollection', { name: c.name })}
+            >
+              ✎
+            </button>
             <button
               className={styles.dropButton}
               onClick={() => handleDropCollection(c.name)}

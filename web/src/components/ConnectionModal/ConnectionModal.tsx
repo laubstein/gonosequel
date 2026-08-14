@@ -7,9 +7,14 @@ import { setSessionId } from '../../api/http'
 
 interface Props {
   onConnected: () => void
+  // When set, a close button lets the user dismiss the modal without
+  // connecting — used when opening it to add a connection alongside an
+  // existing one. Omitted for the blocking initial gate (no session yet),
+  // where there is nothing to cancel back to.
+  onCancel?: () => void
 }
 
-export function ConnectionModal({ onConnected }: Props) {
+export function ConnectionModal({ onConnected, onCancel }: Props) {
   const { t } = useTranslation()
   const [url, setUrl] = useState('mongodb://localhost:27017')
   const [error, setError] = useState<string | null>(null)
@@ -35,9 +40,16 @@ export function ConnectionModal({ onConnected }: Props) {
   })
 
   return (
-    <div className={styles.overlay}>
+    <div className={onCancel ? styles.overlayDialog : styles.overlay}>
       <div className={styles.card}>
-        <div className={styles.title}>{t('connectionModal.title')}</div>
+        <div className={styles.title}>
+          {t('connectionModal.title')}
+          {onCancel && (
+            <button className={styles.closeButton} onClick={onCancel} aria-label={t('connectionModal.cancel')}>
+              ✕
+            </button>
+          )}
+        </div>
 
         <div className={styles.field}>
           <label className={styles.label}>{t('connectionModal.urlLabel')}</label>
