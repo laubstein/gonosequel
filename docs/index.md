@@ -4,7 +4,6 @@ layout: home
 hero:
   name: Go NoSequel
   text: A web-based NoSQL explorer
-  tagline: pgweb's interface, mongo-express's feature set, one self-contained binary. MongoDB today, more NoSQL databases planned.
   actions:
     - theme: brand
       text: Get started
@@ -32,7 +31,7 @@ just this one.
 
 <div class="db-support">
   <span class="db-badge db-badge--supported">MongoDB<small>supported</small></span>
-  <span class="db-badge db-badge--planned">Redis<small>planned</small></span>
+  <span class="db-badge db-badge--planned">Redis/Valkey<small>planned</small></span>
   <span class="db-badge db-badge--planned">CouchDB<small>planned</small></span>
 </div>
 
