@@ -1,4 +1,4 @@
-.PHONY: build dev dev-down test test-short lint clean
+.PHONY: build docs-dev dev dev-down test test-short lint clean
 
 GOFLAGS :=
 MONGO_PORT ?= 27017
@@ -9,11 +9,20 @@ VITE_PORT ?= 5173
 # itself is (e.g. a bare toolchain install without its bin dir exported).
 export PATH := $(PATH):$(shell go env GOROOT)/bin
 
-build: web/dist
+build: web/dist docs/.vitepress/dist
 	go build -o mongo-express-go .
 
 web/dist:
 	cd web && npm ci && npm run build
+
+docs/.vitepress/dist:
+	cd docs && npm ci && npm run docs:build
+
+# Live-editing the documentation itself — not part of `make dev`, which is
+# about developing the app, not the docs. Runs on its own, unrelated to
+# scripts/dev.sh.
+docs-dev:
+	cd docs && npm ci && npm run docs:dev
 
 # Brings up a full local dev environment: a MongoDB (reusing one already
 # listening on MONGO_PORT, otherwise starting one in Docker), the Go API
@@ -43,3 +52,4 @@ lint:
 clean:
 	rm -f mongo-express-go
 	rm -rf web/dist
+	rm -rf docs/.vitepress/dist docs/.vitepress/cache

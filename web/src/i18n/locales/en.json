@@ -11,6 +11,7 @@
     "selectCollectionHint": "Select a collection in the sidebar.",
     "themeToggle": "Toggle theme",
     "themeTitle": "Theme: {{theme}}",
+    "helpTitle": "Documentation",
     "readonlyBanner": "Read-only mode — write actions are disabled on the server",
     "selectDatabaseHint": "Select a database in the sidebar."
   },

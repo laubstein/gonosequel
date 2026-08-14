@@ -119,6 +119,16 @@ export default function App() {
         >
           {THEME_ICON[theme]}
         </button>
+        <a
+          className={styles.tab}
+          href="/doc"
+          target="_blank"
+          rel="noreferrer"
+          title={t('app.helpTitle')}
+          aria-label={t('app.helpTitle')}
+        >
+          ?
+        </a>
       </div>
 
       <div className={styles.layout}>

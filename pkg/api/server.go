@@ -40,6 +40,10 @@ type Config struct {
 	// server instead of serving Assets, enabling hot reload.
 	DevProxy string
 
+	// Docs, if non-nil, is the built documentation site
+	// (docs/.vitepress/dist) served under /doc.
+	Docs fs.FS
+
 	// BookmarksDir is where saved connection bookmarks live (see
 	// pkg/bookmarks). Empty disables the /api/bookmarks endpoint.
 	BookmarksDir string
@@ -84,6 +88,10 @@ func New(cfg Config) *fiber.App {
 		bookmarksDir: cfg.BookmarksDir,
 	}
 	registerRoutes(app, d)
+	// Registered before the SPA's own catch-all (inside registerAssets),
+	// since Fiber matches "/*" patterns in registration order and the
+	// broader SPA route would otherwise swallow every /doc/* request first.
+	registerDocs(app, cfg.Docs)
 	registerAssets(app, cfg.Assets, cfg.DevProxy)
 
 	return app

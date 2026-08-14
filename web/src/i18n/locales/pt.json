@@ -11,6 +11,7 @@
     "selectCollectionHint": "Selecione uma coleção na barra lateral.",
     "themeToggle": "Alternar tema",
     "themeTitle": "Tema: {{theme}}",
+    "helpTitle": "Documentação",
     "readonlyBanner": "Modo somente leitura — ações de escrita estão desabilitadas no servidor",
     "selectDatabaseHint": "Selecione um banco na barra lateral."
   },

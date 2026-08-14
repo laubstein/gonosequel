@@ -26,6 +26,13 @@ import (
 //go:embed all:web/dist
 var distFS embed.FS
 
+// docsFS embeds the built documentation site. Empty until `cd docs && npm
+// run docs:build` has populated docs/.vitepress/dist — same two-stage
+// build pattern as distFS above.
+//
+//go:embed all:docs/.vitepress/dist
+var docsFS embed.FS
+
 func main() {
 	opts, err := command.Parse(os.Args[1:])
 	if err != nil {
@@ -63,6 +70,7 @@ func main() {
 		Assets:       assetsFS(),
 		DevProxy:     opts.DevProxy,
 		BookmarksDir: bookmarksDir,
+		Docs:         docsFSSub(),
 	})
 
 	addr := fmt.Sprintf("%s:%d", opts.Bind, opts.HTTPPort)
@@ -90,6 +98,16 @@ func assetsFS() fs.FS {
 	sub, err := fs.Sub(distFS, "web/dist")
 	if err != nil {
 		log.Fatalf("embed web/dist: %v", err)
+	}
+	return sub
+}
+
+// docsFSSub strips the "docs/.vitepress/dist" embed prefix, same reason
+// as assetsFS above.
+func docsFSSub() fs.FS {
+	sub, err := fs.Sub(docsFS, "docs/.vitepress/dist")
+	if err != nil {
+		log.Fatalf("embed docs/.vitepress/dist: %v", err)
 	}
 	return sub
 }
