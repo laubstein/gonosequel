@@ -13,6 +13,12 @@ interface Props {
   coll: string
   query: FindQuery
   onOpenDocument: (doc: ExtJSONDocument) => void
+  // When set (aggregate mode), these documents are rendered directly
+  // instead of fetching via query — and rows aren't click-to-edit, since
+  // an aggregation stage like $group can produce documents that don't
+  // correspond to any real stored document (a synthetic _id, or none of
+  // the original fields at all).
+  overrideDocuments?: ExtJSONDocument[] | null
 }
 
 function collectColumns(docs: ExtJSONDocument[]): string[] {
@@ -29,20 +35,29 @@ function collectColumns(docs: ExtJSONDocument[]): string[] {
   return ordered
 }
 
-export function Results({ db, coll, query, onOpenDocument }: Props) {
+export function Results({ db, coll, query, onOpenDocument, overrideDocuments }: Props) {
   const { t } = useTranslation()
   const [mode, setMode] = useState<ViewMode>('table')
-  const { data, isLoading, isError, error } = useDocuments(db, coll, query)
+  const fetched = useDocuments(db, coll, query)
 
-  const columns = useMemo(() => collectColumns(data?.documents ?? []), [data])
+  const editable = overrideDocuments == null
+  const documents = overrideDocuments ?? fetched.data?.documents ?? []
+  const total = overrideDocuments ? overrideDocuments.length : (fetched.data?.total ?? 0)
+  const totalIsEstimate = overrideDocuments ? false : (fetched.data?.totalIsEstimate ?? false)
 
-  if (isLoading) {
+  const columns = useMemo(() => collectColumns(documents), [documents])
+
+  if (!overrideDocuments && fetched.isLoading) {
     return <div className={styles.empty}>{t('results.loading')}</div>
   }
-  if (isError) {
-    return <div className={styles.empty}>{error instanceof Error ? error.message : t('results.queryError')}</div>
+  if (!overrideDocuments && fetched.isError) {
+    return (
+      <div className={styles.empty}>
+        {fetched.error instanceof Error ? fetched.error.message : t('results.queryError')}
+      </div>
+    )
   }
-  if (!data || data.documents.length === 0) {
+  if (documents.length === 0) {
     return (
       <div className={styles.container}>
         <Toolbar mode={mode} setMode={setMode} total={0} estimate={false} />
@@ -53,7 +68,7 @@ export function Results({ db, coll, query, onOpenDocument }: Props) {
 
   return (
     <div className={styles.container}>
-      <Toolbar mode={mode} setMode={setMode} total={data.total} estimate={data.totalIsEstimate} />
+      <Toolbar mode={mode} setMode={setMode} total={total} estimate={totalIsEstimate} />
 
       {mode === 'table' ? (
         <div className={styles.tableWrap}>
@@ -66,8 +81,8 @@ export function Results({ db, coll, query, onOpenDocument }: Props) {
               </tr>
             </thead>
             <tbody>
-              {data.documents.map((doc) => (
-                <tr key={docId(doc)} onClick={() => onOpenDocument(doc)}>
+              {documents.map((doc, i) => (
+                <tr key={editable ? docId(doc) : i} onClick={editable ? () => onOpenDocument(doc) : undefined}>
                   {columns.map((c) => (
                     <td key={c}>{c in doc ? summarizeValue(doc[c]) : ''}</td>
                   ))}
@@ -78,9 +93,9 @@ export function Results({ db, coll, query, onOpenDocument }: Props) {
         </div>
       ) : (
         <div className={styles.jsonView}>
-          {data.documents.map((doc) => (
-            <div key={docId(doc)} className={styles.jsonDoc}>
-              <JsonView value={doc} onClick={() => onOpenDocument(doc)} />
+          {documents.map((doc, i) => (
+            <div key={editable ? docId(doc) : i} className={editable ? styles.jsonDoc : styles.jsonDocReadonly}>
+              <JsonView value={doc} onClick={editable ? () => onOpenDocument(doc) : undefined} />
             </div>
           ))}
         </div>

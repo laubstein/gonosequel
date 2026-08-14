@@ -42,7 +42,11 @@
     "newDocument": "+ Novo documento",
     "exportJson": "Exportar JSON",
     "exportCsv": "Exportar CSV",
-    "invalidJson": "JSON inválido"
+    "invalidJson": "JSON inválido",
+    "modeFind": "Find",
+    "modeAggregate": "Aggregate",
+    "pipelinePlaceholder": "[ { \"$match\": { \"status\": \"ativo\" } } ]",
+    "aggregating": "Executando…"
   },
   "results": {
     "loading": "Carregando…",

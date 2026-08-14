@@ -60,6 +60,12 @@ export const api = {
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/explain`,
       { filter },
     ),
+  aggregate: (db: string, coll: string, pipeline: string) =>
+    apiSend<{ documents: ExtJSONDocument[] }>(
+      'POST',
+      `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/aggregate`,
+      JSON.parse(pipeline),
+    ),
   getDocument: (db: string, coll: string, encodedId: string) =>
     apiGet<ExtJSONDocument>(
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/documents/${encodedId}`,

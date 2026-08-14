@@ -17,7 +17,7 @@ import { useTheme } from './hooks/useTheme'
 import { useSessions } from './hooks/useSessions'
 import { useInfo } from './hooks/useInfo'
 import { docId } from './api/extjson'
-import type { ExtJSONDocument, FindQuery, HistoryEntry } from './types'
+import type { ExtJSONDocument, FindQuery, HistoryEntry, Preset } from './types'
 
 const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
 
@@ -39,12 +39,16 @@ export default function App() {
   const [query, setQuery] = useState<FindQuery>(DEFAULT_QUERY)
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
   const [replayNonce, setReplayNonce] = useState(0)
+  const [aggregateResult, setAggregateResult] = useState<ExtJSONDocument[] | null>(null)
+  const [preset, setPreset] = useState<Preset | null>(null)
 
   const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query)
 
   function selectCollection(db: string, coll: string) {
     setSelection({ db, coll })
     setQuery(DEFAULT_QUERY)
+    setAggregateResult(null)
+    setPreset(null)
   }
 
   function collectionRenamed(oldName: string, newName: string) {
@@ -66,6 +70,8 @@ export default function App() {
   function replayHistory(entry: HistoryEntry) {
     setSelection({ db: entry.database, coll: entry.collection })
     setQuery({ ...DEFAULT_QUERY, filter: entry.filter, skip: 0 })
+    setAggregateResult(null)
+    setPreset(null)
     setReplayNonce((n) => n + 1)
     setTab('documents')
   }
@@ -126,14 +132,24 @@ export default function App() {
                 query={query}
                 onRun={runQuery}
                 onNewDocument={() => setEditorTarget({ mode: 'new' })}
+                onAggregateResult={setAggregateResult}
+                preset={preset}
               />
-              <Results db={selection.db} coll={selection.coll} query={query} onOpenDocument={openDocument} />
-              <Pagination
+              <Results
+                db={selection.db}
+                coll={selection.coll}
                 query={query}
-                total={data?.total ?? 0}
-                totalIsEstimate={data?.totalIsEstimate ?? false}
-                onChange={paginate}
+                onOpenDocument={openDocument}
+                overrideDocuments={aggregateResult}
               />
+              {!aggregateResult && (
+                <Pagination
+                  query={query}
+                  total={data?.total ?? 0}
+                  totalIsEstimate={data?.totalIsEstimate ?? false}
+                  onChange={paginate}
+                />
+              )}
             </>
           )}
           {selection && tab === 'schema' && <SchemaPanel db={selection.db} coll={selection.coll} />}

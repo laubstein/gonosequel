@@ -97,3 +97,15 @@ export interface FindQuery {
   skip?: number
   limit?: number
 }
+
+// Preset is a ready-made query offered above the query editor, generated
+// from the selected collection's inferred schema (see
+// components/QueryEditor/presets.ts). find presets fill the filter/sort
+// fields; aggregate presets fill the pipeline editor.
+export interface Preset {
+  label: string
+  mode: 'find' | 'aggregate'
+  filter?: string
+  sort?: string
+  pipeline?: string
+}
