@@ -39,6 +39,15 @@ type Info struct {
 	// and failing on click. Snapshotted once at Put, since a connection's
 	// backend doesn't change capabilities mid-session.
 	Capabilities []string `json:"capabilities"`
+	// Readonly marks this specific session as read-only, independent of
+	// the server-wide --readonly flag: in --sessions mode a user can opt
+	// a connection into read-only from the connect form even when the
+	// server itself wasn't started with --readonly. The caller of Put
+	// (handleConnect) is responsible for forcing this true whenever the
+	// server-wide flag is set, so a session can never be *less*
+	// restrictive than the server default regardless of what the client
+	// requested.
+	Readonly bool `json:"readonly"`
 }
 
 // Registry holds every active session, safe for concurrent use.
@@ -75,6 +84,17 @@ func (r *Registry) Get(id string) (driver.Driver, error) {
 		return nil, ErrNotFound
 	}
 	return e.client, nil
+}
+
+// Info returns the info registered under id.
+func (r *Registry) Info(id string) (Info, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	e, ok := r.sessions[id]
+	if !ok {
+		return Info{}, ErrNotFound
+	}
+	return e.info, nil
 }
 
 // Remove closes and removes the session registered under id, if any.

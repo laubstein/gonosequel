@@ -64,6 +64,13 @@ export interface SessionInfo {
   name: string
   driver: string
   capabilities: Capability[]
+  // readonly is per-session (see pkg/session.Info.Readonly) — independent
+  // of, and possibly stricter than, AppInfo.readonly (the server-wide
+  // --readonly flag). A session can opt into read-only from the connect
+  // form even when the server default is read-write, but never the
+  // reverse: the server forces this true whenever its own --readonly flag
+  // is set, regardless of what the connect request asked for.
+  readonly: boolean
 }
 
 export interface AppInfo {
@@ -126,16 +133,18 @@ export interface FindQuery {
 // Preset is a ready-made query offered above the query editor, generated
 // from the selected collection's inferred schema (see
 // components/QueryEditor/presets.ts). find presets fill the filter/sort
-// fields; aggregate presets fill the pipeline editor. The label is a
-// translation key (+ params for field-specific presets) rather than
-// literal text, so presets render in whichever language the UI is in.
+// fields; aggregate presets fill the pipeline editor; update presets fill
+// the filter and update-document editors. The label is a translation key
+// (+ params for field-specific presets) rather than literal text, so
+// presets render in whichever language the UI is in.
 export interface Preset {
   labelKey: string
   labelParams?: Record<string, string>
-  mode: 'find' | 'aggregate'
+  mode: 'find' | 'aggregate' | 'update'
   filter?: string
   sort?: string
   pipeline?: string
+  update?: string
 }
 
 // CommandResult is the outcome of one line of a redis-cli-like script run

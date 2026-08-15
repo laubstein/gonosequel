@@ -141,7 +141,9 @@ export default function App() {
 
   return (
     <div className={styles.app}>
-      {info?.readonly && <div className={styles.readonlyBanner}>{t('app.readonlyBanner')}</div>}
+      {(info?.readonly || connection?.readonly) && (
+        <div className={styles.readonlyBanner}>{t('app.readonlyBanner')}</div>
+      )}
 
       <div className={styles.tabbar}>
         {visibleTabs.map((id) => (

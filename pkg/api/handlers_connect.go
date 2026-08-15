@@ -28,6 +28,14 @@ type connectRequest struct {
 	// through the browser, unlike URL above which the client typed in.
 	Bookmark string `json:"bookmark"`
 	Name     string `json:"name"`
+	// Readonly opts this specific session into read-only, independent of
+	// the server-wide --readonly flag. Forced true server-side (see
+	// handleConnect) whenever the server itself was started with
+	// --readonly, regardless of what the client sends — the UI disables
+	// unchecking it in that case too, but the server doesn't rely on that:
+	// a tampered request body or a raw curl call can't produce a
+	// read-write session on a --readonly server this way.
+	Readonly bool `json:"readonly"`
 }
 
 // inferDriver guesses the backend from a connection URL's scheme, for
@@ -90,7 +98,13 @@ func (d *deps) handleConnect(c fiber.Ctx) error {
 		displayName = redactURI(targetURL)
 	}
 
-	d.registry.Put(id, cl, session.Info{ID: id, URI: redactURI(targetURL), Name: displayName, Driver: driverName})
+	// A tampered request body can send Readonly:false, but it can never
+	// make a session read-write when the server itself was started with
+	// --readonly — the OR forces true regardless of what the client asked
+	// for, and rejectWrites (server-wide) enforces it independently of
+	// this per-session flag anyway.
+	readonly := req.Readonly || d.readonly
+	d.registry.Put(id, cl, session.Info{ID: id, URI: redactURI(targetURL), Name: displayName, Driver: driverName, Readonly: readonly})
 
 	return c.JSON(fiber.Map{"sessionId": id})
 }

@@ -145,9 +145,22 @@ func errorHandler(c fiber.Ctx, err error) error {
 
 // rejectWrites enforces --readonly at the server boundary: any non-GET
 // request to the API is refused with 403, regardless of what the UI shows.
+//
+// /api/connect and /api/disconnect are deliberately exempt: opening or
+// closing a session is not itself a write to any connected database, and
+// blocking /api/connect here would make --sessions mode entirely unusable
+// under --readonly — nobody could open even a read-only connection.
+// handleConnect is what actually enforces the flag for a new session, by
+// forcing session.Info.Readonly true regardless of what the connect
+// request asked for (see its own comment) — that new session's own writes
+// are then blocked by the per-session check in withSession, and every
+// other route on this server is still blocked here exactly as before.
 func rejectWrites(c fiber.Ctx) error {
-	if c.Method() != fiber.MethodGet && c.Method() != fiber.MethodHead {
-		return fiber.NewError(fiber.StatusForbidden, "server is running in readonly mode")
+	if c.Method() == fiber.MethodGet || c.Method() == fiber.MethodHead {
+		return c.Next()
 	}
-	return c.Next()
+	if c.Path() == "/api/connect" || c.Path() == "/api/disconnect" {
+		return c.Next()
+	}
+	return fiber.NewError(fiber.StatusForbidden, "server is running in readonly mode")
 }

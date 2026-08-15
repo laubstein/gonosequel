@@ -22,10 +22,10 @@ export const api = {
 
   sessions: () => apiGet<SessionInfo[]>('/api/sessions'),
   bookmarks: () => apiGet<{ name: string; uri: string }[]>('/api/bookmarks'),
-  connect: (url: string, driver?: string, name?: string) =>
-    apiSend<{ sessionId: string }>('POST', '/api/connect', { url, driver, name }),
-  connectBookmark: (bookmark: string) =>
-    apiSend<{ sessionId: string }>('POST', '/api/connect', { bookmark }),
+  connect: (url: string, driver?: string, name?: string, readonly?: boolean) =>
+    apiSend<{ sessionId: string }>('POST', '/api/connect', { url, driver, name, readonly }),
+  connectBookmark: (bookmark: string, readonly?: boolean) =>
+    apiSend<{ sessionId: string }>('POST', '/api/connect', { bookmark, readonly }),
   disconnect: () => apiSend<{ ok: true }>('POST', '/api/disconnect'),
   connectionInfo: () => apiGet<SessionInfo>('/api/connection'),
   serverStatus: () => apiGet<ServerStatus>('/api/server_status'),

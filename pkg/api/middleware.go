@@ -33,6 +33,19 @@ func withSession(d *deps) fiber.Handler {
 			return fiber.NewError(fiber.StatusBadRequest, "no active connection for this session; connect first")
 		}
 
+		// Per-session read-only, independent of (and in addition to) the
+		// server-wide --readonly flag already enforced by rejectWrites in
+		// New: a user can opt an individual --sessions connection into
+		// read-only from the connect form even when the server default is
+		// read-write. handleConnect forces Info.Readonly true whenever the
+		// server-wide flag is set, so this check alone is enough — it
+		// never needs to also consult d.readonly here.
+		if info, err := d.registry.Info(id); err == nil && info.Readonly {
+			if c.Method() != fiber.MethodGet && c.Method() != fiber.MethodHead {
+				return fiber.NewError(fiber.StatusForbidden, "this connection is read-only")
+			}
+		}
+
 		fiber.Locals[driver.Driver](c, clientLocalKey, cl)
 		fiber.Locals[string](c, sessionIDLocalKey, id)
 		return c.Next()

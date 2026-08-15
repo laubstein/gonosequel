@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import styles from './ConnectionModal.module.css'
 import { api } from '../../api/client'
 import { setSessionId } from '../../api/http'
+import { useInfo } from '../../hooks/useInfo'
 import { SUPPORTED_DRIVERS, DRIVER_LABEL, DEFAULT_PORT, type DriverName } from '../../drivers'
 
 interface Props {
@@ -43,12 +44,26 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
   // URL (raw string) tab field.
   const [url, setUrl] = useState('')
 
+  // Read-only, shared across both tabs (placed outside the tab-specific
+  // content below). When the server itself was started with --readonly,
+  // AppInfo.readonly is true — the checkbox is then forced checked and
+  // disabled, since a session on this server can never actually be
+  // read-write no matter what the form sends (rejectWrites enforces that
+  // server-side regardless of the request body). effectiveReadonly is
+  // what actually gets sent, so a stale unchecked box can't slip through
+  // even if requiresReadonly briefly disagrees with it during a render.
+  const [readonly, setReadonly] = useState(false)
+  const { data: info } = useInfo()
+  const serverForcesReadonly = info?.readonly ?? false
+  const effectiveReadonly = serverForcesReadonly || readonly
+
   const [error, setError] = useState<string | null>(null)
 
   const { data: bookmarkList } = useQuery({ queryKey: ['bookmarks'], queryFn: api.bookmarks })
 
   const connect = useMutation({
-    mutationFn: (args: { url: string; driver?: string }) => api.connect(args.url, args.driver),
+    mutationFn: (args: { url: string; driver?: string; readonly: boolean }) =>
+      api.connect(args.url, args.driver, undefined, args.readonly),
     onSuccess: (res) => {
       setSessionId(res.sessionId)
       onConnected()
@@ -57,7 +72,7 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
   })
 
   const connectBookmark = useMutation({
-    mutationFn: (name: string) => api.connectBookmark(name),
+    mutationFn: (args: { name: string; readonly: boolean }) => api.connectBookmark(args.name, args.readonly),
     onSuccess: (res) => {
       setSessionId(res.sessionId)
       onConnected()
@@ -76,11 +91,11 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
   }
 
   function handleStandardConnect() {
-    connect.mutate({ url: buildStandardURL(), driver })
+    connect.mutate({ url: buildStandardURL(), driver, readonly: effectiveReadonly })
   }
 
   function handleUrlConnect() {
-    connect.mutate({ url })
+    connect.mutate({ url, readonly: effectiveReadonly })
   }
 
   const titleDriverLabel = tab === 'standard' ? DRIVER_LABEL[driver] : inferDriverLabel(url)
@@ -109,6 +124,19 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
           <button className={tab === 'url' ? styles.tabActive : styles.tab} onClick={() => setTab('url')}>
             {t('connectionModal.tabUrl')}
           </button>
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={effectiveReadonly}
+              disabled={serverForcesReadonly}
+              onChange={(e) => setReadonly(e.target.checked)}
+            />
+            {t('connectionModal.readonlyLabel')}
+          </label>
+          {serverForcesReadonly && <span className={styles.hint}>{t('connectionModal.readonlyForcedHint')}</span>}
         </div>
 
         {tab === 'standard' ? (
@@ -213,7 +241,11 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
           <div className={styles.bookmarks}>
             <div className={styles.label}>{t('connectionModal.savedConnections')}</div>
             {bookmarkList.map((b) => (
-              <div key={b.name} className={styles.bookmarkItem} onClick={() => connectBookmark.mutate(b.name)}>
+              <div
+                key={b.name}
+                className={styles.bookmarkItem}
+                onClick={() => connectBookmark.mutate({ name: b.name, readonly: effectiveReadonly })}
+              >
                 {b.name} — {b.uri}
               </div>
             ))}

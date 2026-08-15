@@ -60,7 +60,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("connect: %v", err)
 		}
-		registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "default", Driver: opts.Driver})
+		registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "default", Driver: opts.Driver, Readonly: opts.Readonly})
 	}
 
 	app := api.New(api.Config{

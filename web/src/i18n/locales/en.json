@@ -151,6 +151,8 @@
     "extraParamsHint": "Appended to the connection URL as query parameters",
     "urlLabel": "Connection URL",
     "urlPlaceholder": "mongodb://user:password@host:27017",
+    "readonlyLabel": "Read-only connection",
+    "readonlyForcedHint": "The server was started with --readonly; this can't be turned off.",
     "connect": "Connect",
     "connecting": "Connecting…",
     "savedConnections": "Saved connections",
@@ -189,7 +191,9 @@
     "whereFieldTrue": "Where {{field}} is true",
     "sortByFieldDesc": "Sort by {{field}} (descending)",
     "fieldLast24h": "{{field}} in the last 24 hours",
-    "countGroupedByField": "Count grouped by {{field}}"
+    "countGroupedByField": "Count grouped by {{field}}",
+    "setFieldEverywhere": "Set a field on every document",
+    "setFieldWhereNull": "Set {{field}} where it's null or missing"
   },
   "toolsPanel": {
     "collectionsOverview": "Collections overview",

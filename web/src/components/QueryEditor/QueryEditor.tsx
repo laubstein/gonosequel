@@ -11,6 +11,7 @@ import { exportURL } from '../../api/http'
 import { api } from '../../api/client'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
 import { useConnectionInfo } from '../../hooks/useConnectionInfo'
+import { useIsDarkMode } from '../../hooks/useIsDarkMode'
 import { fieldCompletionSource } from './fieldCompletion'
 import { buildPresets } from './presets'
 import type { Preset } from '../../types'
@@ -69,6 +70,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
 
   const { data: schemaFields } = useCollectionSchema(db, coll)
   const extensions = [json(), autocompletion({ override: [fieldCompletionSource(schemaFields ?? [])] })]
+  const isDark = useIsDarkMode()
 
   const presets = buildPresets(schemaFields ?? [])
 
@@ -82,9 +84,13 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
     setError(null)
     setExplainResult(null)
     setExplainCollscan(false)
+    setUpdateResult(null)
     if (preset.mode === 'find') {
       setFilterText(preset.filter ?? '{}')
       setSortText(preset.sort ?? '')
+    } else if (preset.mode === 'update') {
+      setFilterText(preset.filter ?? '{}')
+      setUpdateText(preset.update ?? '{\n  "$set": {}\n}')
     } else {
       setPipelineText(preset.pipeline ?? '[]')
     }
@@ -181,11 +187,12 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
   }
 
   async function explain() {
+    const filter = textToRun(filterText)
     try {
-      if (filterText.trim()) JSON.parse(filterText)
+      if (filter.trim()) JSON.parse(filter)
       setError(null)
       setExplaining(true)
-      const result = await api.explain(db, coll, filterText.trim() || '{}')
+      const result = await api.explain(db, coll, filter.trim() || '{}')
       setExplainResult(JSON.stringify(result, null, 2))
       setExplainCollscan(containsCollscan(result))
     } catch (e) {
@@ -267,6 +274,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
           value={pipelineText}
           height="120px"
           extensions={extensions}
+          theme={isDark ? 'dark' : 'light'}
           onChange={(value) => setPipelineText(value)}
           onCreateEditor={(view) => {
             queryViewRef.current = view
@@ -279,6 +287,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
           value={filterText}
           height="80px"
           extensions={extensions}
+          theme={isDark ? 'dark' : 'light'}
           onChange={(value) => setFilterText(value)}
           onCreateEditor={(view) => {
             queryViewRef.current = view
@@ -293,6 +302,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
           value={updateText}
           height="80px"
           extensions={extensions}
+          theme={isDark ? 'dark' : 'light'}
           onChange={(value) => setUpdateText(value)}
           onCreateEditor={(view) => {
             updateViewRef.current = view

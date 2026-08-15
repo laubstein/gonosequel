@@ -96,7 +96,7 @@ func newTestApp(t *testing.T, readonly bool) *fiber.App {
 	t.Cleanup(func() { _ = cl.Close(context.Background()) })
 
 	registry := session.NewRegistry()
-	registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "test"})
+	registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "test", Readonly: readonly})
 
 	return New(Config{Registry: registry, Readonly: readonly})
 }
@@ -117,7 +117,7 @@ func newRedisTestApp(t *testing.T, readonly bool) *fiber.App {
 	t.Cleanup(func() { _ = cl.Close(context.Background()) })
 
 	registry := session.NewRegistry()
-	registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "test"})
+	registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "test", Readonly: readonly})
 
 	return New(Config{Registry: registry, Driver: "redis", Readonly: readonly})
 }
@@ -326,6 +326,139 @@ func TestAPISessionsModeConnectDispatchesByDriver(t *testing.T) {
 	defer connResp.Body.Close()
 	if connResp.StatusCode != http.StatusOK {
 		t.Fatalf("GET /api/connection: status = %d, want 200", connResp.StatusCode)
+	}
+}
+
+// mongoConnectApp is a --sessions mode app whose Connect dispatches only
+// to MongoDB, for the per-session readonly tests below — they only care
+// about session.Info.Readonly, not driver dispatch.
+func mongoConnectApp(t *testing.T) (*fiber.App, *session.Registry) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	registry := session.NewRegistry()
+	app := New(Config{
+		Registry: registry,
+		Sessions: true,
+		Connect: func(ctx context.Context, driverName, uri string) (driver.Driver, error) {
+			return client.Connect(ctx, uri)
+		},
+	})
+	return app, registry
+}
+
+// TestAPIPerSessionReadonlyBlocksWrites covers opting a single --sessions
+// connection into read-only from the connect form, independent of the
+// server-wide --readonly flag (which is off here) — see
+// ConnectionModal.tsx's readonly checkbox and session.Info.Readonly.
+func TestAPIPerSessionReadonlyBlocksWrites(t *testing.T) {
+	app, registry := mongoConnectApp(t)
+
+	resp, body := doJSON(t, app, http.MethodPost, "/api/connect", map[string]any{
+		"url":      testMongoURI,
+		"driver":   "mongodb",
+		"readonly": true,
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("connect: status=%d body=%v", resp.StatusCode, body)
+	}
+	sessionID, _ := body["sessionId"].(string)
+	t.Cleanup(func() {
+		if cl, err := registry.Get(sessionID); err == nil {
+			_ = cl.Close(context.Background())
+		}
+	})
+
+	connReq := httptest.NewRequest(http.MethodGet, "/api/connection", nil)
+	connReq.Header.Set(sessionIDHeader, sessionID)
+	connResp, err := app.Test(connReq)
+	if err != nil {
+		t.Fatalf("app.Test /api/connection: %v", err)
+	}
+	var info map[string]any
+	if err := json.NewDecoder(connResp.Body).Decode(&info); err != nil {
+		t.Fatalf("decode /api/connection: %v", err)
+	}
+	connResp.Body.Close()
+	if ro, _ := info["readonly"].(bool); !ro {
+		t.Errorf("expected session info readonly=true, got %v", info["readonly"])
+	}
+
+	// GET still works.
+	listReq := httptest.NewRequest(http.MethodGet, "/api/databases", nil)
+	listReq.Header.Set(sessionIDHeader, sessionID)
+	listResp, err := app.Test(listReq)
+	if err != nil {
+		t.Fatalf("app.Test GET /api/databases: %v", err)
+	}
+	listResp.Body.Close()
+	if listResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /api/databases: status = %d, want 200", listResp.StatusCode)
+	}
+
+	// A write on this session is rejected, even though the server itself
+	// was not started with --readonly.
+	createReq := httptest.NewRequest(http.MethodPost, "/api/databases", bytes.NewReader([]byte(`{"name":"should_not_be_created"}`)))
+	createReq.Header.Set(sessionIDHeader, sessionID)
+	createReq.Header.Set("Content-Type", "application/json")
+	createResp, err := app.Test(createReq)
+	if err != nil {
+		t.Fatalf("app.Test POST /api/databases: %v", err)
+	}
+	createResp.Body.Close()
+	if createResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("POST /api/databases: status = %d, want 403", createResp.StatusCode)
+	}
+}
+
+// TestAPIPerSessionReadonlyForcedWhenServerReadonly confirms a connect
+// request can't downgrade a --readonly server's session to read-write by
+// sending readonly:false — handleConnect ORs the request's value with the
+// server-wide flag, so tampering with the connect form's HTML or calling
+// the API directly can't produce a read-write session here.
+func TestAPIPerSessionReadonlyForcedWhenServerReadonly(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	registry := session.NewRegistry()
+	app := New(Config{
+		Registry: registry,
+		Sessions: true,
+		Readonly: true,
+		Connect: func(ctx context.Context, driverName, uri string) (driver.Driver, error) {
+			return client.Connect(ctx, uri)
+		},
+	})
+
+	resp, body := doJSON(t, app, http.MethodPost, "/api/connect", map[string]any{
+		"url":      testMongoURI,
+		"driver":   "mongodb",
+		"readonly": false,
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("connect: status=%d body=%v", resp.StatusCode, body)
+	}
+	sessionID, _ := body["sessionId"].(string)
+	t.Cleanup(func() {
+		if cl, err := registry.Get(sessionID); err == nil {
+			_ = cl.Close(context.Background())
+		}
+	})
+
+	connReq := httptest.NewRequest(http.MethodGet, "/api/connection", nil)
+	connReq.Header.Set(sessionIDHeader, sessionID)
+	connResp, err := app.Test(connReq)
+	if err != nil {
+		t.Fatalf("app.Test /api/connection: %v", err)
+	}
+	var info map[string]any
+	if err := json.NewDecoder(connResp.Body).Decode(&info); err != nil {
+		t.Fatalf("decode /api/connection: %v", err)
+	}
+	connResp.Body.Close()
+	if ro, _ := info["readonly"].(bool); !ro {
+		t.Errorf("expected session info readonly=true (forced by server-wide flag), got %v", info["readonly"])
 	}
 }
 

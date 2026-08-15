@@ -20,6 +20,12 @@ export function buildPresets(schema: SchemaField[]): Preset[] {
     { labelKey: 'presets.findById', mode: 'find', filter: '{ "_id": { "$oid": "" } }' },
     { labelKey: 'presets.sample10', mode: 'aggregate', pipeline: '[\n  { "$sample": { "size": 10 } }\n]' },
     { labelKey: 'presets.countAll', mode: 'aggregate', pipeline: '[\n  { "$count": "total" }\n]' },
+    {
+      labelKey: 'presets.setFieldEverywhere',
+      mode: 'update',
+      filter: '{}',
+      update: '{ "$set": { "field": "value" } }',
+    },
   ]
 
   const fields = schema.filter((f) => f.path !== '_id' && !f.path.includes('.')).slice(0, MAX_FIELD_PRESETS)
@@ -32,6 +38,13 @@ export function buildPresets(schema: SchemaField[]): Preset[] {
           labelParams: { field: field.path },
           mode: 'find',
           filter: `{ "${field.path}": "" }`,
+        })
+        presets.push({
+          labelKey: 'presets.setFieldWhereNull',
+          labelParams: { field: field.path },
+          mode: 'update',
+          filter: `{ "${field.path}": null }`,
+          update: `{ "$set": { "${field.path}": "" } }`,
         })
         break
       case 'bool':

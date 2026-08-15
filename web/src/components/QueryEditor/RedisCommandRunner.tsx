@@ -7,6 +7,7 @@ import { keymap, type EditorView } from '@codemirror/view'
 import { Prec } from '@codemirror/state'
 import styles from './QueryEditor.module.css'
 import { api } from '../../api/client'
+import { useIsDarkMode } from '../../hooks/useIsDarkMode'
 import { redisCommandCompletionSource } from './redisCommandCompletion'
 import { formatRedisResult } from './redisResultFormat'
 import type { CommandResult } from '../../types'
@@ -42,6 +43,7 @@ export function RedisCommandRunner({ db, coll }: Props) {
   const [results, setResults] = useState<CommandResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const viewRef = useRef<EditorView | null>(null)
+  const isDark = useIsDarkMode()
 
   const run = useMutation({
     mutationFn: (text: string) => api.runCommand(db, text),
@@ -124,6 +126,7 @@ export function RedisCommandRunner({ db, coll }: Props) {
           value={script}
           height="100px"
           extensions={extensions}
+          theme={isDark ? 'dark' : 'light'}
           onChange={(value) => setScript(value)}
           onCreateEditor={(view) => {
             viewRef.current = view
