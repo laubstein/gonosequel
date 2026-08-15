@@ -6,6 +6,19 @@ import { useCollections } from '../../hooks/useCollections'
 import { useCollectionStats } from '../../hooks/useCollectionStats'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
+import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
+import { PromptDialog } from '../Dialogs/PromptDialog'
+
+// One dialog can be open at a time — replaces window.prompt/window.confirm
+// (unstyled, and can't require typed confirmation) for every destructive
+// or free-text action in this sidebar.
+type DialogState =
+  | { kind: 'none' }
+  | { kind: 'newDatabase' }
+  | { kind: 'dropDatabase' }
+  | { kind: 'newCollection' }
+  | { kind: 'dropCollection'; name: string }
+  | { kind: 'renameCollection'; name: string }
 
 interface Props {
   selectedDb: string | null
@@ -41,6 +54,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
   const queryClient = useQueryClient()
   const { data: databases, isLoading: dbsLoading } = useDatabases()
   const [filter, setFilter] = useState('')
+  const [dialog, setDialog] = useState<DialogState>({ kind: 'none' })
   const isKeyValueDriver = driver === 'redis' || driver === 'valkey'
 
   const { data: collections, isLoading: collsLoading } = useCollections(selectedDb)
@@ -58,11 +72,16 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
     void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] })
   }
 
+  function closeDialog() {
+    setDialog({ kind: 'none' })
+  }
+
   const createDatabase = useMutation({
     mutationFn: (name: string) => api.createDatabase(name),
     onSuccess: (_r, name) => {
       void queryClient.invalidateQueries({ queryKey: ['databases'] })
       onSelectDb(name)
+      closeDialog()
     },
   })
 
@@ -71,17 +90,24 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['databases'] })
       onSelectDb(null)
+      closeDialog()
     },
   })
 
   const createCollection = useMutation({
     mutationFn: (name: string) => api.createCollection(selectedDb as string, name),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] })
+      closeDialog()
+    },
   })
 
   const dropCollection = useMutation({
     mutationFn: (name: string) => api.dropCollection(selectedDb as string, name),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] })
+      closeDialog()
+    },
   })
 
   const renameCollection = useMutation({
@@ -90,39 +116,9 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
     onSuccess: (_r, { oldName, newName }) => {
       void queryClient.invalidateQueries({ queryKey: ['collections', selectedDb] })
       onCollectionRenamed?.(oldName, newName)
+      closeDialog()
     },
   })
-
-  function handleCreateDatabase() {
-    const name = window.prompt(t('sidebar.promptNewDatabaseName'))
-    if (name) createDatabase.mutate(name)
-  }
-
-  function handleDropDatabase() {
-    if (!selectedDb) return
-    if (window.confirm(t('sidebar.confirmDropDatabase', { name: selectedDb }))) {
-      dropDatabase.mutate(selectedDb)
-    }
-  }
-
-  function handleCreateCollection() {
-    if (!selectedDb) return
-    const name = window.prompt(t('sidebar.promptNewCollectionName'))
-    if (name) createCollection.mutate(name)
-  }
-
-  function handleDropCollection(name: string) {
-    if (window.confirm(t('sidebar.confirmDropCollection', { name }))) {
-      dropCollection.mutate(name)
-    }
-  }
-
-  function handleRenameCollection(name: string) {
-    const newName = window.prompt(t('sidebar.promptRenameCollection', { name }), name)
-    if (newName && newName !== name) {
-      renameCollection.mutate({ oldName: name, newName })
-    }
-  }
 
   return (
     <aside className={styles.sidebar}>
@@ -141,12 +137,17 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
             </option>
           ))}
         </select>
-        <button className={styles.iconButton} onClick={handleCreateDatabase} title={t('sidebar.newDatabase')} aria-label={t('sidebar.newDatabase')}>
+        <button
+          className={styles.iconButton}
+          onClick={() => setDialog({ kind: 'newDatabase' })}
+          title={t('sidebar.newDatabase')}
+          aria-label={t('sidebar.newDatabase')}
+        >
           +
         </button>
         <button
           className={styles.iconButton}
-          onClick={handleDropDatabase}
+          onClick={() => setDialog({ kind: 'dropDatabase' })}
           title={t('sidebar.dropDatabase')}
           aria-label={t('sidebar.dropDatabase')}
           disabled={!selectedDb}
@@ -169,7 +170,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
         <div className={styles.newCollectionRow}>
           <button
             className={styles.newCollectionButton}
-            onClick={isKeyValueDriver ? onNewKey : handleCreateCollection}
+            onClick={isKeyValueDriver ? onNewKey : () => setDialog({ kind: 'newCollection' })}
           >
             {isKeyValueDriver ? t('sidebar.newKey') : t('sidebar.newCollection')}
           </button>
@@ -195,7 +196,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
             </span>
             <button
               className={styles.dropButton}
-              onClick={() => handleRenameCollection(c.name)}
+              onClick={() => setDialog({ kind: 'renameCollection', name: c.name })}
               title={t('sidebar.renameCollection', { name: c.name })}
               aria-label={t('sidebar.renameCollection', { name: c.name })}
             >
@@ -203,7 +204,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
             </button>
             <button
               className={styles.dropButton}
-              onClick={() => handleDropCollection(c.name)}
+              onClick={() => setDialog({ kind: 'dropCollection', name: c.name })}
               title={t('sidebar.dropCollection', { name: c.name })}
               aria-label={t('sidebar.dropCollection', { name: c.name })}
             >
@@ -219,6 +220,68 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
           <span>{formatBytes(stats.sizeBytes)}</span>
           <span>{t('sidebar.indexCount', { count: stats.indexCount })}</span>
         </div>
+      )}
+
+      {dialog.kind === 'newDatabase' && (
+        <PromptDialog
+          title={t('sidebar.newDatabaseTitle')}
+          label={t('sidebar.promptNewDatabaseName')}
+          confirmLabel={t('dialog.create')}
+          cancelLabel={t('dialog.cancel')}
+          onConfirm={(name) => createDatabase.mutate(name)}
+          onCancel={closeDialog}
+        />
+      )}
+
+      {dialog.kind === 'dropDatabase' && selectedDb && (
+        <ConfirmDialog
+          title={t('sidebar.dropDatabaseTitle')}
+          message={t('sidebar.confirmDropDatabase', { name: selectedDb })}
+          confirmLabel={t('dialog.delete')}
+          cancelLabel={t('dialog.cancel')}
+          danger
+          onConfirm={() => dropDatabase.mutate(selectedDb)}
+          onCancel={closeDialog}
+        />
+      )}
+
+      {dialog.kind === 'newCollection' && selectedDb && (
+        <PromptDialog
+          title={t('sidebar.newCollectionTitle')}
+          label={t('sidebar.promptNewCollectionName')}
+          confirmLabel={t('dialog.create')}
+          cancelLabel={t('dialog.cancel')}
+          onConfirm={(name) => createCollection.mutate(name)}
+          onCancel={closeDialog}
+        />
+      )}
+
+      {dialog.kind === 'dropCollection' && (
+        <ConfirmDialog
+          title={t('sidebar.dropCollectionTitle')}
+          message={t('sidebar.confirmDropCollection', { name: dialog.name })}
+          confirmLabel={t('dialog.delete')}
+          cancelLabel={t('dialog.cancel')}
+          danger
+          requireText={dialog.name}
+          onConfirm={() => dropCollection.mutate(dialog.name)}
+          onCancel={closeDialog}
+        />
+      )}
+
+      {dialog.kind === 'renameCollection' && (
+        <PromptDialog
+          title={t('sidebar.renameCollectionTitle')}
+          label={t('sidebar.promptRenameCollection', { name: dialog.name })}
+          defaultValue={dialog.name}
+          confirmLabel={t('dialog.rename')}
+          cancelLabel={t('dialog.cancel')}
+          onConfirm={(newName) => {
+            if (newName !== dialog.name) renameCollection.mutate({ oldName: dialog.name, newName })
+            else closeDialog()
+          }}
+          onCancel={closeDialog}
+        />
       )}
     </aside>
   )

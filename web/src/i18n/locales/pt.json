@@ -37,7 +37,20 @@
     "indexCount_one": "{{count}} índice",
     "indexCount_other": "{{count}} índices",
     "renameCollection": "Renomear {{name}}",
-    "promptRenameCollection": "Novo nome para \"{{name}}\":"
+    "promptRenameCollection": "Novo nome para \"{{name}}\":",
+    "newDatabaseTitle": "Novo banco",
+    "dropDatabaseTitle": "Apagar banco",
+    "newCollectionTitle": "Nova coleção",
+    "dropCollectionTitle": "Apagar coleção",
+    "renameCollectionTitle": "Renomear coleção"
+  },
+  "dialog": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "create": "Criar",
+    "rename": "Renomear",
+    "delete": "Apagar",
+    "typeToConfirm": "Digite \"{{name}}\" para confirmar."
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"ativo\" }",
