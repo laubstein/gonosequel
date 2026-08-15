@@ -75,3 +75,30 @@
   min-height: 0;
   min-width: 0;
 }
+
+.selectCollectionHint {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* The gopher watermark lives on a pseudo-element behind the hint text
+   rather than as opacity on the text itself, so the text stays fully
+   readable while the image sits at a faint 10% — the two need different
+   opacities, and a single element can only have one. */
+.selectCollectionHint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/gopher.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 320px;
+  opacity: 0.1;
+  pointer-events: none;
+}

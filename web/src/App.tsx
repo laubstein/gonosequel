@@ -247,9 +247,7 @@ export default function App() {
             </div>
           )}
           {!selection && tab !== 'history' && tab !== 'server' && tab !== 'tools' && (
-            <div style={{ padding: 16, color: 'var(--color-text-muted)' }}>
-              {t('app.selectCollectionHint')}
-            </div>
+            <div className={styles.selectCollectionHint}>{t('app.selectCollectionHint')}</div>
           )}
 
           {selection && tab === 'documents' && (

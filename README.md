@@ -1,5 +1,7 @@
 # Go NoSequel
 
+<img src="gopher.png" alt="Go NoSequel gopher mascot" width="200" align="right">
+
 A web-based MongoDB explorer, in the spirit of [pgweb](https://github.com/sosedoff/pgweb)'s
 interface and [mongo-express](https://github.com/mongo-express/mongo-express)'s feature set.
 Ships as a single self-contained binary — the React frontend is built and embedded into the

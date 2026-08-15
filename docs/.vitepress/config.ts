@@ -16,6 +16,11 @@ export default defineConfig({
   // exactly.
 
   themeConfig: {
+    // Files under docs/public/ are served at the site root and copied
+    // verbatim into the build — VitePress rewrites this path with `base`
+    // (/doc/) itself, same as it does for page links, so this stays
+    // '/gopher.png' regardless of where the docs are actually mounted.
+    logo: '/gopher.png',
     nav: [
       { text: 'Guide', link: '/getting-started' },
       { text: 'CLI reference', link: '/cli-reference' },

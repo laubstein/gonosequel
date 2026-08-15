@@ -4,6 +4,9 @@ layout: home
 hero:
   name: Go NoSequel
   text: A web-based NoSQL explorer
+  image:
+    src: /gopher.png
+    alt: Go NoSequel gopher mascot
   actions:
     - theme: brand
       text: Get started
