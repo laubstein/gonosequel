@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { autocompletion } from '@codemirror/autocomplete'
+import type { EditorView } from '@codemirror/view'
 import styles from './QueryEditor.module.css'
 import type { ExtJSONDocument, FindQuery } from '../../types'
 import { exportURL } from '../../api/http'
@@ -91,30 +92,46 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
     if (next === 'find') onAggregateResult(null)
   }
 
+  // If the user has a non-empty text selection in the active query/pipeline
+  // editor, running only executes the selected text instead of the whole
+  // box — same convention as RedisCommandRunner's command runner. `field`
+  // is only ever queried through queryViewRef, which points at whichever
+  // CodeMirror instance (filter or pipeline) is currently mounted for the
+  // active mode.
+  const queryViewRef = useRef<EditorView | null>(null)
+  function textToRun(fallback: string): string {
+    const view = queryViewRef.current
+    const sel = view?.state.selection.main
+    if (sel && !sel.empty) return view!.state.sliceDoc(sel.from, sel.to)
+    return fallback
+  }
+
   function run() {
     if (mode === 'aggregate') {
       void runAggregate()
       return
     }
+    const filter = textToRun(filterText)
     try {
-      if (filterText.trim()) JSON.parse(filterText)
+      if (filter.trim()) JSON.parse(filter)
       if (sortText.trim()) JSON.parse(sortText)
       setError(null)
       setExplainResult(null)
     setExplainCollscan(false)
       onAggregateResult(null)
-      onRun(filterText.trim() || '{}', sortText.trim())
+      onRun(filter.trim() || '{}', sortText.trim())
     } catch (e) {
       setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
     }
   }
 
   async function runAggregate() {
+    const pipeline = textToRun(pipelineText)
     try {
-      JSON.parse(pipelineText)
+      JSON.parse(pipeline)
       setError(null)
       setAggregating(true)
-      const result = await api.aggregate(db, coll, pipelineText)
+      const result = await api.aggregate(db, coll, pipeline)
       onAggregateResult(result.documents)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
@@ -203,6 +220,9 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
           height="80px"
           extensions={extensions}
           onChange={(value) => setFilterText(value)}
+          onCreateEditor={(view) => {
+            queryViewRef.current = view
+          }}
           placeholder={t('queryEditor.filterPlaceholder')}
           basicSetup={{ lineNumbers: false, foldGutter: false }}
         />
@@ -212,6 +232,9 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
           height="120px"
           extensions={extensions}
           onChange={(value) => setPipelineText(value)}
+          onCreateEditor={(view) => {
+            queryViewRef.current = view
+          }}
           placeholder={t('queryEditor.pipelinePlaceholder')}
           basicSetup={{ lineNumbers: false, foldGutter: false }}
         />

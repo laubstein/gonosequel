@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import CodeMirror from '@uiw/react-codemirror'
 import { autocompletion } from '@codemirror/autocomplete'
+import { keymap, type EditorView } from '@codemirror/view'
+import { Prec } from '@codemirror/state'
 import styles from './QueryEditor.module.css'
 import { api } from '../../api/client'
 import { redisCommandCompletionSource } from './redisCommandCompletion'
@@ -39,17 +41,61 @@ export function RedisCommandRunner({ db, coll }: Props) {
   const [presetIndex, setPresetIndex] = useState('')
   const [results, setResults] = useState<CommandResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const extensions = [autocompletion({ override: [redisCommandCompletionSource] })]
+  const viewRef = useRef<EditorView | null>(null)
 
   const run = useMutation({
-    mutationFn: () => api.runCommand(db, script),
+    mutationFn: (text: string) => api.runCommand(db, text),
     onSuccess: (res) => {
       setResults(res)
       setError(null)
     },
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
+
+  // Read via the live EditorView rather than the `script` state: the
+  // keymap command below is captured once by the memoized extensions array,
+  // so closing over `script`/`run.isPending` directly would see stale
+  // values from whichever render first built the extension. The view's own
+  // state (passed fresh on every keypress) and this ref are always current.
+  const pendingRef = useRef(false)
+  pendingRef.current = run.isPending
+
+  // If the user has a non-empty text selection, running only executes the
+  // selected text — matches the "run selection" convention of most script
+  // runners (mongosh's own shell, SQL clients). Otherwise the whole script
+  // runs, as before.
+  function textToRun(view: EditorView | null): string {
+    if (!view) return script
+    const sel = view.state.selection.main
+    if (!sel.empty) return view.state.sliceDoc(sel.from, sel.to)
+    return view.state.doc.toString()
+  }
+
+  function runNow(view: EditorView | null) {
+    if (pendingRef.current) return
+    const text = textToRun(view)
+    if (!text.trim()) return
+    run.mutate(text)
+  }
+
+  const extensions = useMemo(
+    () => [
+      autocompletion({ override: [redisCommandCompletionSource] }),
+      Prec.highest(
+        keymap.of([
+          {
+            key: 'Mod-Enter',
+            run: (view) => {
+              runNow(view)
+              return true
+            },
+          },
+        ]),
+      ),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
 
   function applyPreset(index: string) {
     setPresetIndex(index)
@@ -79,12 +125,15 @@ export function RedisCommandRunner({ db, coll }: Props) {
           height="100px"
           extensions={extensions}
           onChange={(value) => setScript(value)}
+          onCreateEditor={(view) => {
+            viewRef.current = view
+          }}
           placeholder={t('redisRunner.placeholder')}
           basicSetup={{ lineNumbers: true, foldGutter: false }}
         />
 
         <div className={styles.row}>
-          <button className={styles.button} onClick={() => run.mutate()} disabled={run.isPending || !script.trim()}>
+          <button className={styles.button} onClick={() => runNow(viewRef.current)} disabled={run.isPending || !script.trim()}>
             {run.isPending ? t('redisRunner.running') : t('redisRunner.run')}
           </button>
           {error && <span className={styles.error}>{error}</span>}
