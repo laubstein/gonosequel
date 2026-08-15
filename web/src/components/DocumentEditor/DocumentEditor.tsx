@@ -34,6 +34,14 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
     }
   }, [target, existing.data])
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
   }

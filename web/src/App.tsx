@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import styles from './App.module.css'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { QueryEditor } from './components/QueryEditor/QueryEditor'
@@ -21,6 +21,7 @@ import { useSessions } from './hooks/useSessions'
 import { useInfo } from './hooks/useInfo'
 import { useConnectionInfo } from './hooks/useConnectionInfo'
 import { docId } from './api/extjson'
+import { api } from './api/client'
 import { DRIVER_LABEL } from './drivers'
 import type { Capability, ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
@@ -51,6 +52,11 @@ export default function App() {
   const { data: info } = useInfo()
   const { data: connection } = useConnectionInfo()
   const isKeyValueDriver = connection?.driver === 'redis' || connection?.driver === 'valkey'
+
+  const disconnect = useMutation({
+    mutationFn: () => api.disconnect(),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+  })
 
   const visibleTabs = TAB_IDS.filter((id) => {
     const cap = TAB_CAPABILITY[id]
@@ -171,6 +177,14 @@ export default function App() {
         >
           ?
         </a>
+        <button
+          className={styles.tab}
+          onClick={() => disconnect.mutate()}
+          title={t('app.disconnect')}
+          aria-label={t('app.disconnect')}
+        >
+          ⏻
+        </button>
       </div>
 
       <div className={styles.layout}>

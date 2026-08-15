@@ -12,6 +12,7 @@
     "themeToggle": "Alternar tema",
     "themeTitle": "Tema: {{theme}}",
     "helpTitle": "Documentação",
+    "disconnect": "Desconectar",
     "driverTitle": "Banco de dados conectado",
     "readonlyBanner": "Modo somente leitura — ações de escrita estão desabilitadas no servidor",
     "selectDatabaseHint": "Selecione um banco na barra lateral."
