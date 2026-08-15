@@ -24,6 +24,7 @@
     "refresh": "Atualizar",
     "filterCollections": "filtrar coleções…",
     "newCollection": "+ Nova coleção",
+    "newKey": "+ Nova chave",
     "noCollections": "Nenhuma coleção",
     "dropCollection": "Apagar {{name}}",
     "promptNewDatabaseName": "Nome do novo banco:",
@@ -79,6 +80,8 @@
   },
   "redisEditor": {
     "key": "Chave",
+    "keyPlaceholder": "ex: myapp:123",
+    "keyRequired": "A chave é obrigatória — uma coleção é só um prefixo de chave compartilhado, então não dá pra criar uma sem informar a chave",
     "type": "Tipo",
     "field": "campo",
     "value": "valor",

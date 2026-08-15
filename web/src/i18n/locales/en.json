@@ -24,6 +24,7 @@
     "refresh": "Refresh",
     "filterCollections": "Filter collections…",
     "newCollection": "+ New collection",
+    "newKey": "+ New key",
     "noCollections": "No collections",
     "dropCollection": "Delete {{name}}",
     "promptNewDatabaseName": "New database name:",
@@ -79,6 +80,8 @@
   },
   "redisEditor": {
     "key": "Key",
+    "keyPlaceholder": "e.g. myapp:123",
+    "keyRequired": "Key is required — a collection is just a shared key prefix, so it can't be created without one",
     "type": "Type",
     "field": "field",
     "value": "value",

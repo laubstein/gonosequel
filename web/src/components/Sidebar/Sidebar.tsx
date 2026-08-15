@@ -13,6 +13,15 @@ interface Props {
   selection: { db: string; coll: string } | null
   onSelect: (db: string, coll: string) => void
   onCollectionRenamed?: (oldName: string, newName: string) => void
+  // The connected backend, e.g. "mongodb" or "redis" — collections are a
+  // real, independently-creatable object in MongoDB but only a derived
+  // grouping by key prefix in Redis/Valkey, so "+ New collection" means
+  // something different (or nothing) there; see onNewKey.
+  driver?: string
+  // Opens the key editor directly (no collection selected yet) — the
+  // Redis/Valkey equivalent of "+ New collection", since a collection
+  // there only exists once a key with that prefix does.
+  onNewKey?: () => void
 }
 
 function formatBytes(n: number): string {
@@ -27,11 +36,12 @@ function formatBytes(n: number): string {
   return `${value.toFixed(1)} ${units[i]}`
 }
 
-export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollectionRenamed }: Props) {
+export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollectionRenamed, driver, onNewKey }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: databases, isLoading: dbsLoading } = useDatabases()
   const [filter, setFilter] = useState('')
+  const isKeyValueDriver = driver === 'redis' || driver === 'valkey'
 
   const { data: collections, isLoading: collsLoading } = useCollections(selectedDb)
   const { data: stats } = useCollectionStats(selectedDb, selection?.coll ?? null)
@@ -157,8 +167,11 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
 
       {selectedDb && (
         <div className={styles.newCollectionRow}>
-          <button className={styles.newCollectionButton} onClick={handleCreateCollection}>
-            {t('sidebar.newCollection')}
+          <button
+            className={styles.newCollectionButton}
+            onClick={isKeyValueDriver ? onNewKey : handleCreateCollection}
+          >
+            {isKeyValueDriver ? t('sidebar.newKey') : t('sidebar.newCollection')}
           </button>
         </div>
       )}

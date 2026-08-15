@@ -81,6 +81,11 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
+    // A saved key can create or empty out a "collection" (a derived key
+    // prefix grouping, not a real Redis concept — see pkg/redis), so the
+    // sidebar's collection list needs a refresh too, not just this
+    // collection's own document list.
+    void queryClient.invalidateQueries({ queryKey: ['collections', db] })
   }
 
   function buildValue(): unknown {
@@ -108,7 +113,14 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
       const doc: Record<string, unknown> = { type, value: buildValue() }
       if (target.mode === 'new') {
         if (key) doc._id = key
-        return api.insertDocument(db, coll, doc)
+        // coll can be "" when creating the first key of a not-yet-existing
+        // collection (see App.tsx's newKeyDb flow) — the route needs a
+        // non-empty path segment regardless, and the server ignores it
+        // once doc._id is set, so derive it from the key's own prefix
+        // rather than sending an empty segment (which 405s, since
+        // /collections//documents doesn't match the :coll route param).
+        const urlColl = coll || key.split(':')[0] || '_'
+        return api.insertDocument(db, urlColl, doc)
       }
       return api.replaceDocument(db, coll, target.encodedId, doc)
     },
@@ -118,6 +130,19 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
     },
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
+
+  function handleSave() {
+    setError(null)
+    // With no collection context (creating the first key of a new
+    // collection from the sidebar's "+ New key"), falling back to an
+    // auto-generated id would produce a key starting with ":" — a
+    // collection name can't be inferred from nothing, so require one here.
+    if (target.mode === 'new' && !coll && !key) {
+      setError(t('redisEditor.keyRequired'))
+      return
+    }
+    save.mutate()
+  }
 
   const remove = useMutation({
     mutationFn: async () => {
@@ -154,7 +179,7 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
                   disabled={target.mode === 'edit'}
-                  placeholder={`${coll}:...`}
+                  placeholder={coll ? `${coll}:...` : t('redisEditor.keyPlaceholder')}
                 />
               </div>
               <div className={styles.row}>
@@ -295,7 +320,7 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
           <button className={docStyles.button} onClick={onClose}>
             {t('documentEditor.cancel')}
           </button>
-          <button className={docStyles.buttonPrimary} onClick={() => save.mutate()} disabled={save.isPending}>
+          <button className={docStyles.buttonPrimary} onClick={handleSave} disabled={save.isPending}>
             {t('documentEditor.save')}
           </button>
         </div>

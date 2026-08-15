@@ -60,6 +60,13 @@ export default function App() {
   const [selection, setSelection] = useState<{ db: string; coll: string } | null>(null)
   const [query, setQuery] = useState<FindQuery>(DEFAULT_QUERY)
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
+  // Set while creating the very first key of a not-yet-existing Redis
+  // "collection" (a collection is only a derived grouping by key prefix —
+  // it can't be created empty the way a MongoDB collection can, so there's
+  // no selection.coll to open the usual "+ New document" editor against
+  // yet). Holds the database to create the key in; RedisValueEditor's own
+  // Key field is where the user types the full key, prefix included.
+  const [newKeyDb, setNewKeyDb] = useState<string | null>(null)
   const [replayNonce, setReplayNonce] = useState(0)
   const [aggregateResult, setAggregateResult] = useState<ExtJSONDocument[] | null>(null)
 
@@ -171,6 +178,8 @@ export default function App() {
           selection={selection}
           onSelect={selectCollection}
           onCollectionRenamed={collectionRenamed}
+          driver={connection?.driver}
+          onNewKey={() => setNewKeyDb(selectedDb)}
         />
 
         <div className={styles.main}>
@@ -238,6 +247,15 @@ export default function App() {
             onClose={() => setEditorTarget(null)}
           />
         ))}
+
+      {newKeyDb && (
+        <RedisValueEditor
+          db={newKeyDb}
+          coll=""
+          target={{ mode: 'new' }}
+          onClose={() => setNewKeyDb(null)}
+        />
+      )}
     </div>
   )
 }
