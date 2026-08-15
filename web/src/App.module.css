@@ -53,6 +53,15 @@
   margin-right: 8px;
 }
 
+.disconnectButton {
+  composes: tab;
+  color: var(--color-danger);
+}
+
+.disconnectButton:hover {
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+}
+
 .layout {
   display: grid;
   grid-template-columns: 260px 1fr;

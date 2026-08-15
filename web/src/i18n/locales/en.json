@@ -50,7 +50,8 @@
     "create": "Create",
     "rename": "Rename",
     "delete": "Delete",
-    "typeToConfirm": "Type \"{{name}}\" to confirm."
+    "typeToConfirm": "Type \"{{name}}\" to confirm.",
+    "irreversibleWarning": "This action is irreversible."
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"active\" }",
@@ -146,6 +147,13 @@
     "database": "Database",
     "collection": "Collection",
     "filter": "Filter"
+  },
+  "connectionLost": {
+    "title": "Connection lost",
+    "message": "Can't reach the gonosequel server. It will keep retrying automatically, or you can try now.",
+    "retry": "Try again",
+    "retrying": "Retrying…",
+    "disconnect": "Disconnect"
   },
   "connectionModal": {
     "title": "Connect to a database",

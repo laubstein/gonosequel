@@ -15,6 +15,7 @@ import { ToolsPanel } from './components/ToolsPanel/ToolsPanel'
 import { DocumentEditor, type EditorTarget } from './components/DocumentEditor/DocumentEditor'
 import { RedisValueEditor } from './components/RedisValueEditor/RedisValueEditor'
 import { ConnectionModal } from './components/ConnectionModal/ConnectionModal'
+import { ConnectionLost } from './components/ConnectionLost/ConnectionLost'
 import { useDocuments } from './hooks/useDocuments'
 import { useTheme } from './hooks/useTheme'
 import { useSessions } from './hooks/useSessions'
@@ -22,6 +23,7 @@ import { useInfo } from './hooks/useInfo'
 import { useConnectionInfo } from './hooks/useConnectionInfo'
 import { docId } from './api/extjson'
 import { api } from './api/client'
+import { setSessionId } from './api/http'
 import { DRIVER_LABEL } from './drivers'
 import type { Capability, ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
@@ -49,9 +51,23 @@ export default function App() {
   const queryClient = useQueryClient()
   const { theme, cycle } = useTheme()
   const { data: sessions, isLoading: sessionsLoading } = useSessions()
-  const { data: info } = useInfo()
+  const infoQuery = useInfo()
+  const { data: info } = infoQuery
   const { data: connection } = useConnectionInfo()
   const isKeyValueDriver = connection?.driver === 'redis' || connection?.driver === 'valkey'
+
+  // Set when the user clicks "Disconnect" on the connection-lost
+  // placeholder below: the server is unreachable, so there's no request
+  // to make (unlike the header's own Disconnect button, which calls
+  // api.disconnect()) — this just clears the local session and drops back
+  // to the connect screen, same as the sessions-gate below does after a
+  // normal disconnect.
+  const [forcedDisconnect, setForcedDisconnect] = useState(false)
+
+  function disconnectAfterConnectionLost() {
+    setSessionId(null)
+    setForcedDisconnect(true)
+  }
 
   const disconnect = useMutation({
     mutationFn: () => api.disconnect(),
@@ -127,15 +143,39 @@ export default function App() {
     setTab('documents')
   }
 
+  // /api/info never touches the database (see its own doc comment) — a
+  // failing fetch here means the browser can't reach the gonosequel
+  // server itself, not a backend/database problem. Checked before the
+  // sessions gate below: while the server is unreachable, GET
+  // /api/sessions is failing too, so `sessions` never becomes the
+  // zero-length array that gate looks for — this placeholder is what
+  // actually surfaces the outage instead of the app silently hanging on
+  // stale or empty data.
+  if (infoQuery.isError && !forcedDisconnect) {
+    return (
+      <ConnectionLost
+        onRetry={() => void infoQuery.refetch()}
+        onDisconnect={disconnectAfterConnectionLost}
+        retrying={infoQuery.isFetching}
+      />
+    )
+  }
+
   // In --sessions mode the server starts with no active connection, so
   // GET /api/sessions comes back empty until the user connects through
   // this modal. In single-connection mode a "default" session is always
   // pre-registered at startup, so this never renders — except right after
-  // disconnecting from the Server tab, which drops back to zero sessions
-  // in either mode and reuses this same gate to reconnect.
-  if (!sessionsLoading && sessions && sessions.length === 0) {
+  // disconnecting (from the Server tab, or forcedDisconnect above), which
+  // drops back to zero sessions in either mode and reuses this same gate
+  // to reconnect.
+  if (forcedDisconnect || (!sessionsLoading && sessions && sessions.length === 0)) {
     return (
-      <ConnectionModal onConnected={() => void queryClient.invalidateQueries()} />
+      <ConnectionModal
+        onConnected={() => {
+          setForcedDisconnect(false)
+          void queryClient.invalidateQueries()
+        }}
+      />
     )
   }
 
@@ -180,7 +220,7 @@ export default function App() {
           ?
         </a>
         <button
-          className={styles.tab}
+          className={styles.disconnectButton}
           onClick={() => disconnect.mutate()}
           title={t('app.disconnect')}
           aria-label={t('app.disconnect')}

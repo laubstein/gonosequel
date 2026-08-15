@@ -50,7 +50,8 @@
     "create": "Criar",
     "rename": "Renomear",
     "delete": "Apagar",
-    "typeToConfirm": "Digite \"{{name}}\" para confirmar."
+    "typeToConfirm": "Digite \"{{name}}\" para confirmar.",
+    "irreversibleWarning": "Essa ação é irreversível."
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"ativo\" }",
@@ -146,6 +147,13 @@
     "database": "Banco",
     "collection": "Coleção",
     "filter": "Filtro"
+  },
+  "connectionLost": {
+    "title": "Conexão perdida",
+    "message": "Não foi possível alcançar o servidor gonosequel. Novas tentativas automáticas continuarão ocorrendo, ou você pode tentar agora.",
+    "retry": "Tentar novamente",
+    "retrying": "Tentando…",
+    "disconnect": "Desconectar"
   },
   "connectionModal": {
     "title": "Conectar a um banco",
