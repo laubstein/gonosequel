@@ -75,4 +75,21 @@ NoSQL engines, not just these.
 .db-badge--planned {
   opacity: 0.7;
 }
+
+/* VitePress's default home hero puts the image after the text (on the
+   right). The gopher in gopher.png faces right in the artwork, so left
+   unchanged it reads as looking away, off the edge of the page, instead
+   of at the hero text next to it — reversed here (desktop widths only;
+   the hero already stacks vertically below that, where left/right order
+   doesn't apply) so the gopher faces the text instead. */
+/* !important: VitePress's own scoped Hero component style
+   (.container[data-v-xxxxxxxx]{flex-direction:row}) has the same
+   specificity as a plain class-based override from here, and wins ties by
+   appearing later in the built stylesheet — there's no selector-only way
+   to beat it from outside the component. */
+@media (min-width: 960px) {
+  .VPHero .container {
+    flex-direction: row-reverse !important;
+  }
+}
 </style>

@@ -1,6 +1,8 @@
 # Go NoSequel
 
-<img src="gopher.png" alt="Go NoSequel gopher mascot" width="200" align="right">
+<!-- The gopher faces right in the artwork, so it's placed on the left here — it reads as
+     looking at the text next to it, rather than off the edge of the page. -->
+<img src="gopher.png" alt="Go NoSequel gopher mascot" width="200" align="left" hspace="16">
 
 A web-based NoSQL explorer, in the spirit of [pgweb](https://github.com/sosedoff/pgweb)'s
 interface and [mongo-express](https://github.com/mongo-express/mongo-express)'s feature set.
