@@ -2,15 +2,24 @@
 
 <img src="gopher.png" alt="Go NoSequel gopher mascot" width="200" align="right">
 
-A web-based MongoDB explorer, in the spirit of [pgweb](https://github.com/sosedoff/pgweb)'s
+A web-based NoSQL explorer, in the spirit of [pgweb](https://github.com/sosedoff/pgweb)'s
 interface and [mongo-express](https://github.com/mongo-express/mongo-express)'s feature set.
-Ships as a single self-contained binary — the React frontend is built and embedded into the
-Go executable, so there's nothing else to install or run alongside it in production.
+Connects to **MongoDB** or **Redis/Valkey** — pick the backend with `--driver` (or the
+connection screen's own database-type selector in `--sessions` mode). Ships as a single
+self-contained binary — the React frontend is built and embedded into the Go executable, so
+there's nothing else to install or run alongside it in production.
 
-Browse databases and collections, view/create/edit/delete documents as Extended JSON, manage
-indexes, run filter queries with schema-aware autocomplete and `explain()`, export results as
-JSON/CSV, and connect to multiple MongoDB instances at once via saved bookmarks. The UI is in
-English by default and switches to Portuguese automatically when the browser asks for it.
+Against MongoDB: browse databases and collections, view/create/edit/delete documents as
+Extended JSON, manage indexes, run filter and aggregation-pipeline queries with schema-aware
+autocomplete and `explain()`, bulk `updateMany`, and export results as JSON/CSV.
+
+Against Redis/Valkey: browse numbered databases and key-prefix "collections", edit values with
+a form specific to each type (string/hash/list/set/zset), and run raw commands through a
+redis-cli-like console (multi-line, command-name autocomplete, write commands included).
+
+In `--sessions` mode you can hold connections to several instances — MongoDB and Redis/Valkey
+alike — open at once, and reconnect to any of them in one click via saved bookmarks. The UI is
+in English by default and switches to Portuguese automatically when the browser asks for it.
 
 ## Credits
 
@@ -45,6 +54,11 @@ This single command:
 Press Ctrl+C to stop everything. `make dev-down` additionally removes the MongoDB container
 `make dev` may have started, if you want to clear out its data.
 
+`make dev` is MongoDB-specific (it's meant for iterating on the app itself, and most of it —
+document editing, aggregation, indexes — only applies there anyway). To develop against
+Redis/Valkey, run a server yourself and point the built binary at it with `--driver`, e.g.
+`./gonosequel --driver redis --url redis://localhost:6379`.
+
 Override the ports if the defaults collide with something else on your machine:
 
 ```bash
@@ -58,10 +72,16 @@ make build
 ```
 
 Builds the frontend (`web/dist`) and embeds it into a single `gonosequel` binary via
-`go:embed`. Run it against any MongoDB:
+`go:embed`. Run it against MongoDB (the default):
 
 ```bash
 ./gonosequel --url mongodb://user:pass@host:27017
+```
+
+or Redis/Valkey:
+
+```bash
+./gonosequel --driver redis --url redis://user:pass@host:6379
 ```
 
 ## CLI flags
@@ -76,11 +96,12 @@ same substitution a shell does), so e.g. `GNS_URL=$MONGO_URL` resolves through t
 
 | Flag | Env var | Default | Description |
 |---|---|---|---|
-| `--url` | `GNS_URL` (`ME_URL`) | — | Full MongoDB connection URL. Takes priority over `--host`/`--port`/`--user`/`--pass`/`--db`. |
-| `--host` | `GNS_HOST` (`ME_HOST`) | `localhost` | MongoDB host, used when `--url` isn't given. |
-| `--port` | `GNS_MONGO_PORT` (`ME_MONGO_PORT`) | `27017` | MongoDB port. |
-| `--user` / `--pass` | `GNS_USER` / `GNS_PASS` (`ME_USER` / `ME_PASS`) | — | MongoDB credentials. |
-| `--db` | `GNS_DB` (`ME_DB`) | — | Default database. |
+| `--driver` | `GNS_DRIVER` (`ME_DRIVER`) | `mongodb` | Backend to connect to: `mongodb`, `redis`, or `valkey` (the latter two are wire-compatible and route to the same driver). |
+| `--url` | `GNS_URL` (`ME_URL`) | — | Full connection URL (`mongodb://...` or `redis://...`). Takes priority over `--host`/`--port`/`--user`/`--pass`/`--db`. |
+| `--host` | `GNS_HOST` (`ME_HOST`) | `localhost` | Backend host, used when `--url` isn't given. |
+| `--port` | `GNS_MONGO_PORT` (`ME_MONGO_PORT`) | `27017` (MongoDB) / `6379` (Redis/Valkey) | Backend port; the default depends on `--driver`. `GNS_MONGO_PORT` is a MongoDB-specific override kept for mongo-express compatibility. |
+| `--user` / `--pass` | `GNS_USER` / `GNS_PASS` (`ME_USER` / `ME_PASS`) | — | Backend credentials. |
+| `--db` | `GNS_DB` (`ME_DB`) | — | Default database (MongoDB database name, or a Redis/Valkey numbered database 0-15). |
 | `--bookmark` | `GNS_BOOKMARK` (`ME_BOOKMARK`) | — | Load the connection from a saved bookmark instead of the flags above (see below). Takes priority over `--url`. |
 | `--bind` | `GNS_BIND` (`ME_BIND`) | `127.0.0.1` | Address the HTTP server binds to. |
 | `--http-port` | `GNS_HTTP_PORT` (`ME_HTTP_PORT`) | `8081` | HTTP server port. |
@@ -91,11 +112,17 @@ same substitution a shell does), so e.g. `GNS_URL=$MONGO_URL` resolves through t
 
 ## Bookmarks
 
-Save a named connection so you don't have to retype it:
+Save a named connection so you don't have to retype it — the backend is inferred from the
+URL's scheme (`mongodb://` or `redis://`), no separate field needed:
 
 ```toml
 # ~/.gonosequel/bookmarks/prod.toml
 url = "mongodb://user:pass@prod.example.com:27017"
+```
+
+```toml
+# ~/.gonosequel/bookmarks/cache.toml
+url = "redis://user:pass@cache.example.com:6379"
 ```
 
 ```bash
@@ -109,7 +136,7 @@ browser.
 ## Testing
 
 ```bash
-make test          # unit + integration; starts and stops a MongoDB container itself via Docker
+make test          # unit + integration; starts and stops MongoDB and Redis containers itself via Docker
 make test-short     # unit tests only, no Docker required
 make lint           # gofmt, go vet, staticcheck, errcheck
 ```

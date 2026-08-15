@@ -10,6 +10,12 @@ reaches the browser).
 Version, host, process name, uptime, connection pool usage (current/available), and cumulative
 operation counters (insert/query/update/delete/getmore/command) for the connected `mongod`.
 
+For a Redis/Valkey connection this reports the equivalent fields from Redis's own `INFO`
+command (`redis_version`, `connected_clients`, `maxclients`, ...) instead — Redis's own
+operation counters don't map cleanly onto MongoDB's insert/query/update/delete/getmore/command
+breakdown, so only `command` (`total_commands_processed`) is populated there; the rest read
+zero rather than being guessed at.
+
 ## Disconnect
 
 Drops the current session and brings back the connection screen. Works in both

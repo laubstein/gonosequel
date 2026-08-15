@@ -1,7 +1,8 @@
 # Getting started
 
-Go NoSequel currently connects to MongoDB — see [Supported databases](/#supported-databases)
-for where it's headed next.
+Go NoSequel connects to **MongoDB** or **Redis/Valkey** — pick with `--driver` (see
+[CLI reference](/cli-reference)) or the connection screen's own database-type selector in
+`--sessions` mode. See [Supported databases](/#supported-databases) for what's next.
 
 ## Requirements
 
@@ -37,6 +38,9 @@ make dev MONGO_PORT=27018 HTTP_PORT=8082 VITE_PORT=5174
 `make dev-down` removes the MongoDB container `make dev` may have started, if you want to
 clear out its data.
 
+`make dev` is MongoDB-specific. To develop against Redis/Valkey, run a server yourself and
+point the built binary at it directly: `./gonosequel --driver redis --url redis://localhost:6379`.
+
 ## Building for production
 
 ```bash
@@ -44,11 +48,12 @@ make build
 ```
 
 Builds the frontend (`web/dist`) and this documentation site (`docs/.vitepress/dist`), then
-embeds both into a single `gonosequel` binary via `go:embed`. Run it against any
-MongoDB:
+embeds both into a single `gonosequel` binary via `go:embed`. Run it against MongoDB (the
+default) or Redis/Valkey:
 
 ```bash
 ./gonosequel --url mongodb://user:pass@host:27017
+./gonosequel --driver redis --url redis://user:pass@host:6379
 ```
 
 The app is served at `/`, this documentation at `/doc`.
@@ -56,7 +61,7 @@ The app is served at `/`, this documentation at `/doc`.
 ## Testing
 
 ```bash
-make test        # unit + integration; starts and stops a MongoDB container itself via Docker
+make test        # unit + integration; starts and stops MongoDB and Redis containers itself via Docker
 make test-short   # unit tests only, no Docker required
 make lint         # gofmt, go vet, staticcheck, errcheck
 ```

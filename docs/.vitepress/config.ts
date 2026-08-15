@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Go NoSequel',
-  description: 'A web-based MongoDB explorer — usage and configuration',
+  description: 'A web-based NoSQL explorer (MongoDB, Redis/Valkey) — usage and configuration',
   // Served under /doc by the Go binary (pkg/api/assets.go), embedded via
   // go:embed alongside the main React app served at /.
   base: '/doc/',
@@ -45,6 +45,7 @@ export default defineConfig({
           { text: 'Schema & indexes', link: '/features/schema-and-indexes' },
           { text: 'Tools', link: '/features/tools' },
           { text: 'Server & sessions', link: '/features/server-and-sessions' },
+          { text: 'Redis & Valkey', link: '/features/redis-valkey' },
         ],
       },
       {

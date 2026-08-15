@@ -1,6 +1,8 @@
-// Package bookmarks loads and saves named MongoDB connection strings as
-// TOML files under a directory (by default ~/.gonosequel/bookmarks/),
-// so a URL doesn't have to be retyped or kept in shell history.
+// Package bookmarks loads and saves named connection strings — MongoDB or
+// Redis/Valkey, the driver is inferred from the URL's own scheme (see
+// pkg/api/handlers_connect.go's inferDriver) — as TOML files under a
+// directory (by default ~/.gonosequel/bookmarks/), so a URL doesn't have
+// to be retyped or kept in shell history.
 package bookmarks
 
 import (

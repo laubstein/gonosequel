@@ -24,17 +24,19 @@ features:
     details: A schema-aware query editor with ready-made presets, Explain with a COLLSCAN warning, and a full aggregation pipeline mode.
   - title: Hotspot tools
     details: Collection size overview, index usage stats, and currently running operations — all read-only, all safe under --readonly.
+  - title: Redis & Valkey, too
+    details: A redis-cli-like command console with autocomplete, and a per-type editor for strings/hashes/lists/sets/zsets — pick the backend with --driver.
 ---
 
 ## Supported databases
 
-Go NoSequel connects to **MongoDB** today. The name and the architecture are deliberately
-database-agnostic — the goal is to grow into a single explorer for several NoSQL engines, not
-just this one.
+Go NoSequel connects to **MongoDB** and **Redis/Valkey** today. The name and the architecture
+are deliberately database-agnostic — the goal is to grow into a single explorer for several
+NoSQL engines, not just these.
 
 <div class="db-support">
   <span class="db-badge db-badge--supported">MongoDB<small>supported</small></span>
-  <span class="db-badge db-badge--planned">Redis/Valkey<small>planned</small></span>
+  <span class="db-badge db-badge--supported">Redis/Valkey<small>supported</small></span>
   <span class="db-badge db-badge--planned">CouchDB<small>planned</small></span>
 </div>
 

@@ -10,11 +10,12 @@ docker-compose service link, a Kubernetes downstream env var, etc).
 
 | Flag | Env var | Default | Description |
 |---|---|---|---|
-| `--url` | `GNS_URL` (`ME_URL`) | — | Full MongoDB connection URL. Takes priority over `--host`/`--port`/`--user`/`--pass`/`--db`. |
-| `--host` | `GNS_HOST` (`ME_HOST`) | `localhost` | MongoDB host, used when `--url` isn't given. |
-| `--port` | `GNS_MONGO_PORT` (`ME_MONGO_PORT`) | `27017` | MongoDB port. |
-| `--user` / `--pass` | `GNS_USER` / `GNS_PASS` (`ME_USER` / `ME_PASS`) | — | MongoDB credentials. |
-| `--db` | `GNS_DB` (`ME_DB`) | — | Default database. |
+| `--driver` | `GNS_DRIVER` (`ME_DRIVER`) | `mongodb` | Backend to connect to: `mongodb`, `redis`, or `valkey` (the latter two are wire-compatible and route to the same driver). See [Redis & Valkey](/features/redis-valkey). |
+| `--url` | `GNS_URL` (`ME_URL`) | — | Full connection URL (`mongodb://...` or `redis://...`). Takes priority over `--host`/`--port`/`--user`/`--pass`/`--db`. |
+| `--host` | `GNS_HOST` (`ME_HOST`) | `localhost` | Backend host, used when `--url` isn't given. |
+| `--port` | `GNS_MONGO_PORT` (`ME_MONGO_PORT`) | `27017` (MongoDB) / `6379` (Redis/Valkey) | Backend port; the default depends on `--driver`. `GNS_MONGO_PORT` is a MongoDB-specific override kept for mongo-express compatibility. |
+| `--user` / `--pass` | `GNS_USER` / `GNS_PASS` (`ME_USER` / `ME_PASS`) | — | Backend credentials. |
+| `--db` | `GNS_DB` (`ME_DB`) | — | Default database (MongoDB database name, or a Redis/Valkey numbered database 0-15). |
 | `--bookmark` | `GNS_BOOKMARK` (`ME_BOOKMARK`) | — | Load the connection from a saved bookmark instead of the flags above. Takes priority over `--url`. See [Connecting](/connecting). |
 | `--bind` | `GNS_BIND` (`ME_BIND`) | `127.0.0.1` | Address the HTTP server binds to. |
 | `--http-port` | `GNS_HTTP_PORT` (`ME_HTTP_PORT`) | `8081` | HTTP server port. |

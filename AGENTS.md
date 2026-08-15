@@ -6,25 +6,30 @@ fazer.
 
 ## O que é
 
-`Go NoSequel` é um explorador web de MongoDB em Go: a interface e a usabilidade do
+`Go NoSequel` é um explorador web de NoSQL em Go: a interface e a usabilidade do
 [pgweb](https://github.com/sosedoff/pgweb) com as funcionalidades do
 [mongo-express](https://github.com/mongo-express/mongo-express). Compila para um binário único com
-o frontend embutido.
+o frontend embutido. Conecta a **MongoDB** ou **Redis/Valkey** via `--driver`
+(`pkg/driver.Driver` é a interface que abstrai o backend — `pkg/client` implementa para MongoDB,
+`pkg/redis` para Redis/Valkey).
 
-**Estado atual: projeto do zero.** Nada foi implementado ainda. Siga a "Ordem de execução" do
-`PLAN.md` — o `pkg/client/extjson.go` e seus testes vêm antes de qualquer outra coisa, porque são a
-base de correção do resto.
+**Estado atual: MongoDB e Redis/Valkey implementados e em uso.** `PLAN.md` tem o racional de
+design original; não é mais um roteiro de "o que falta fazer" — trate como histórico, não como
+lista de pendências.
 
 ## Comandos
 
 ```bash
 make build       # cd web && npm run build  →  go build -o gonosequel .
-make test        # unidade + integração; sobe e derruba o Mongo em Docker sozinho
+make test        # unidade + integração; sobe e derruba Mongo e Redis em Docker sozinho
 make test-short  # só unidade (go test ./... -short); não precisa de Docker
 make lint        # gofmt -l . && go vet ./... && staticcheck ./... && errcheck ./...
-make dev         # sobe Mongo (Docker se preciso), API Go e Vite; abra a URL do Vite
+make dev         # sobe Mongo (Docker se preciso), API Go e Vite; abra a URL do Vite — só MongoDB
 make dev-down    # remove o container Mongo que `make dev` possa ter criado
 ```
+
+`make dev` é específico de MongoDB (é para iterar na aplicação em si). Para desenvolver contra
+Redis/Valkey, suba um servidor à parte e rode o binário com `--driver redis --url redis://...`.
 
 Rode `make lint` e `make test` antes de dar qualquer trabalho por concluído. Se o Docker não
 estiver disponível no ambiente, rode `make test-short` e **diga explicitamente** que os testes de
@@ -38,7 +43,9 @@ Fixadas nestas versões; não faça downgrade nem troque sem justificar.
 |---|---|
 | `github.com/gofiber/fiber/v3` | v3.5.0 |
 | `go.mongodb.org/mongo-driver/v2` | v2.8.0 |
+| `github.com/redis/go-redis/v9` | v9.22.0 |
 | `github.com/testcontainers/testcontainers-go/modules/mongodb` | v0.44.0 |
+| `github.com/testcontainers/testcontainers-go/modules/redis` | v0.44.0 |
 | `github.com/BurntSushi/toml` | v1.x |
 
 Go 1.26+, Node 24+. O backend não deve ganhar dependências além dessas sem uma boa razão — o
@@ -48,18 +55,22 @@ objetivo é binário único e enxuto.
 
 ```
 main.go              flags, bootstrap, ciclo de vida — e nada mais
-pkg/command/         flags CLI + env vars
+pkg/command/         flags CLI + env vars (GNS_*, com fallback ME_*)
 pkg/bookmarks/       ~/.gonosequel/bookmarks/*.toml
-pkg/client/          toda a interação com o MongoDB
-pkg/session/         registro de sessões (modo --sessions)
+pkg/driver/          interface Driver que abstrai o backend — nem pkg/client nem pkg/redis
+                      são conhecidos fora daqui e de main.go
+pkg/client/          implementação de driver.Driver para MongoDB
+pkg/redis/           implementação de driver.Driver para Redis/Valkey (mesmo driver p/ ambos)
+pkg/session/         registro de sessões (modo --sessions), incl. readonly por sessão
 pkg/history/         histórico de queries, em memória, por sessão
 pkg/export/          JSON e CSV em streaming
 pkg/api/             *fiber.App: server.go, routes.go, handlers_*.go, middleware.go, assets.go
 web/                 React 19 + TypeScript + Vite
 ```
 
-`pkg/client` não importa `pkg/api` nem conhece HTTP. `pkg/api` não fala com o driver do Mongo
-diretamente.
+Nem `pkg/client` nem `pkg/redis` importam `pkg/api` ou conhecem HTTP. `pkg/api` só fala com
+`driver.Driver` — nunca importa `pkg/client`/`pkg/redis` diretamente (só `main.go` faz esse
+dispatch, via `Config.Connect`).
 
 ## Regras invioláveis
 
@@ -79,6 +90,10 @@ Nunca assuma ObjectID hex. O path param de documento é o base64url do extended 
 
 **3. `--readonly` é imposto no middleware.**
 Rejeite todo método não-GET com 403 no servidor. Esconder botões na UI é sugestão, não trava.
+Existe também readonly por sessão (`session.Info.Readonly`, opcional via a tela de conexão em
+modo `--sessions`), verificado em `withSession` — independente do `--readonly` global, mas
+nunca menos restritivo: `handleConnect` força a sessão como readonly se o servidor já estiver
+em `--readonly`, mesmo que o request de conexão não peça isso.
 
 **4. Propague o contexto da requisição.**
 Toda chamada ao driver recebe o `c.Context()` do handler, para que uma query cara seja cancelada
@@ -112,18 +127,22 @@ Três camadas, todas em `make test`:
 1. **Unidade, sem Docker** — table-driven, com `t.Parallel()`. O round-trip de cada tipo BSON
    (`ObjectId`, `ISODate`, `Decimal128`, `Long`, `Binary`, `DBRef`, `MinKey`/`MaxKey`) é a suíte
    mais importante do projeto: é onde uma regressão corrompe dados do usuário em silêncio.
-2. **Integração contra Mongo real** — `testcontainers-go/modules/mongodb` sobe um `mongo:8` no
-   `TestMain`. Não exija que o usuário rode `docker run` antes. Cada teste usa um banco de nome
-   único e o remove no `t.Cleanup`, para rodarem em paralelo sem interferência.
-3. **HTTP ponta a ponta** — `app.Test(req)` do Fiber contra o Mongo do container; sem porta aberta,
+2. **Integração contra servidor real** — `testcontainers-go/modules/mongodb` sobe um `mongo:8`
+   e `testcontainers-go/modules/redis` sobe um `redis:8`, ambos no `TestMain` (de `pkg/client`,
+   `pkg/redis`, e `pkg/api`). Não exija que o usuário rode `docker run` antes. Cada teste usa um
+   banco de nome único e o remove no `t.Cleanup`, para rodarem em paralelo sem interferência.
+3. **HTTP ponta a ponta** — `app.Test(req)` do Fiber contra os containers reais; sem porta aberta,
    sem servidor real.
 
 Testes que precisam de Docker pulam com `testing.Short()`.
 
-## Escopo do v1 — não implemente
+## Fora de escopo — não implemente
 
 Fora do escopo por decisão explícita. Não adicione sem pedir:
-GridFS, pipeline de aggregation, gestão de usuários/roles, preview inline de mídia, túnel SSH.
+GridFS, gestão de usuários/roles, preview inline de mídia, túnel SSH, CouchDB (planejado, mas
+sem trabalho iniciado). Pipeline de aggregation **está implementado** (modo Aggregate do
+`QueryEditor`, MongoDB apenas) — não é mais escopo excluído, mencionado aqui só porque a versão
+anterior deste arquivo listava errado.
 
 ## Frontend
 

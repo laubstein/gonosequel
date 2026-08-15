@@ -2,6 +2,10 @@
 
 Select a database and a collection in the sidebar to open the **Documents** tab.
 
+This page describes MongoDB's Documents tab. For a Redis/Valkey connection this tab shows a
+key browser plus a per-type value editor and command console instead — see
+[Redis & Valkey](/features/redis-valkey).
+
 ## Table and JSON views
 
 Results toggle between a flattened table (one column per top-level field, values summarized
