@@ -56,7 +56,7 @@ export interface SchemaField {
 
 // Capability values reported by the server for the current connection —
 // keep in sync with the driver.Cap* constants in pkg/driver/driver.go.
-export type Capability = 'find' | 'aggregate' | 'explain' | 'indexes' | 'schema' | 'tools'
+export type Capability = 'find' | 'aggregate' | 'explain' | 'indexes' | 'schema' | 'tools' | 'command' | 'updateMany'
 
 export interface SessionInfo {
   id: string

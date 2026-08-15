@@ -51,8 +51,12 @@
     "invalidJson": "JSON inválido",
     "modeFind": "Find",
     "modeAggregate": "Aggregate",
+    "modeUpdate": "Atualizar",
     "pipelinePlaceholder": "[ { \"$match\": { \"status\": \"ativo\" } } ]",
+    "updatePlaceholder": "{ \"$set\": { \"campo\": \"valor\" } }",
     "aggregating": "Executando…",
+    "updating": "Atualizando…",
+    "updateResult": "{{matched}} encontrados, {{modified}} modificados",
     "presetPlaceholder": "Queries úteis…",
     "collscanWarning": "Varredura completa da coleção — nenhum índice foi usado nesta consulta."
   },

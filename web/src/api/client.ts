@@ -71,6 +71,12 @@ export const api = {
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/aggregate`,
       JSON.parse(pipeline),
     ),
+  updateMany: (db: string, coll: string, filter: string, update: string) =>
+    apiSend<{ matched: number; modified: number }>(
+      'POST',
+      `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/update-many`,
+      { filter: JSON.parse(filter), update: JSON.parse(update) },
+    ),
   getDocument: (db: string, coll: string, encodedId: string) =>
     apiGet<ExtJSONDocument>(
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/documents/${encodedId}`,

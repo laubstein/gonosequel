@@ -25,6 +25,9 @@ func TestUnsupportedCapabilitiesReturnErrUnsupported(t *testing.T) {
 	if _, err := c.Aggregate(ctx, "8", "widgets", nil); !errors.Is(err, driver.ErrUnsupported) {
 		t.Errorf("Aggregate: expected ErrUnsupported, got %v", err)
 	}
+	if _, _, err := c.UpdateMany(ctx, "8", "widgets", driver.Doc{}, driver.Doc{}); !errors.Is(err, driver.ErrUnsupported) {
+		t.Errorf("UpdateMany: expected ErrUnsupported, got %v", err)
+	}
 
 	indexes, err := c.ListIndexes(ctx, "8", "widgets")
 	if err != nil {
@@ -56,7 +59,7 @@ func TestCapabilitiesListMatchesWhatWorks(t *testing.T) {
 			t.Errorf("unexpected capability %q", capName)
 		}
 	}
-	for _, notWant := range []string{driver.CapAggregate, driver.CapExplain, driver.CapIndexes} {
+	for _, notWant := range []string{driver.CapAggregate, driver.CapExplain, driver.CapIndexes, driver.CapUpdateMany} {
 		for _, capName := range caps {
 			if capName == notWant {
 				t.Errorf("capability %q should not be reported as supported", notWant)

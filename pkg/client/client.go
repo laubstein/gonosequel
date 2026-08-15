@@ -52,5 +52,6 @@ func (c *Client) Capabilities() []string {
 		driver.CapIndexes,
 		driver.CapSchema,
 		driver.CapTools,
+		driver.CapUpdateMany,
 	}
 }

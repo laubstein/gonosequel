@@ -421,6 +421,84 @@ func TestAPIAggregateRejectedInReadonlyMode(t *testing.T) {
 	}
 }
 
+// TestAPIUpdateMany mirrors the exact scenario asked for in practice:
+// db.suaColecao.updateMany({ activity: null }, { $set: { activity: [] } }).
+func TestAPIUpdateMany(t *testing.T) {
+	app := newTestApp(t, false)
+
+	if resp, body := doJSON(t, app, http.MethodPost, "/api/databases/api_test_upd/collections", map[string]string{"name": "items"}); resp.StatusCode != http.StatusCreated {
+		t.Fatalf("create collection: status=%d body=%v", resp.StatusCode, body)
+	}
+
+	for _, doc := range []map[string]any{
+		{"_id": "a", "activity": nil},
+		{"_id": "b"},
+		{"_id": "c", "activity": []string{"login"}},
+	} {
+		insertBody, err := json.Marshal(doc)
+		if err != nil {
+			t.Fatalf("marshal insert body: %v", err)
+		}
+		req := httptest.NewRequest(http.MethodPost, "/api/databases/api_test_upd/collections/items/documents", bytes.NewReader(insertBody))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("insert document: %v", err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusCreated {
+			t.Fatalf("insert document: status=%d", resp.StatusCode)
+		}
+	}
+
+	updateBody := []byte(`{"filter":{"activity":null},"update":{"$set":{"activity":[]}}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/databases/api_test_upd/collections/items/update-many", bytes.NewReader(updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("update-many: %v", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("update-many: status=%d body=%s", resp.StatusCode, body)
+	}
+	if !bytes.Contains(body, []byte(`"matched":2`)) || !bytes.Contains(body, []byte(`"modified":2`)) {
+		t.Errorf("expected matched:2 and modified:2 in response, got: %s", body)
+	}
+
+	getResp, getBody := doJSON(t, app, http.MethodGet, "/api/databases/api_test_upd/collections/items/documents?filter=%7B%22_id%22%3A%22c%22%7D", nil)
+	if getResp.StatusCode != http.StatusOK {
+		t.Fatalf("get c: status=%d body=%v", getResp.StatusCode, getBody)
+	}
+	docs, _ := getBody["documents"].([]any)
+	if len(docs) != 1 {
+		t.Fatalf("expected exactly 1 document for c, got %d: %v", len(docs), getBody)
+	}
+	c, _ := docs[0].(map[string]any)
+	activity, _ := c["activity"].([]any)
+	if len(activity) != 1 || activity[0] != "login" {
+		t.Errorf("expected c.activity to remain [\"login\"] (not matched by the filter), got %v", c["activity"])
+	}
+}
+
+func TestAPIUpdateManyRejectedInReadonlyMode(t *testing.T) {
+	app := newTestApp(t, true)
+
+	updateBody := []byte(`{"filter":{},"update":{"$set":{"x":1}}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/databases/api_test_upd_ro/collections/items/update-many", bytes.NewReader(updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", resp.StatusCode)
+	}
+}
+
 func TestAPIToolsEndpoints(t *testing.T) {
 	app := newTestApp(t, false)
 

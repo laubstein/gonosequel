@@ -40,6 +40,7 @@ func registerRoutes(app *fiber.App, d *deps) {
 	scoped.Get("/databases/:db/collections/:coll/documents", d.handleListDocuments)
 	scoped.Get("/databases/:db/collections/:coll/explain", d.handleExplainQuery)
 	scoped.Post("/databases/:db/collections/:coll/aggregate", d.handleAggregate)
+	scoped.Post("/databases/:db/collections/:coll/update-many", d.handleUpdateMany)
 	scoped.Post("/databases/:db/collections/:coll/documents", d.handleInsertDocument)
 	scoped.Get("/databases/:db/collections/:coll/documents/:id", d.handleGetDocument)
 	scoped.Put("/databases/:db/collections/:coll/documents/:id", d.handleReplaceDocument)

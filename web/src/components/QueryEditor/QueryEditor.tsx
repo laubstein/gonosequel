@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { autocompletion } from '@codemirror/autocomplete'
@@ -14,7 +15,7 @@ import { fieldCompletionSource } from './fieldCompletion'
 import { buildPresets } from './presets'
 import type { Preset } from '../../types'
 
-type Mode = 'find' | 'aggregate'
+type Mode = 'find' | 'aggregate' | 'update'
 
 // containsCollscan walks an explain result looking for a COLLSCAN stage
 // anywhere in the plan tree — recursing into every object/array rather
@@ -42,24 +43,29 @@ interface Props {
 
 export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregateResult }: Props) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const [mode, setMode] = useState<Mode>('find')
   const [filterText, setFilterText] = useState(query.filter ?? '{}')
   const [sortText, setSortText] = useState(query.sort ?? '')
   const [pipelineText, setPipelineText] = useState('[]')
+  const [updateText, setUpdateText] = useState('{\n  "$set": {}\n}')
   const [error, setError] = useState<string | null>(null)
   const [explainResult, setExplainResult] = useState<string | null>(null)
   const [explainCollscan, setExplainCollscan] = useState(false)
   const [explaining, setExplaining] = useState(false)
   const [aggregating, setAggregating] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const [updateResult, setUpdateResult] = useState<{ matched: number; modified: number } | null>(null)
   const [presetIndex, setPresetIndex] = useState('')
 
   // QueryEditor only renders for Mongo-shaped connections now — App.tsx
   // swaps in RedisCommandRunner entirely for redis/valkey (see its own
-  // doc comment), so capability gating here is just for Explain/Aggregate
-  // specifically, not a driver check.
+  // doc comment), so capability gating here is just for Explain/Aggregate/
+  // UpdateMany specifically, not a driver check.
   const { data: connection } = useConnectionInfo()
   const canAggregate = connection?.capabilities.includes('aggregate') ?? true
   const canExplain = connection?.capabilities.includes('explain') ?? true
+  const canUpdateMany = connection?.capabilities.includes('updateMany') ?? true
 
   const { data: schemaFields } = useCollectionSchema(db, coll)
   const extensions = [json(), autocompletion({ override: [fieldCompletionSource(schemaFields ?? [])] })]
@@ -89,26 +95,36 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
     setError(null)
     setExplainResult(null)
     setExplainCollscan(false)
+    setUpdateResult(null)
     if (next === 'find') onAggregateResult(null)
   }
 
   // If the user has a non-empty text selection in the active query/pipeline
   // editor, running only executes the selected text instead of the whole
-  // box — same convention as RedisCommandRunner's command runner. `field`
-  // is only ever queried through queryViewRef, which points at whichever
-  // CodeMirror instance (filter or pipeline) is currently mounted for the
-  // active mode.
+  // box — same convention as RedisCommandRunner's command runner.
+  // queryViewRef points at whichever CodeMirror instance (filter or
+  // pipeline) is currently mounted for find/aggregate mode; updateViewRef
+  // is separate because update mode shows the filter box *and* the update
+  // document box at once, so there are two live editors to track instead
+  // of one.
   const queryViewRef = useRef<EditorView | null>(null)
-  function textToRun(fallback: string): string {
-    const view = queryViewRef.current
+  const updateViewRef = useRef<EditorView | null>(null)
+  function textFromView(view: EditorView | null, fallback: string): string {
     const sel = view?.state.selection.main
     if (sel && !sel.empty) return view!.state.sliceDoc(sel.from, sel.to)
     return fallback
+  }
+  function textToRun(fallback: string): string {
+    return textFromView(queryViewRef.current, fallback)
   }
 
   function run() {
     if (mode === 'aggregate') {
       void runAggregate()
+      return
+    }
+    if (mode === 'update') {
+      void runUpdateMany()
       return
     }
     const filter = textToRun(filterText)
@@ -137,6 +153,30 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
       setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
     } finally {
       setAggregating(false)
+    }
+  }
+
+  async function runUpdateMany() {
+    const filter = textToRun(filterText)
+    const update = textFromView(updateViewRef.current, updateText)
+    try {
+      JSON.parse(filter.trim() || '{}')
+      JSON.parse(update)
+      setError(null)
+      setUpdateResult(null)
+      setUpdating(true)
+      const result = await api.updateMany(db, coll, filter.trim() || '{}', update)
+      setUpdateResult(result)
+      // The document table (Results/Pagination) fetches through
+      // useDocuments's ['documents', db, coll, query] key — a bulk write
+      // outside that hook's own query/mutation flow needs an explicit
+      // invalidation, same as DocumentEditor/RedisValueEditor do after a
+      // single-document save.
+      void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -179,7 +219,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])
 
-  const running = mode === 'find' ? false : aggregating
+  const running = mode === 'aggregate' ? aggregating : mode === 'update' ? updating : false
 
   return (
     <div className={styles.editor} ref={wrapperRef}>
@@ -212,9 +252,29 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
             {t('queryEditor.modeAggregate')}
           </button>
         )}
+        {canUpdateMany && (
+          <button
+            className={mode === 'update' ? styles.modeButtonActive : styles.modeButton}
+            onClick={() => switchMode('update')}
+          >
+            {t('queryEditor.modeUpdate')}
+          </button>
+        )}
       </div>
 
-      {mode === 'find' ? (
+      {mode === 'aggregate' ? (
+        <CodeMirror
+          value={pipelineText}
+          height="120px"
+          extensions={extensions}
+          onChange={(value) => setPipelineText(value)}
+          onCreateEditor={(view) => {
+            queryViewRef.current = view
+          }}
+          placeholder={t('queryEditor.pipelinePlaceholder')}
+          basicSetup={{ lineNumbers: false, foldGutter: false }}
+        />
+      ) : (
         <CodeMirror
           value={filterText}
           height="80px"
@@ -226,16 +286,18 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
           placeholder={t('queryEditor.filterPlaceholder')}
           basicSetup={{ lineNumbers: false, foldGutter: false }}
         />
-      ) : (
+      )}
+
+      {mode === 'update' && (
         <CodeMirror
-          value={pipelineText}
-          height="120px"
+          value={updateText}
+          height="80px"
           extensions={extensions}
-          onChange={(value) => setPipelineText(value)}
+          onChange={(value) => setUpdateText(value)}
           onCreateEditor={(view) => {
-            queryViewRef.current = view
+            updateViewRef.current = view
           }}
-          placeholder={t('queryEditor.pipelinePlaceholder')}
+          placeholder={t('queryEditor.updatePlaceholder')}
           basicSetup={{ lineNumbers: false, foldGutter: false }}
         />
       )}
@@ -254,16 +316,18 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
 
       <div className={styles.row}>
         <button className={styles.button} onClick={run} disabled={running}>
-          {running ? t('queryEditor.aggregating') : t('queryEditor.run')}
+          {running ? (mode === 'update' ? t('queryEditor.updating') : t('queryEditor.aggregating')) : t('queryEditor.run')}
         </button>
         {mode === 'find' && canExplain && (
           <button className={styles.button} onClick={() => void explain()} disabled={explaining}>
             {explaining ? t('queryEditor.explaining') : t('queryEditor.explain')}
           </button>
         )}
-        <button className={styles.button} onClick={onNewDocument}>
-          {t('queryEditor.newDocument')}
-        </button>
+        {mode !== 'update' && (
+          <button className={styles.button} onClick={onNewDocument}>
+            {t('queryEditor.newDocument')}
+          </button>
+        )}
         {error && <span className={styles.error}>{error}</span>}
         <div className={styles.spacer} />
         {mode === 'find' && (
@@ -282,6 +346,11 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
           {explainCollscan && <div className={styles.collscanWarning}>{t('queryEditor.collscanWarning')}</div>}
           <pre className={styles.explainOutput}>{explainResult}</pre>
         </>
+      )}
+      {updateResult && (
+        <div className={styles.explainOutput}>
+          {t('queryEditor.updateResult', { matched: updateResult.matched, modified: updateResult.modified })}
+        </div>
       )}
     </div>
   )

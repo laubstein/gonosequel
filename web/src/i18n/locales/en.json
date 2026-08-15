@@ -51,8 +51,12 @@
     "invalidJson": "Invalid JSON",
     "modeFind": "Find",
     "modeAggregate": "Aggregate",
+    "modeUpdate": "Update",
     "pipelinePlaceholder": "[ { \"$match\": { \"status\": \"active\" } } ]",
+    "updatePlaceholder": "{ \"$set\": { \"field\": \"value\" } }",
     "aggregating": "Running…",
+    "updating": "Updating…",
+    "updateResult": "{{matched}} matched, {{modified}} modified",
     "presetPlaceholder": "Useful queries…",
     "collscanWarning": "Full collection scan — no index was used for this query."
   },

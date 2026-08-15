@@ -32,13 +32,14 @@ type OrderedDoc []Entry
 // doesn't have (e.g. Aggregate/Explain/Indexes/Schema for Redis) instead
 // of showing them and failing on click.
 const (
-	CapFind      = "find"
-	CapAggregate = "aggregate"
-	CapExplain   = "explain"
-	CapIndexes   = "indexes"
-	CapSchema    = "schema"
-	CapTools     = "tools"
-	CapCommand   = "command"
+	CapFind       = "find"
+	CapAggregate  = "aggregate"
+	CapExplain    = "explain"
+	CapIndexes    = "indexes"
+	CapSchema     = "schema"
+	CapTools      = "tools"
+	CapCommand    = "command"
+	CapUpdateMany = "updateMany"
 )
 
 // DatabaseAdmin creates, lists, and drops databases.
@@ -109,6 +110,19 @@ type CommandRunner interface {
 	RunCommand(ctx context.Context, dbName string, args []string) (any, error)
 }
 
+// BulkUpdater applies an update document to every document matching a
+// filter in one call — MongoDB's updateMany. Redis/Valkey has no concept
+// of a filter matching multiple keys at once (RunCommand's SCAN+per-key
+// SET is the closest equivalent, and that's a client-side loop, not a
+// single backend call) and returns ErrUnsupported.
+type BulkUpdater interface {
+	// UpdateMany returns how many documents matched the filter and how
+	// many were actually modified (a document matching the filter but
+	// already equal to the update's result counts toward matched, not
+	// modified — mirrors mongosh's own updateMany result shape).
+	UpdateMany(ctx context.Context, dbName, collName string, filter, update Doc) (matched, modified int64, err error)
+}
+
 // DocCodec is how a backend represents documents on the wire. MongoDB's
 // implementation handles Extended JSON (ObjectId, Decimal128, ...); a
 // CouchDB backend's would just be plain JSON with no surrogate types.
@@ -168,4 +182,5 @@ type Driver interface {
 	ServerDiagnostics
 	DocCodec
 	CommandRunner
+	BulkUpdater
 }
