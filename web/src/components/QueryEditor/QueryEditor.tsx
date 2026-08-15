@@ -10,7 +10,7 @@ import { api } from '../../api/client'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
 import { useConnectionInfo } from '../../hooks/useConnectionInfo'
 import { fieldCompletionSource } from './fieldCompletion'
-import { buildPresets } from './presets'
+import { buildPresets, buildRedisPresets } from './presets'
 import type { Preset } from '../../types'
 
 type Mode = 'find' | 'aggregate'
@@ -55,14 +55,21 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
   const { data: connection } = useConnectionInfo()
   const canAggregate = connection?.capabilities.includes('aggregate') ?? true
   const canExplain = connection?.capabilities.includes('explain') ?? true
+  // Redis/Valkey have no query language over values (see
+  // pkg/redis/documents.go's Find — only a "$keyPattern" glob filter is
+  // understood), so the Mongo-shaped schema-field autocomplete and
+  // per-field/aggregate presets below don't apply and are replaced with
+  // Redis-appropriate ones instead of showing filters that always 400 or
+  // aggregate presets that always 501.
+  const isKeyValueDriver = connection?.driver === 'redis' || connection?.driver === 'valkey'
 
   const { data: schemaFields } = useCollectionSchema(db, coll)
   const extensions = [
     json(),
-    autocompletion({ override: [fieldCompletionSource(schemaFields ?? [])] }),
+    autocompletion({ override: [fieldCompletionSource(isKeyValueDriver ? [] : (schemaFields ?? []))] }),
   ]
 
-  const presets = buildPresets(schemaFields ?? [])
+  const presets = isKeyValueDriver ? buildRedisPresets(coll) : buildPresets(schemaFields ?? [])
 
   function applyPreset(index: string) {
     setPresetIndex(index)
@@ -202,7 +209,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
           height="80px"
           extensions={extensions}
           onChange={(value) => setFilterText(value)}
-          placeholder={t('queryEditor.filterPlaceholder')}
+          placeholder={isKeyValueDriver ? t('queryEditor.redisFilterPlaceholder') : t('queryEditor.filterPlaceholder')}
           basicSetup={{ lineNumbers: false, foldGutter: false }}
         />
       ) : (
@@ -216,7 +223,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
         />
       )}
 
-      {mode === 'find' && (
+      {mode === 'find' && !isKeyValueDriver && (
         <div className={styles.row}>
           <input
             className={styles.textarea}

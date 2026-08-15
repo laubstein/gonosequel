@@ -40,6 +40,7 @@
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"ativo\" }",
+    "redisFilterPlaceholder": "{ \"$keyPattern\": \"user:*\" }",
     "sortPlaceholder": "sort: { \"campo\": 1 }",
     "run": "Executar",
     "explain": "Explain",
@@ -174,7 +175,9 @@
     "whereFieldTrue": "Onde {{field}} é verdadeiro",
     "sortByFieldDesc": "Ordenar por {{field}} (decrescente)",
     "fieldLast24h": "{{field}} nas últimas 24 horas",
-    "countGroupedByField": "Contar agrupado por {{field}}"
+    "countGroupedByField": "Contar agrupado por {{field}}",
+    "redisAllKeys": "Todas as chaves desta coleção",
+    "redisKeyPattern": "Chaves que combinam com {{pattern}}"
   },
   "toolsPanel": {
     "collectionsOverview": "Visão geral das coleções",
