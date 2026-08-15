@@ -102,5 +102,13 @@
   border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 12px;
+  /* Column alignment (the Redis command runner's numbered/indented
+     output, e.g. SCAN's nested array) is built by padding with spaces to
+     match a marker's character count — that only lines up visually in a
+     monospace font, where every character (including space) has the same
+     width. In the default proportional font, "2) " (digit + paren +
+     space) renders wider than 3 plain spaces, so the same padding drifts
+     out of alignment. */
+  font-family: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
   white-space: pre-wrap;
 }
