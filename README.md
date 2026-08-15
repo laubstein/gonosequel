@@ -64,20 +64,28 @@ Builds the frontend (`web/dist`) and embeds it into a single `gonosequel` binary
 
 ## CLI flags
 
+Every env var below is read as `GNS_<name>` first; if unset, `ME_<name>` (mongo-express's own
+naming — this project's earlier working name) is used as a fallback, so an existing
+mongo-express deployment can switch images without also rewriting its environment. A value
+containing `$VAR` or `${VAR}` is expanded against the rest of the environment before use (the
+same substitution a shell does), so e.g. `GNS_URL=$MONGO_URL` resolves through to whatever
+`MONGO_URL` is set to — handy when a value is already wired up by the surrounding deployment
+(a docker-compose service link, a Kubernetes downstream env var, etc).
+
 | Flag | Env var | Default | Description |
 |---|---|---|---|
-| `--url` | `ME_URL` | — | Full MongoDB connection URL. Takes priority over `--host`/`--port`/`--user`/`--pass`/`--db`. |
-| `--host` | `ME_HOST` | `localhost` | MongoDB host, used when `--url` isn't given. |
-| `--port` | `ME_MONGO_PORT` | `27017` | MongoDB port. |
-| `--user` / `--pass` | `ME_USER` / `ME_PASS` | — | MongoDB credentials. |
-| `--db` | `ME_DB` | — | Default database. |
-| `--bookmark` | `ME_BOOKMARK` | — | Load the connection from a saved bookmark instead of the flags above (see below). Takes priority over `--url`. |
-| `--bind` | `ME_BIND` | `127.0.0.1` | Address the HTTP server binds to. |
-| `--http-port` | `ME_HTTP_PORT` | `8081` | HTTP server port. |
-| `--sessions` | `ME_SESSIONS` | `false` | Multi-session mode: don't connect at startup: the UI prompts to connect (by URL or bookmark), and can hold several connections open at once. |
-| `--readonly` | `ME_READONLY` | `false` | Reject every non-GET API request with 403, enforced server-side. |
-| `--auth-user` / `--auth-pass` | `ME_AUTH_USER` / `ME_AUTH_PASS` | — | Basic auth in front of the web UI itself. |
-| `--dev-proxy` | `ME_DEV_PROXY` | — | Reverse-proxy non-API requests to this URL instead of serving the embedded frontend. Used internally by `make dev`; prefer browsing Vite's own URL directly, since this path doesn't support the WebSocket upgrade hot module reload needs. |
+| `--url` | `GNS_URL` (`ME_URL`) | — | Full MongoDB connection URL. Takes priority over `--host`/`--port`/`--user`/`--pass`/`--db`. |
+| `--host` | `GNS_HOST` (`ME_HOST`) | `localhost` | MongoDB host, used when `--url` isn't given. |
+| `--port` | `GNS_MONGO_PORT` (`ME_MONGO_PORT`) | `27017` | MongoDB port. |
+| `--user` / `--pass` | `GNS_USER` / `GNS_PASS` (`ME_USER` / `ME_PASS`) | — | MongoDB credentials. |
+| `--db` | `GNS_DB` (`ME_DB`) | — | Default database. |
+| `--bookmark` | `GNS_BOOKMARK` (`ME_BOOKMARK`) | — | Load the connection from a saved bookmark instead of the flags above (see below). Takes priority over `--url`. |
+| `--bind` | `GNS_BIND` (`ME_BIND`) | `127.0.0.1` | Address the HTTP server binds to. |
+| `--http-port` | `GNS_HTTP_PORT` (`ME_HTTP_PORT`) | `8081` | HTTP server port. |
+| `--sessions` | `GNS_SESSIONS` (`ME_SESSIONS`) | `false` | Multi-session mode: don't connect at startup: the UI prompts to connect (by URL or bookmark), and can hold several connections open at once. |
+| `--readonly` | `GNS_READONLY` (`ME_READONLY`) | `false` | Reject every non-GET API request with 403, enforced server-side. |
+| `--auth-user` / `--auth-pass` | `GNS_AUTH_USER` / `GNS_AUTH_PASS` (`ME_AUTH_USER` / `ME_AUTH_PASS`) | — | Basic auth in front of the web UI itself. |
+| `--dev-proxy` | `GNS_DEV_PROXY` (`ME_DEV_PROXY`) | — | Reverse-proxy non-API requests to this URL instead of serving the embedded frontend. Used internally by `make dev`; prefer browsing Vite's own URL directly, since this path doesn't support the WebSocket upgrade hot module reload needs. |
 
 ## Bookmarks
 

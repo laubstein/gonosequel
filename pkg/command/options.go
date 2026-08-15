@@ -56,23 +56,23 @@ func Parse(args []string) (*Options, error) {
 	fs := flag.NewFlagSet("gonosequel", flag.ContinueOnError)
 
 	opts := &Options{}
-	fs.StringVar(&opts.Driver, "driver", envOr("ME_DRIVER", "mongodb"), "database backend to connect to ("+strings.Join(SupportedDrivers, ", ")+")")
-	fs.StringVar(&opts.URL, "url", envOr("ME_URL", ""), "connection URL (mongodb://... or redis://...)")
-	fs.StringVar(&opts.Host, "host", envOr("ME_HOST", ""), "backend host")
+	fs.StringVar(&opts.Driver, "driver", envOr("DRIVER", "mongodb"), "database backend to connect to ("+strings.Join(SupportedDrivers, ", ")+")")
+	fs.StringVar(&opts.URL, "url", envOr("URL", ""), "connection URL (mongodb://... or redis://...)")
+	fs.StringVar(&opts.Host, "host", envOr("HOST", ""), "backend host")
 	fs.IntVar(&opts.Port, "port", 0, "backend port (default depends on --driver: mongodb 27017, redis/valkey 6379)")
-	fs.StringVar(&opts.User, "user", envOr("ME_USER", ""), "backend username")
-	fs.StringVar(&opts.Pass, "pass", envOr("ME_PASS", ""), "backend password")
-	fs.StringVar(&opts.DB, "db", envOr("ME_DB", ""), "default database (MongoDB database name, or Redis/Valkey numbered database)")
+	fs.StringVar(&opts.User, "user", envOr("USER", ""), "backend username")
+	fs.StringVar(&opts.Pass, "pass", envOr("PASS", ""), "backend password")
+	fs.StringVar(&opts.DB, "db", envOr("DB", ""), "default database (MongoDB database name, or Redis/Valkey numbered database)")
 
-	fs.StringVar(&opts.Bind, "bind", envOr("ME_BIND", "127.0.0.1"), "address to bind the HTTP server")
-	fs.IntVar(&opts.HTTPPort, "http-port", envIntOr("ME_HTTP_PORT", 8081), "HTTP server port")
+	fs.StringVar(&opts.Bind, "bind", envOr("BIND", "127.0.0.1"), "address to bind the HTTP server")
+	fs.IntVar(&opts.HTTPPort, "http-port", envIntOr("HTTP_PORT", 8081), "HTTP server port")
 
-	fs.StringVar(&opts.Bookmark, "bookmark", envOr("ME_BOOKMARK", ""), "load connection from a saved bookmark")
-	fs.BoolVar(&opts.Sessions, "sessions", envBoolOr("ME_SESSIONS", false), "enable multi-session mode")
-	fs.StringVar(&opts.AuthUser, "auth-user", envOr("ME_AUTH_USER", ""), "basic auth username for the web UI")
-	fs.StringVar(&opts.AuthPass, "auth-pass", envOr("ME_AUTH_PASS", ""), "basic auth password for the web UI")
-	fs.BoolVar(&opts.Readonly, "readonly", envBoolOr("ME_READONLY", false), "reject all non-GET requests")
-	fs.StringVar(&opts.DevProxy, "dev-proxy", envOr("ME_DEV_PROXY", ""), "proxy non-API requests to this URL (dev mode)")
+	fs.StringVar(&opts.Bookmark, "bookmark", envOr("BOOKMARK", ""), "load connection from a saved bookmark")
+	fs.BoolVar(&opts.Sessions, "sessions", envBoolOr("SESSIONS", false), "enable multi-session mode")
+	fs.StringVar(&opts.AuthUser, "auth-user", envOr("AUTH_USER", ""), "basic auth username for the web UI")
+	fs.StringVar(&opts.AuthPass, "auth-pass", envOr("AUTH_PASS", ""), "basic auth password for the web UI")
+	fs.BoolVar(&opts.Readonly, "readonly", envBoolOr("READONLY", false), "reject all non-GET requests")
+	fs.StringVar(&opts.DevProxy, "dev-proxy", envOr("DEV_PROXY", ""), "proxy non-API requests to this URL (dev mode)")
 
 	readTimeout := fs.Duration("read-timeout", 30*time.Second, "HTTP read timeout")
 	writeTimeout := fs.Duration("write-timeout", 30*time.Second, "HTTP write timeout")
@@ -87,10 +87,10 @@ func Parse(args []string) (*Options, error) {
 
 	// --port has no fixed flag default (see above) because the right
 	// default depends on which --driver was chosen, known only after
-	// parsing. ME_MONGO_PORT is kept as a MongoDB-specific fallback for
-	// backward compatibility; anything else falls back to defaultPort.
+	// parsing. MONGO_PORT is kept as a MongoDB-specific fallback for
+	// mongo-express compatibility; anything else falls back to defaultPort.
 	if opts.Port == 0 {
-		if v, ok := os.LookupEnv("ME_MONGO_PORT"); ok {
+		if v, ok := envLookup("MONGO_PORT"); ok {
 			if n, err := strconv.Atoi(v); err == nil {
 				opts.Port = n
 			}
@@ -136,15 +136,35 @@ func (o *Options) URI() string {
 	return uri
 }
 
+// envLookup resolves a setting from the environment: GNS_<key> first, then
+// ME_<key> as a fallback for mongo-express's own variable names (this
+// project's earlier working name), so an existing mongo-express deployment
+// can switch images without also having to rewrite its environment. The
+// value — from either prefix — is then run through os.ExpandEnv, so a
+// value like "$MONGO_URL" resolves through to MONGO_URL's own value rather
+// than being used as the literal string "$MONGO_URL" (the same expansion
+// a shell would do, useful when the value is wired up from another
+// variable already set by the surrounding deployment, e.g. a docker-compose
+// service link).
+func envLookup(key string) (string, bool) {
+	if v, ok := os.LookupEnv("GNS_" + key); ok {
+		return os.ExpandEnv(v), true
+	}
+	if v, ok := os.LookupEnv("ME_" + key); ok {
+		return os.ExpandEnv(v), true
+	}
+	return "", false
+}
+
 func envOr(key, def string) string {
-	if v, ok := os.LookupEnv(key); ok {
+	if v, ok := envLookup(key); ok {
 		return v
 	}
 	return def
 }
 
 func envIntOr(key string, def int) int {
-	v, ok := os.LookupEnv(key)
+	v, ok := envLookup(key)
 	if !ok {
 		return def
 	}
@@ -156,7 +176,7 @@ func envIntOr(key string, def int) int {
 }
 
 func envBoolOr(key string, def bool) bool {
-	v, ok := os.LookupEnv(key)
+	v, ok := envLookup(key)
 	if !ok {
 		return def
 	}
