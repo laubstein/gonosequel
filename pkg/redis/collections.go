@@ -156,6 +156,17 @@ func (c *Client) RenameCollection(ctx context.Context, dbName, oldName, newName 
 // sampled with MEMORY USAGE over at most sampleStatsKeys keys and
 // extrapolated — an exact sum would mean calling MEMORY USAGE once per
 // key, too expensive for a large collection.
+//
+// Unlike DropCollection/RenameCollection, a zero-key match is not an
+// error here: a "collection" is just a derived grouping, not a real
+// object with independent existence, and Find/InferSchema already treat
+// zero matches as "empty", not "not found" — Stats matching that avoids
+// both a confusing 404 for a collection the sidebar just listed a moment
+// earlier (ListCollections and Stats are two independent scans, so a
+// key deleted between them is a real possibility, not just a race to
+// paper over) and a cascading failure in CollectionsOverview, which
+// calls Stats once per collection and would fail outright on any one
+// zero-key collection.
 func (c *Client) Stats(ctx context.Context, dbName, collName string) (driver.CollectionStats, error) {
 	idx, err := dbIndex(dbName)
 	if err != nil {
@@ -186,9 +197,6 @@ func (c *Client) Stats(ctx context.Context, dbName, collName string) (driver.Col
 		return nil
 	}); err != nil {
 		return driver.CollectionStats{}, fmt.Errorf("stats %q: %w", collName, err)
-	}
-	if len(keys) == 0 {
-		return driver.CollectionStats{}, driver.ErrNotFound
 	}
 
 	avg := int64(0)

@@ -78,6 +78,12 @@ func New(cfg Config) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName:      "gonosequel",
 		ErrorHandler: errorHandler,
+		// Fiber does not percent-decode path params by default, so
+		// c.Params("db"/"coll"/"name") would come back with %XX escapes
+		// still literal — breaking any name that needs URL-encoding, e.g.
+		// pkg/redis's synthetic "(no prefix)" collection (a literal
+		// space) or a MongoDB collection/database name with one.
+		UnescapePath: true,
 	})
 
 	app.Use(recover.New())

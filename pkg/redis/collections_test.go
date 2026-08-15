@@ -47,7 +47,15 @@ func TestDropAndRenameCollection(t *testing.T) {
 	if err := c.DropCollection(ctx, "7", "gadgets"); err != nil {
 		t.Fatalf("DropCollection: %v", err)
 	}
-	if _, err := c.Stats(ctx, "7", "gadgets"); !errors.Is(err, driver.ErrNotFound) {
-		t.Errorf("expected ErrNotFound stats-ing a dropped collection, got %v", err)
+	// Stats on a since-emptied collection is not an error — see its doc
+	// comment: a collection has no independent existence to be "not
+	// found", it's just a derived grouping, same as Find/InferSchema
+	// already treat a zero-key match as "empty" rather than "missing".
+	afterDrop, err := c.Stats(ctx, "7", "gadgets")
+	if err != nil {
+		t.Fatalf("Stats after drop: expected no error, got %v", err)
+	}
+	if afterDrop.Count != 0 {
+		t.Errorf("expected count 0 after drop, got %d", afterDrop.Count)
 	}
 }
