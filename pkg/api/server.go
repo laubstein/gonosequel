@@ -6,6 +6,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 
@@ -32,7 +33,13 @@ type Config struct {
 	// Driver is the backend the server was started against (e.g.
 	// "mongodb"), reported by /api/info so the UI can show what it's
 	// connected to.
-	Driver   string
+	Driver string
+	// Connect opens a new connection to the named backend driver (e.g.
+	// "mongodb", "redis"). Required when Sessions is true, since
+	// /api/connect needs to open connections at runtime to whatever
+	// backend the user picks in the UI — pkg/api has no concrete driver
+	// package of its own to call into, by design.
+	Connect  func(ctx context.Context, driverName, uri string) (driver.Driver, error)
 	Sessions bool // whether the UI may open additional connections
 	Readonly bool
 	AuthUser string
@@ -59,6 +66,7 @@ type deps struct {
 	registry     *session.Registry
 	history      *history.Store
 	driver       string
+	connect      func(ctx context.Context, driverName, uri string) (driver.Driver, error)
 	sessions     bool
 	readonly     bool
 	bookmarksDir string
@@ -90,6 +98,7 @@ func New(cfg Config) *fiber.App {
 		registry:     cfg.Registry,
 		history:      history.NewStore(),
 		driver:       cfg.Driver,
+		connect:      cfg.Connect,
 		sessions:     cfg.Sessions,
 		readonly:     cfg.Readonly,
 		bookmarksDir: cfg.BookmarksDir,

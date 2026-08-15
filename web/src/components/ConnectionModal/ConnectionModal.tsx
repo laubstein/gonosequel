@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import styles from './ConnectionModal.module.css'
 import { api } from '../../api/client'
 import { setSessionId } from '../../api/http'
+import { SUPPORTED_DRIVERS, DRIVER_LABEL, DEFAULT_PORT, type DriverName } from '../../drivers'
 
 interface Props {
   onConnected: () => void
@@ -14,15 +15,40 @@ interface Props {
   onCancel?: () => void
 }
 
+type Tab = 'standard' | 'url'
+
+// inferDriverLabel guesses a display name from a raw connection URL's
+// scheme, for the URL tab — there's no type selector there, just a pasted
+// string, but the title still reacts to what the user typed.
+function inferDriverLabel(url: string): string | null {
+  if (url.startsWith('redis://') || url.startsWith('rediss://')) return DRIVER_LABEL.redis
+  if (url.startsWith('mongodb://') || url.startsWith('mongodb+srv://')) return DRIVER_LABEL.mongodb
+  return null
+}
+
 export function ConnectionModal({ onConnected, onCancel }: Props) {
   const { t } = useTranslation()
-  const [url, setUrl] = useState('mongodb://localhost:27017')
+  const [tab, setTab] = useState<Tab>('standard')
+
+  // Standard (form) tab fields.
+  const [driver, setDriver] = useState<DriverName>('mongodb')
+  const [host, setHost] = useState('localhost')
+  const [port, setPort] = useState('')
+  const [requiresAuth, setRequiresAuth] = useState(false)
+  const [user, setUser] = useState('')
+  const [pass, setPass] = useState('')
+  const [dbName, setDbName] = useState('')
+  const [extraParams, setExtraParams] = useState('')
+
+  // URL (raw string) tab field.
+  const [url, setUrl] = useState('')
+
   const [error, setError] = useState<string | null>(null)
 
   const { data: bookmarkList } = useQuery({ queryKey: ['bookmarks'], queryFn: api.bookmarks })
 
   const connect = useMutation({
-    mutationFn: (targetUrl: string) => api.connect(targetUrl),
+    mutationFn: (args: { url: string; driver?: string }) => api.connect(args.url, args.driver),
     onSuccess: (res) => {
       setSessionId(res.sessionId)
       onConnected()
@@ -39,11 +65,33 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
 
+  function buildStandardURL(): string {
+    const scheme = driver === 'mongodb' ? 'mongodb' : 'redis'
+    const auth = requiresAuth && user ? `${encodeURIComponent(user)}:${encodeURIComponent(pass)}@` : ''
+    const effectivePort = port || DEFAULT_PORT[driver]
+    let built = `${scheme}://${auth}${host || 'localhost'}:${effectivePort}`
+    if (dbName) built += `/${encodeURIComponent(dbName)}`
+    if (extraParams) built += `?${extraParams}`
+    return built
+  }
+
+  function handleStandardConnect() {
+    connect.mutate({ url: buildStandardURL(), driver })
+  }
+
+  function handleUrlConnect() {
+    connect.mutate({ url })
+  }
+
+  const titleDriverLabel = tab === 'standard' ? DRIVER_LABEL[driver] : inferDriverLabel(url)
+
   return (
     <div className={onCancel ? styles.overlayDialog : styles.overlay}>
       <div className={styles.card}>
         <div className={styles.title}>
-          {t('connectionModal.title')}
+          {titleDriverLabel
+            ? t('connectionModal.titleFor', { driver: titleDriverLabel })
+            : t('connectionModal.title')}
           {onCancel && (
             <button className={styles.closeButton} onClick={onCancel} aria-label={t('connectionModal.cancel')}>
               ✕
@@ -51,19 +99,114 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
           )}
         </div>
 
-        <div className={styles.field}>
-          <label className={styles.label}>{t('connectionModal.urlLabel')}</label>
-          <input
-            className={styles.input}
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder={t('connectionModal.urlPlaceholder')}
-          />
+        <div className={styles.tabs}>
+          <button
+            className={tab === 'standard' ? styles.tabActive : styles.tab}
+            onClick={() => setTab('standard')}
+          >
+            {t('connectionModal.tabStandard')}
+          </button>
+          <button className={tab === 'url' ? styles.tabActive : styles.tab} onClick={() => setTab('url')}>
+            {t('connectionModal.tabUrl')}
+          </button>
         </div>
 
-        <button className={styles.button} onClick={() => connect.mutate(url)} disabled={connect.isPending}>
-          {connect.isPending ? t('connectionModal.connecting') : t('connectionModal.connect')}
-        </button>
+        {tab === 'standard' ? (
+          <>
+            <div className={styles.field}>
+              <label className={styles.label}>{t('connectionModal.driverLabel')}</label>
+              <select className={styles.input} value={driver} onChange={(e) => setDriver(e.target.value as DriverName)}>
+                {SUPPORTED_DRIVERS.map((d) => (
+                  <option key={d} value={d}>
+                    {DRIVER_LABEL[d]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.row}>
+              <div className={styles.field} style={{ flex: 2 }}>
+                <label className={styles.label}>{t('connectionModal.hostLabel')}</label>
+                <input className={styles.input} value={host} onChange={(e) => setHost(e.target.value)} placeholder="localhost" />
+              </div>
+              <div className={styles.field} style={{ flex: 1 }}>
+                <label className={styles.label}>{t('connectionModal.portLabel')}</label>
+                <input
+                  className={styles.input}
+                  value={port}
+                  onChange={(e) => setPort(e.target.value)}
+                  placeholder={String(DEFAULT_PORT[driver])}
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.checkboxLabel}>
+                <input type="checkbox" checked={requiresAuth} onChange={(e) => setRequiresAuth(e.target.checked)} />
+                {t('connectionModal.requiresAuth')}
+              </label>
+            </div>
+
+            {requiresAuth && (
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label className={styles.label}>{t('connectionModal.userLabel')}</label>
+                  <input className={styles.input} value={user} onChange={(e) => setUser(e.target.value)} />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>{t('connectionModal.passLabel')}</label>
+                  <input
+                    className={styles.input}
+                    type="password"
+                    value={pass}
+                    onChange={(e) => setPass(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className={styles.field}>
+              <label className={styles.label}>
+                {driver === 'mongodb' ? t('connectionModal.dbLabelMongo') : t('connectionModal.dbLabelRedis')}
+              </label>
+              <input className={styles.input} value={dbName} onChange={(e) => setDbName(e.target.value)} />
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>{t('connectionModal.extraParamsLabel')}</label>
+              <input
+                className={styles.input}
+                value={extraParams}
+                onChange={(e) => setExtraParams(e.target.value)}
+                placeholder={
+                  driver === 'mongodb' ? 'authSource=admin&replicaSet=rs0' : 'dial_timeout=5s'
+                }
+              />
+              <span className={styles.hint}>{t('connectionModal.extraParamsHint')}</span>
+            </div>
+
+            <button className={styles.button} onClick={handleStandardConnect} disabled={connect.isPending}>
+              {connect.isPending ? t('connectionModal.connecting') : t('connectionModal.connect')}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className={styles.field}>
+              <label className={styles.label}>{t('connectionModal.urlLabel')}</label>
+              <input
+                className={styles.input}
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder={t('connectionModal.urlPlaceholder')}
+              />
+            </div>
+            <button className={styles.button} onClick={handleUrlConnect} disabled={connect.isPending}>
+              {connect.isPending ? t('connectionModal.connecting') : t('connectionModal.connect')}
+            </button>
+          </>
+        )}
+
         {error && <div className={styles.error}>{error}</div>}
 
         {bookmarkList && bookmarkList.length > 0 && (

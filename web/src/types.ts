@@ -62,6 +62,7 @@ export interface SessionInfo {
   id: string
   uri: string
   name: string
+  driver: string
   capabilities: Capability[]
 }
 

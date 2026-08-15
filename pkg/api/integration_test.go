@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/mongodb"
 
 	"github.com/laubstein/gonosequel/pkg/client"
+	"github.com/laubstein/gonosequel/pkg/driver"
 	"github.com/laubstein/gonosequel/pkg/session"
 )
 
@@ -231,6 +233,59 @@ func TestAPIUnknownSessionRejected(t *testing.T) {
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", resp.StatusCode)
+	}
+}
+
+// TestAPISessionsModeConnectDispatchesByDriver covers the bug this test
+// would have caught: /api/connect used to call pkg/client.Connect
+// unconditionally, so --sessions mode could only ever open MongoDB
+// connections regardless of what driver the request asked for. It now
+// goes through Config.Connect, the same dispatch function main.go uses
+// for the startup connection.
+func TestAPISessionsModeConnectDispatchesByDriver(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	registry := session.NewRegistry()
+	app := New(Config{
+		Registry: registry,
+		Sessions: true,
+		Connect: func(ctx context.Context, driverName, uri string) (driver.Driver, error) {
+			if driverName != "mongodb" {
+				return nil, fmt.Errorf("unexpected driver %q", driverName)
+			}
+			return client.Connect(ctx, uri)
+		},
+	})
+
+	resp, body := doJSON(t, app, http.MethodPost, "/api/connect", map[string]string{
+		"url":    testMongoURI,
+		"driver": "mongodb",
+		"name":   "test-session",
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("connect: status=%d body=%v", resp.StatusCode, body)
+	}
+	sessionID, _ := body["sessionId"].(string)
+	if sessionID == "" {
+		t.Fatalf("expected a sessionId in response, got %v", body)
+	}
+	t.Cleanup(func() {
+		if cl, err := registry.Get(sessionID); err == nil {
+			_ = cl.Close(context.Background())
+		}
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/connection", nil)
+	req.Header.Set(sessionIDHeader, sessionID)
+	connResp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test /api/connection: %v", err)
+	}
+	defer connResp.Body.Close()
+	if connResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /api/connection: status = %d, want 200", connResp.StatusCode)
 	}
 }
 

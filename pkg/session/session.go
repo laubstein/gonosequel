@@ -26,6 +26,13 @@ type Info struct {
 	ID   string `json:"id"`
 	URI  string `json:"uri"` // credentials redacted
 	Name string `json:"name"`
+	// Driver names which backend this session is connected to (e.g.
+	// "mongodb", "redis") — set by the caller of Put, since Registry has
+	// no way to derive a name from a driver.Driver value alone. In
+	// --sessions mode different sessions can be different backends, so
+	// this is the per-session source of truth; Config.Driver on
+	// pkg/api.New is only the startup default and can disagree.
+	Driver string `json:"driver"`
 	// Capabilities lists which driver.Cap* capabilities this connection's
 	// backend actually supports (see driver.Driver.Capabilities), so the
 	// frontend can hide UI for what it doesn't have instead of showing it

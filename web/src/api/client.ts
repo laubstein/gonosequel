@@ -21,8 +21,8 @@ export const api = {
 
   sessions: () => apiGet<SessionInfo[]>('/api/sessions'),
   bookmarks: () => apiGet<{ name: string; uri: string }[]>('/api/bookmarks'),
-  connect: (url: string, name?: string) =>
-    apiSend<{ sessionId: string }>('POST', '/api/connect', { url, name }),
+  connect: (url: string, driver?: string, name?: string) =>
+    apiSend<{ sessionId: string }>('POST', '/api/connect', { url, driver, name }),
   connectBookmark: (bookmark: string) =>
     apiSend<{ sessionId: string }>('POST', '/api/connect', { bookmark }),
   disconnect: () => apiSend<{ ok: true }>('POST', '/api/disconnect'),

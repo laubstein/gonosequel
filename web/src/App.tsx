@@ -20,19 +20,10 @@ import { useSessions } from './hooks/useSessions'
 import { useInfo } from './hooks/useInfo'
 import { useConnectionInfo } from './hooks/useConnectionInfo'
 import { docId } from './api/extjson'
+import { DRIVER_LABEL } from './drivers'
 import type { Capability, ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
 const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
-
-// Display names for the --driver values the server reports via /api/info.
-// Falls back to the raw value for anything not listed here, so a future
-// backend shows up correctly even before this map is updated for it.
-const DRIVER_LABEL: Record<string, string> = {
-  mongodb: 'MongoDB',
-  redis: 'Redis',
-  valkey: 'Valkey',
-  couchdb: 'CouchDB',
-}
 
 type Tab = 'documents' | 'schema' | 'indexes' | 'tools' | 'history' | 'server'
 
@@ -129,7 +120,7 @@ export default function App() {
   // in either mode and reuses this same gate to reconnect.
   if (!sessionsLoading && sessions && sessions.length === 0) {
     return (
-      <ConnectionModal onConnected={() => void queryClient.invalidateQueries({ queryKey: ['sessions'] })} />
+      <ConnectionModal onConnected={() => void queryClient.invalidateQueries()} />
     )
   }
 
@@ -148,9 +139,9 @@ export default function App() {
           </button>
         ))}
         <div className={styles.spacer} />
-        {info?.driver && (
+        {connection?.driver && (
           <span className={styles.connectionLabel} title={t('app.driverTitle')}>
-            {DRIVER_LABEL[info.driver] ?? info.driver}
+            {DRIVER_LABEL[connection.driver] ?? connection.driver}
           </span>
         )}
         <button
@@ -232,7 +223,7 @@ export default function App() {
 
       {selection &&
         editorTarget &&
-        (info?.driver === 'redis' || info?.driver === 'valkey' ? (
+        (connection?.driver === 'redis' || connection?.driver === 'valkey' ? (
           <RedisValueEditor
             db={selection.db}
             coll={selection.coll}

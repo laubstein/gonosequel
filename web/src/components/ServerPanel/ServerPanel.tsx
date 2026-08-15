@@ -151,7 +151,7 @@ export function ServerPanel() {
           onCancel={() => setAddingConnection(false)}
           onConnected={() => {
             setAddingConnection(false)
-            void queryClient.invalidateQueries({ queryKey: ['sessions'] })
+            void queryClient.invalidateQueries()
           }}
         />
       )}
