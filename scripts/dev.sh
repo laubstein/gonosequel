@@ -73,6 +73,20 @@ if [ ! -d web/node_modules ]; then
   (cd web && npm ci)
 fi
 
+# Unlike the frontend (served live by Vite above) and the API server
+# itself (rebuilt on every run), /doc is served from docs/.vitepress/dist
+# via go:embed — baked into the binary at compile time, with no live
+# reload. Rebuilding it here on every `make dev` run is what makes doc
+# edits actually show up; skipping this step (as this script used to)
+# left /doc silently serving whatever was last built by hand, however
+# stale.
+if [ ! -d docs/node_modules ]; then
+  echo "==> Installing docs dependencies"
+  (cd docs && npm ci)
+fi
+echo "==> Building docs (embedded into the API server's /doc route)"
+(cd docs && npm run docs:build)
+
 echo "==> Building gonosequel"
 API_BIN="$(mktemp -d)/gonosequel-dev"
 go build -o "$API_BIN" .
