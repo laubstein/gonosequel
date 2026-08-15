@@ -7,15 +7,25 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // SupportedDrivers lists the backend values --driver currently accepts.
-// MongoDB is the only one implemented today; the flag exists so choosing a
-// backend is already part of the CLI surface once Valkey/CouchDB support
-// lands, instead of being a breaking addition at that point.
-var SupportedDrivers = []string{"mongodb"}
+// "redis" and "valkey" both route to the same driver package — the two
+// are wire-compatible, --driver just records which one the user typed.
+// CouchDB support is planned but not implemented yet.
+var SupportedDrivers = []string{"mongodb", "redis", "valkey"}
+
+// defaultPort is the connection port assumed for a driver when --port
+// isn't explicitly set — each backend has its own conventional default,
+// unlike --host/--user/--pass/--db, which mean the same thing everywhere.
+var defaultPort = map[string]int{
+	"mongodb": 27017,
+	"redis":   6379,
+	"valkey":  6379,
+}
 
 // Options holds every runtime setting the application accepts, sourced from
 // CLI flags with environment variable fallbacks.
@@ -47,12 +57,12 @@ func Parse(args []string) (*Options, error) {
 
 	opts := &Options{}
 	fs.StringVar(&opts.Driver, "driver", envOr("ME_DRIVER", "mongodb"), "database backend to connect to ("+strings.Join(SupportedDrivers, ", ")+")")
-	fs.StringVar(&opts.URL, "url", envOr("ME_URL", ""), "MongoDB connection URL (mongodb://...)")
-	fs.StringVar(&opts.Host, "host", envOr("ME_HOST", ""), "MongoDB host")
-	fs.IntVar(&opts.Port, "port", envIntOr("ME_MONGO_PORT", 27017), "MongoDB port")
-	fs.StringVar(&opts.User, "user", envOr("ME_USER", ""), "MongoDB username")
-	fs.StringVar(&opts.Pass, "pass", envOr("ME_PASS", ""), "MongoDB password")
-	fs.StringVar(&opts.DB, "db", envOr("ME_DB", ""), "MongoDB default database")
+	fs.StringVar(&opts.URL, "url", envOr("ME_URL", ""), "connection URL (mongodb://... or redis://...)")
+	fs.StringVar(&opts.Host, "host", envOr("ME_HOST", ""), "backend host")
+	fs.IntVar(&opts.Port, "port", 0, "backend port (default depends on --driver: mongodb 27017, redis/valkey 6379)")
+	fs.StringVar(&opts.User, "user", envOr("ME_USER", ""), "backend username")
+	fs.StringVar(&opts.Pass, "pass", envOr("ME_PASS", ""), "backend password")
+	fs.StringVar(&opts.DB, "db", envOr("ME_DB", ""), "default database (MongoDB database name, or Redis/Valkey numbered database)")
 
 	fs.StringVar(&opts.Bind, "bind", envOr("ME_BIND", "127.0.0.1"), "address to bind the HTTP server")
 	fs.IntVar(&opts.HTTPPort, "http-port", envIntOr("ME_HTTP_PORT", 8081), "HTTP server port")
@@ -75,18 +85,30 @@ func Parse(args []string) (*Options, error) {
 		return nil, fmt.Errorf("unsupported --driver %q (supported: %s)", opts.Driver, strings.Join(SupportedDrivers, ", "))
 	}
 
+	// --port has no fixed flag default (see above) because the right
+	// default depends on which --driver was chosen, known only after
+	// parsing. ME_MONGO_PORT is kept as a MongoDB-specific fallback for
+	// backward compatibility; anything else falls back to defaultPort.
+	if opts.Port == 0 {
+		if v, ok := os.LookupEnv("ME_MONGO_PORT"); ok {
+			if n, err := strconv.Atoi(v); err == nil {
+				opts.Port = n
+			}
+		}
+	}
+	if opts.Port == 0 {
+		opts.Port = defaultPort[opts.Driver]
+	}
+
 	opts.ReadTimeout = *readTimeout
 	opts.WriteTimeout = *writeTimeout
 
 	return opts, nil
 }
 
-// URI builds the connection string for the selected --driver, preferring
-// the explicit --url flag when set. Today only mongodb:// is supported —
-// --driver has one valid value — so this always builds a MongoDB URI; it
-// exists as its own method (rather than being inlined at the call site) so
-// a future driver can plug in a different URI/DSN shape here without
-// touching callers.
+// URI builds the connection string for the selected --driver from the
+// discrete host/port/user/pass/db flags, preferring the explicit --url
+// flag when set. mongodb and redis/valkey each get their own scheme.
 func (o *Options) URI() string {
 	if o.URL != "" {
 		return o.URL
@@ -97,12 +119,17 @@ func (o *Options) URI() string {
 		host = "localhost"
 	}
 
+	scheme := "mongodb"
+	if o.Driver == "redis" || o.Driver == "valkey" {
+		scheme = "redis"
+	}
+
 	auth := ""
 	if o.User != "" {
 		auth = fmt.Sprintf("%s:%s@", o.User, o.Pass)
 	}
 
-	uri := fmt.Sprintf("mongodb://%s%s:%d", auth, host, o.Port)
+	uri := fmt.Sprintf("%s://%s%s:%d", scheme, auth, host, o.Port)
 	if o.DB != "" {
 		uri += "/" + o.DB
 	}

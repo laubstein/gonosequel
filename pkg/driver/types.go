@@ -14,6 +14,12 @@ var (
 	// ErrAlreadyExists is returned when creating a collection or index
 	// that already exists under that name.
 	ErrAlreadyExists = errors.New("already exists")
+	// ErrUnsupported is returned by a Driver method that this backend
+	// doesn't implement (e.g. Aggregate on a Redis connection). Callers
+	// should prefer checking Driver.Capabilities() before calling into a
+	// capability at all; this exists as the well-defined failure mode for
+	// when that check is skipped or the capability list changes mid-call.
+	ErrUnsupported = errors.New("not supported by this backend")
 )
 
 // DatabaseInfo summarizes a single database.

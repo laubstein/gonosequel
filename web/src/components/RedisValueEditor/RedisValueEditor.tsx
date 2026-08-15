@@ -1,0 +1,305 @@
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import docStyles from '../DocumentEditor/DocumentEditor.module.css'
+import styles from './RedisValueEditor.module.css'
+import { api } from '../../api/client'
+import type { EditorTarget } from '../DocumentEditor/DocumentEditor'
+
+type ValueType = 'string' | 'hash' | 'list' | 'set' | 'zset'
+
+interface HashRow {
+  field: string
+  value: string
+}
+
+interface ZRow {
+  member: string
+  score: string
+}
+
+interface Props {
+  db: string
+  coll: string
+  target: EditorTarget
+  onClose: () => void
+}
+
+// RedisValueEditor replaces DocumentEditor's free-form JSON textarea with a
+// dedicated form per Redis value type (string/hash/list/set/zset), matching
+// the {_id, type, ttl, value} shape pkg/redis's driver.Driver implementation
+// reads and writes — see pkg/redis/documents.go's readKeyDoc/writeKeyDoc.
+export function RedisValueEditor({ db, coll, target, onClose }: Props) {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+
+  const [key, setKey] = useState('')
+  const [ttl, setTtl] = useState<number>(-1)
+  const [type, setType] = useState<ValueType>('string')
+  const [stringValue, setStringValue] = useState('')
+  const [hashRows, setHashRows] = useState<HashRow[]>([{ field: '', value: '' }])
+  const [listItems, setListItems] = useState<string[]>([''])
+  const [setItems, setSetItems] = useState<string[]>([''])
+  const [zsetRows, setZsetRows] = useState<ZRow[]>([{ member: '', score: '0' }])
+  const [error, setError] = useState<string | null>(null)
+
+  const existing = useQuery({
+    queryKey: ['document', db, coll, target.mode === 'edit' ? target.encodedId : null],
+    queryFn: () => api.getDocument(db, coll, target.mode === 'edit' ? target.encodedId : ''),
+    enabled: target.mode === 'edit',
+  })
+
+  useEffect(() => {
+    if (target.mode !== 'edit' || !existing.data) return
+    const doc = existing.data
+    setKey(typeof doc._id === 'string' ? doc._id : '')
+    setTtl(typeof doc.ttl === 'number' ? doc.ttl : -1)
+    const docType = (typeof doc.type === 'string' ? doc.type : 'string') as ValueType
+    setType(docType)
+    const value = doc.value
+
+    if (docType === 'string') {
+      setStringValue(typeof value === 'string' ? value : '')
+    } else if (docType === 'hash' && value && typeof value === 'object') {
+      const rows = Object.entries(value as Record<string, unknown>).map(([field, v]) => ({
+        field,
+        value: String(v),
+      }))
+      setHashRows(rows.length ? rows : [{ field: '', value: '' }])
+    } else if (docType === 'list' && Array.isArray(value)) {
+      setListItems(value.length ? value.map(String) : [''])
+    } else if (docType === 'set' && Array.isArray(value)) {
+      setSetItems(value.length ? value.map(String) : [''])
+    } else if (docType === 'zset' && Array.isArray(value)) {
+      const rows = (value as { member: unknown; score: unknown }[]).map((z) => ({
+        member: String(z.member),
+        score: String(z.score),
+      }))
+      setZsetRows(rows.length ? rows : [{ member: '', score: '0' }])
+    }
+  }, [target, existing.data])
+
+  function invalidate() {
+    void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
+  }
+
+  function buildValue(): unknown {
+    switch (type) {
+      case 'string':
+        return stringValue
+      case 'hash': {
+        const obj: Record<string, string> = {}
+        for (const row of hashRows) if (row.field) obj[row.field] = row.value
+        return obj
+      }
+      case 'list':
+        return listItems.filter((v) => v !== '')
+      case 'set':
+        return setItems.filter((v) => v !== '')
+      case 'zset':
+        return zsetRows
+          .filter((r) => r.member !== '')
+          .map((r) => ({ member: r.member, score: Number(r.score) || 0 }))
+    }
+  }
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const doc: Record<string, unknown> = { type, value: buildValue() }
+      if (target.mode === 'new') {
+        if (key) doc._id = key
+        return api.insertDocument(db, coll, doc)
+      }
+      return api.replaceDocument(db, coll, target.encodedId, doc)
+    },
+    onSuccess: () => {
+      invalidate()
+      onClose()
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  })
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      if (target.mode !== 'edit') throw new Error('no key to delete')
+      return api.deleteDocument(db, coll, target.encodedId)
+    },
+    onSuccess: () => {
+      invalidate()
+      onClose()
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  })
+
+  return (
+    <div className={docStyles.overlay} onClick={onClose}>
+      <div className={docStyles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={docStyles.header}>
+          {target.mode === 'new' ? t('documentEditor.newTitle') : t('documentEditor.editTitle')}
+          <div className={docStyles.headerSpacer} />
+          <button className={docStyles.closeButton} onClick={onClose} aria-label={t('documentEditor.close')}>
+            ✕
+          </button>
+        </div>
+
+        <div className={docStyles.body}>
+          {target.mode === 'edit' && existing.isLoading ? (
+            <div>{t('documentEditor.loading')}</div>
+          ) : (
+            <>
+              <div className={styles.row}>
+                <label className={styles.label}>{t('redisEditor.key')}</label>
+                <input
+                  className={styles.input}
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                  disabled={target.mode === 'edit'}
+                  placeholder={`${coll}:...`}
+                />
+              </div>
+              <div className={styles.row}>
+                <label className={styles.label}>{t('redisEditor.type')}</label>
+                <select
+                  className={styles.input}
+                  value={type}
+                  onChange={(e) => setType(e.target.value as ValueType)}
+                  disabled={target.mode === 'edit'}
+                >
+                  <option value="string">string</option>
+                  <option value="hash">hash</option>
+                  <option value="list">list</option>
+                  <option value="set">set</option>
+                  <option value="zset">zset</option>
+                </select>
+              </div>
+
+              {type === 'string' && (
+                <textarea
+                  className={docStyles.textarea}
+                  value={stringValue}
+                  onChange={(e) => setStringValue(e.target.value)}
+                  spellCheck={false}
+                />
+              )}
+
+              {type === 'hash' && (
+                <div className={styles.rows}>
+                  {hashRows.map((row, i) => (
+                    <div key={i} className={styles.row}>
+                      <input
+                        className={styles.input}
+                        placeholder={t('redisEditor.field')}
+                        value={row.field}
+                        onChange={(e) =>
+                          setHashRows(hashRows.map((r, j) => (j === i ? { ...r, field: e.target.value } : r)))
+                        }
+                      />
+                      <input
+                        className={styles.input}
+                        placeholder={t('redisEditor.value')}
+                        value={row.value}
+                        onChange={(e) =>
+                          setHashRows(hashRows.map((r, j) => (j === i ? { ...r, value: e.target.value } : r)))
+                        }
+                      />
+                      <button className={styles.removeButton} onClick={() => setHashRows(hashRows.filter((_, j) => j !== i))}>
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button className={docStyles.button} onClick={() => setHashRows([...hashRows, { field: '', value: '' }])}>
+                    {t('redisEditor.addField')}
+                  </button>
+                </div>
+              )}
+
+              {(type === 'list' || type === 'set') && (
+                <div className={styles.rows}>
+                  {(type === 'list' ? listItems : setItems).map((item, i) => (
+                    <div key={i} className={styles.row}>
+                      <input
+                        className={styles.input}
+                        value={item}
+                        onChange={(e) => {
+                          const next = [...(type === 'list' ? listItems : setItems)]
+                          next[i] = e.target.value
+                          if (type === 'list') setListItems(next)
+                          else setSetItems(next)
+                        }}
+                      />
+                      <button
+                        className={styles.removeButton}
+                        onClick={() => {
+                          const next = (type === 'list' ? listItems : setItems).filter((_, j) => j !== i)
+                          if (type === 'list') setListItems(next)
+                          else setSetItems(next)
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    className={docStyles.button}
+                    onClick={() => (type === 'list' ? setListItems([...listItems, '']) : setSetItems([...setItems, '']))}
+                  >
+                    {t('redisEditor.addItem')}
+                  </button>
+                </div>
+              )}
+
+              {type === 'zset' && (
+                <div className={styles.rows}>
+                  {zsetRows.map((row, i) => (
+                    <div key={i} className={styles.row}>
+                      <input
+                        className={styles.input}
+                        placeholder={t('redisEditor.member')}
+                        value={row.member}
+                        onChange={(e) =>
+                          setZsetRows(zsetRows.map((r, j) => (j === i ? { ...r, member: e.target.value } : r)))
+                        }
+                      />
+                      <input
+                        className={styles.input}
+                        placeholder={t('redisEditor.score')}
+                        value={row.score}
+                        onChange={(e) =>
+                          setZsetRows(zsetRows.map((r, j) => (j === i ? { ...r, score: e.target.value } : r)))
+                        }
+                      />
+                      <button className={styles.removeButton} onClick={() => setZsetRows(zsetRows.filter((_, j) => j !== i))}>
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button className={docStyles.button} onClick={() => setZsetRows([...zsetRows, { member: '', score: '0' }])}>
+                    {t('redisEditor.addMember')}
+                  </button>
+                </div>
+              )}
+
+              {target.mode === 'edit' && <div className={styles.ttl}>{t('redisEditor.ttl', { ttl })}</div>}
+            </>
+          )}
+          {error && <div className={docStyles.error}>{error}</div>}
+        </div>
+
+        <div className={docStyles.footer}>
+          {target.mode === 'edit' && (
+            <button className={docStyles.buttonDanger} onClick={() => remove.mutate()} disabled={remove.isPending}>
+              {t('documentEditor.delete')}
+            </button>
+          )}
+          <div className={docStyles.footerSpacer} />
+          <button className={docStyles.button} onClick={onClose}>
+            {t('documentEditor.cancel')}
+          </button>
+          <button className={docStyles.buttonPrimary} onClick={() => save.mutate()} disabled={save.isPending}>
+            {t('documentEditor.save')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

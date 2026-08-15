@@ -16,6 +16,8 @@ import (
 	"github.com/laubstein/gonosequel/pkg/bookmarks"
 	"github.com/laubstein/gonosequel/pkg/client"
 	"github.com/laubstein/gonosequel/pkg/command"
+	"github.com/laubstein/gonosequel/pkg/driver"
+	"github.com/laubstein/gonosequel/pkg/redis"
 	"github.com/laubstein/gonosequel/pkg/session"
 )
 
@@ -53,10 +55,10 @@ func main() {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		cl, err := client.Connect(ctx, uri)
+		cl, err := connect(ctx, opts.Driver, uri)
 		cancel()
 		if err != nil {
-			log.Fatalf("connect to mongodb: %v", err)
+			log.Fatalf("connect: %v", err)
 		}
 		registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "default"})
 	}
@@ -78,6 +80,20 @@ func main() {
 	log.Printf("gonosequel listening on %s", addr)
 	if err := app.Listen(addr); err != nil {
 		log.Fatalf("serve: %v", err)
+	}
+}
+
+// connect dials the backend named by driverName, returning it as a
+// driver.Driver so the rest of the app never needs to know which concrete
+// backend package handled the connection.
+func connect(ctx context.Context, driverName, uri string) (driver.Driver, error) {
+	switch driverName {
+	case "mongodb":
+		return client.Connect(ctx, uri)
+	case "redis", "valkey":
+		return redis.Connect(ctx, uri)
+	default:
+		return nil, fmt.Errorf("unknown driver %q", driverName)
 	}
 }
 

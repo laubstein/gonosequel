@@ -77,6 +77,18 @@
     "save": "Save",
     "invalidJson": "Invalid JSON"
   },
+  "redisEditor": {
+    "key": "Key",
+    "type": "Type",
+    "field": "field",
+    "value": "value",
+    "member": "member",
+    "score": "score",
+    "addField": "+ Add field",
+    "addItem": "+ Add item",
+    "addMember": "+ Add member",
+    "ttl": "TTL: {{ttl}}s (-1 = no expiry)"
+  },
   "indexPanel": {
     "loading": "Loading…",
     "name": "Name",

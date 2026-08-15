@@ -120,6 +120,8 @@ func errorHandler(c fiber.Ctx, err error) error {
 		code = fiber.StatusNotFound
 	case errors.Is(err, driver.ErrAlreadyExists):
 		code = fiber.StatusConflict
+	case errors.Is(err, driver.ErrUnsupported):
+		code = fiber.StatusNotImplemented
 	case errors.Is(err, session.ErrNotFound):
 		code = fiber.StatusBadRequest
 	}

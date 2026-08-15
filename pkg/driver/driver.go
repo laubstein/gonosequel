@@ -26,6 +26,20 @@ type Entry struct {
 // OrderedDoc is an ordered sequence of key/value pairs; see Entry.
 type OrderedDoc []Entry
 
+// Capability names reported by Driver.Capabilities, one per embedded
+// interface above that a backend may or may not implement meaningfully.
+// The frontend uses this list to hide UI for capabilities a connection
+// doesn't have (e.g. Aggregate/Explain/Indexes/Schema for Redis) instead
+// of showing them and failing on click.
+const (
+	CapFind      = "find"
+	CapAggregate = "aggregate"
+	CapExplain   = "explain"
+	CapIndexes   = "indexes"
+	CapSchema    = "schema"
+	CapTools     = "tools"
+)
+
 // DatabaseAdmin creates, lists, and drops databases.
 type DatabaseAdmin interface {
 	ListDatabases(ctx context.Context) ([]DatabaseInfo, error)
@@ -128,6 +142,13 @@ type DocCodec interface {
 type Driver interface {
 	// Close disconnects the backend.
 	Close(ctx context.Context) error
+
+	// Capabilities lists which of the Cap* constants this connection
+	// actually supports, for the frontend to gate UI on (see the Cap*
+	// constants above). A method that isn't in this list may still be
+	// called — it must return ErrUnsupported, not panic — but the UI
+	// shouldn't offer it in the first place.
+	Capabilities() []string
 
 	DatabaseAdmin
 	CollectionAdmin

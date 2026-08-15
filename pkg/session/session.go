@@ -26,6 +26,12 @@ type Info struct {
 	ID   string `json:"id"`
 	URI  string `json:"uri"` // credentials redacted
 	Name string `json:"name"`
+	// Capabilities lists which driver.Cap* capabilities this connection's
+	// backend actually supports (see driver.Driver.Capabilities), so the
+	// frontend can hide UI for what it doesn't have instead of showing it
+	// and failing on click. Snapshotted once at Put, since a connection's
+	// backend doesn't change capabilities mid-session.
+	Capabilities []string `json:"capabilities"`
 }
 
 // Registry holds every active session, safe for concurrent use.
@@ -46,6 +52,8 @@ func NewRegistry() *Registry {
 
 // Put registers a connected driver under id, replacing any existing entry.
 func (r *Registry) Put(id string, d driver.Driver, info Info) {
+	info.Capabilities = d.Capabilities()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.sessions[id] = &entry{client: d, info: info}

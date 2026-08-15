@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import styles from './App.module.css'
@@ -12,13 +12,15 @@ import { HistoryPanel } from './components/HistoryPanel/HistoryPanel'
 import { ServerPanel } from './components/ServerPanel/ServerPanel'
 import { ToolsPanel } from './components/ToolsPanel/ToolsPanel'
 import { DocumentEditor, type EditorTarget } from './components/DocumentEditor/DocumentEditor'
+import { RedisValueEditor } from './components/RedisValueEditor/RedisValueEditor'
 import { ConnectionModal } from './components/ConnectionModal/ConnectionModal'
 import { useDocuments } from './hooks/useDocuments'
 import { useTheme } from './hooks/useTheme'
 import { useSessions } from './hooks/useSessions'
 import { useInfo } from './hooks/useInfo'
+import { useConnectionInfo } from './hooks/useConnectionInfo'
 import { docId } from './api/extjson'
-import type { ExtJSONDocument, FindQuery, HistoryEntry } from './types'
+import type { Capability, ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
 const THEME_ICON = { light: '☀', dark: '☾', system: '◐' } as const
 
@@ -36,6 +38,17 @@ type Tab = 'documents' | 'schema' | 'indexes' | 'tools' | 'history' | 'server'
 
 const TAB_IDS: Tab[] = ['documents', 'schema', 'indexes', 'tools', 'history', 'server']
 
+// Tabs that only make sense when the connected backend reports the
+// matching capability (see pkg/driver's Cap* constants) — 'documents',
+// 'history', and 'server' have no backend-specific requirement and always
+// show. Hiding rather than showing-then-erroring keeps the same "you know
+// upfront" philosophy as the --readonly banner.
+const TAB_CAPABILITY: Partial<Record<Tab, Capability>> = {
+  schema: 'schema',
+  indexes: 'indexes',
+  tools: 'tools',
+}
+
 const DEFAULT_QUERY: FindQuery = { filter: '{}', sort: '', skip: 0, limit: 50 }
 
 export default function App() {
@@ -44,6 +57,12 @@ export default function App() {
   const { theme, cycle } = useTheme()
   const { data: sessions, isLoading: sessionsLoading } = useSessions()
   const { data: info } = useInfo()
+  const { data: connection } = useConnectionInfo()
+
+  const visibleTabs = TAB_IDS.filter((id) => {
+    const cap = TAB_CAPABILITY[id]
+    return !cap || !connection || connection.capabilities.includes(cap)
+  })
 
   const [tab, setTab] = useState<Tab>('documents')
   const [selectedDb, setSelectedDb] = useState<string | null>(null)
@@ -54,6 +73,14 @@ export default function App() {
   const [aggregateResult, setAggregateResult] = useState<ExtJSONDocument[] | null>(null)
 
   const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query)
+
+  // If the active tab loses its capability (e.g. switching to a
+  // lower-capability connection), fall back to Documents rather than
+  // leaving the content area stuck on a tab whose button just disappeared.
+  useEffect(() => {
+    if (!visibleTabs.includes(tab)) setTab('documents')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleTabs.join(',')])
 
   function selectDatabase(db: string | null) {
     setSelectedDb(db)
@@ -111,7 +138,7 @@ export default function App() {
       {info?.readonly && <div className={styles.readonlyBanner}>{t('app.readonlyBanner')}</div>}
 
       <div className={styles.tabbar}>
-        {TAB_IDS.map((id) => (
+        {visibleTabs.map((id) => (
           <button
             key={id}
             className={tab === id ? styles.tabActive : styles.tab}
@@ -203,14 +230,23 @@ export default function App() {
         </div>
       </div>
 
-      {selection && editorTarget && (
-        <DocumentEditor
-          db={selection.db}
-          coll={selection.coll}
-          target={editorTarget}
-          onClose={() => setEditorTarget(null)}
-        />
-      )}
+      {selection &&
+        editorTarget &&
+        (info?.driver === 'redis' || info?.driver === 'valkey' ? (
+          <RedisValueEditor
+            db={selection.db}
+            coll={selection.coll}
+            target={editorTarget}
+            onClose={() => setEditorTarget(null)}
+          />
+        ) : (
+          <DocumentEditor
+            db={selection.db}
+            coll={selection.coll}
+            target={editorTarget}
+            onClose={() => setEditorTarget(null)}
+          />
+        ))}
     </div>
   )
 }

@@ -41,3 +41,16 @@ func Connect(ctx context.Context, uri string) (*Client, error) {
 func (c *Client) Close(ctx context.Context) error {
 	return c.mongo.Disconnect(ctx)
 }
+
+// Capabilities reports every capability driver.Driver defines — MongoDB is
+// the reference implementation the interface was originally shaped around.
+func (c *Client) Capabilities() []string {
+	return []string{
+		driver.CapFind,
+		driver.CapAggregate,
+		driver.CapExplain,
+		driver.CapIndexes,
+		driver.CapSchema,
+		driver.CapTools,
+	}
+}

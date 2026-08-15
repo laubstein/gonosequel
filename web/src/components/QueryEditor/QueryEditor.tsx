@@ -8,6 +8,7 @@ import type { ExtJSONDocument, FindQuery } from '../../types'
 import { exportURL } from '../../api/http'
 import { api } from '../../api/client'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
+import { useConnectionInfo } from '../../hooks/useConnectionInfo'
 import { fieldCompletionSource } from './fieldCompletion'
 import { buildPresets } from './presets'
 import type { Preset } from '../../types'
@@ -50,6 +51,10 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
   const [explaining, setExplaining] = useState(false)
   const [aggregating, setAggregating] = useState(false)
   const [presetIndex, setPresetIndex] = useState('')
+
+  const { data: connection } = useConnectionInfo()
+  const canAggregate = connection?.capabilities.includes('aggregate') ?? true
+  const canExplain = connection?.capabilities.includes('explain') ?? true
 
   const { data: schemaFields } = useCollectionSchema(db, coll)
   const extensions = [
@@ -181,12 +186,14 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
         >
           {t('queryEditor.modeFind')}
         </button>
-        <button
-          className={mode === 'aggregate' ? styles.modeButtonActive : styles.modeButton}
-          onClick={() => switchMode('aggregate')}
-        >
-          {t('queryEditor.modeAggregate')}
-        </button>
+        {canAggregate && (
+          <button
+            className={mode === 'aggregate' ? styles.modeButtonActive : styles.modeButton}
+            onClick={() => switchMode('aggregate')}
+          >
+            {t('queryEditor.modeAggregate')}
+          </button>
+        )}
       </div>
 
       {mode === 'find' ? (
@@ -225,7 +232,7 @@ export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregate
         <button className={styles.button} onClick={run} disabled={running}>
           {running ? t('queryEditor.aggregating') : t('queryEditor.run')}
         </button>
-        {mode === 'find' && (
+        {mode === 'find' && canExplain && (
           <button className={styles.button} onClick={() => void explain()} disabled={explaining}>
             {explaining ? t('queryEditor.explaining') : t('queryEditor.explain')}
           </button>
