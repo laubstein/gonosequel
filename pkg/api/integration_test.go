@@ -17,13 +17,16 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/mongodb"
+	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 
 	"github.com/laubstein/gonosequel/pkg/client"
 	"github.com/laubstein/gonosequel/pkg/driver"
+	"github.com/laubstein/gonosequel/pkg/redis"
 	"github.com/laubstein/gonosequel/pkg/session"
 )
 
 var testMongoURI string
+var testRedisURI string
 
 func TestMain(m *testing.M) {
 	// go test runs both server_test.go's unit tests and this file's
@@ -58,6 +61,22 @@ func runTestMain(m *testing.M) int {
 	}
 	testMongoURI = uri
 
+	redisContainer, err := tcredis.Run(ctx, "redis:8")
+	if err != nil {
+		log.Fatalf("start redis container: %v", err)
+	}
+	defer func() {
+		if err := testcontainers.TerminateContainer(redisContainer); err != nil {
+			log.Printf("terminate redis container: %v", err)
+		}
+	}()
+
+	redisURI, err := redisContainer.ConnectionString(ctx)
+	if err != nil {
+		log.Fatalf("get redis connection string: %v", err)
+	}
+	testRedisURI = redisURI
+
 	return m.Run()
 }
 
@@ -80,6 +99,27 @@ func newTestApp(t *testing.T, readonly bool) *fiber.App {
 	registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "test"})
 
 	return New(Config{Registry: registry, Readonly: readonly})
+}
+
+// newRedisTestApp is newTestApp's Redis equivalent, for the handlers that
+// only Redis actually supports (RunCommand).
+func newRedisTestApp(t *testing.T, readonly bool) *fiber.App {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	ctx := context.Background()
+	cl, err := redis.Connect(ctx, testRedisURI)
+	if err != nil {
+		t.Fatalf("redis.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close(context.Background()) })
+
+	registry := session.NewRegistry()
+	registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "test"})
+
+	return New(Config{Registry: registry, Driver: "redis", Readonly: readonly})
 }
 
 func doJSON(t *testing.T, app *fiber.App, method, path string, body any) (*http.Response, map[string]any) {
@@ -437,5 +477,62 @@ func TestAPIToolsEndpoints(t *testing.T) {
 	if opsResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(opsResp.Body)
 		t.Fatalf("current-ops: status=%d body=%s", opsResp.StatusCode, body)
+	}
+}
+
+func TestAPIRunCommandMultiLineContinuesAfterError(t *testing.T) {
+	app := newRedisTestApp(t, false)
+
+	script := "SET foo bar\nGET foo\nINCR foo\nGET foo"
+	body, err := json.Marshal(map[string]string{"script": script})
+	if err != nil {
+		t.Fatalf("marshal request body: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/databases/0/command", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		errBody, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status=%d body=%s", resp.StatusCode, errBody)
+	}
+
+	var results []commandResult
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(results) != 4 {
+		t.Fatalf("expected 4 results, got %d: %+v", len(results), results)
+	}
+	if results[0].Result != "OK" {
+		t.Errorf("SET: expected OK, got %+v", results[0])
+	}
+	if results[1].Result != "bar" {
+		t.Errorf("GET: expected bar, got %+v", results[1])
+	}
+	if results[2].Error == "" {
+		t.Errorf("INCR on a non-numeric string: expected an error, got %+v", results[2])
+	}
+	// The 4th line (after the failing 3rd) must still have run.
+	if results[3].Result != "bar" {
+		t.Errorf("final GET: expected the error on line 3 not to stop line 4, got %+v", results[3])
+	}
+}
+
+func TestAPIRunCommandRejectedInReadonlyMode(t *testing.T) {
+	app := newRedisTestApp(t, true)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/databases/0/command", bytes.NewReader([]byte(`{"script":"PING"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status=%d, want 403", resp.StatusCode)
 	}
 }

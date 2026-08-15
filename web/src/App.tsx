@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import styles from './App.module.css'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { QueryEditor } from './components/QueryEditor/QueryEditor'
+import { RedisCommandRunner } from './components/QueryEditor/RedisCommandRunner'
 import { Results } from './components/Results/Results'
 import { Pagination } from './components/Pagination/Pagination'
 import { IndexPanel } from './components/IndexPanel/IndexPanel'
@@ -49,6 +50,7 @@ export default function App() {
   const { data: sessions, isLoading: sessionsLoading } = useSessions()
   const { data: info } = useInfo()
   const { data: connection } = useConnectionInfo()
+  const isKeyValueDriver = connection?.driver === 'redis' || connection?.driver === 'valkey'
 
   const visibleTabs = TAB_IDS.filter((id) => {
     const cap = TAB_CAPABILITY[id]
@@ -196,15 +198,19 @@ export default function App() {
 
           {selection && tab === 'documents' && (
             <>
-              <QueryEditor
-                key={`${selection.db}:${selection.coll}:${replayNonce}`}
-                db={selection.db}
-                coll={selection.coll}
-                query={query}
-                onRun={runQuery}
-                onNewDocument={() => setEditorTarget({ mode: 'new' })}
-                onAggregateResult={setAggregateResult}
-              />
+              {isKeyValueDriver ? (
+                <RedisCommandRunner db={selection.db} coll={selection.coll} />
+              ) : (
+                <QueryEditor
+                  key={`${selection.db}:${selection.coll}:${replayNonce}`}
+                  db={selection.db}
+                  coll={selection.coll}
+                  query={query}
+                  onRun={runQuery}
+                  onNewDocument={() => setEditorTarget({ mode: 'new' })}
+                  onAggregateResult={setAggregateResult}
+                />
+              )}
               <Results
                 db={selection.db}
                 coll={selection.coll}
@@ -232,7 +238,7 @@ export default function App() {
 
       {selection &&
         editorTarget &&
-        (connection?.driver === 'redis' || connection?.driver === 'valkey' ? (
+        (isKeyValueDriver ? (
           <RedisValueEditor
             db={selection.db}
             coll={selection.coll}

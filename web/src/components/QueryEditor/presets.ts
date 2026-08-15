@@ -79,23 +79,3 @@ export function buildPresets(schema: SchemaField[]): Preset[] {
 
   return presets
 }
-
-// buildRedisPresets is buildPresets' Redis/Valkey equivalent. Every preset
-// above assumes MongoDB: ObjectId/_id-based lookups, and several run in
-// "aggregate" mode — a capability Redis doesn't have (see
-// pkg/redis/aggregate.go), so applying one would 501. Redis's Find only
-// understands one filter shape at all, "$keyPattern" (see
-// pkg/redis/documents.go), so there is no per-field preset generation the
-// way buildPresets does from a sampled schema — there's nothing to sample
-// that would be a valid filter target.
-export function buildRedisPresets(coll: string): Preset[] {
-  return [
-    { labelKey: 'presets.redisAllKeys', mode: 'find', filter: '{}' },
-    {
-      labelKey: 'presets.redisKeyPattern',
-      labelParams: { pattern: `${coll}:*` },
-      mode: 'find',
-      filter: `{ "$keyPattern": "${coll}:*" }`,
-    },
-  ]
-}

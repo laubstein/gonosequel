@@ -40,7 +40,6 @@
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"active\" }",
-    "redisFilterPlaceholder": "{ \"$keyPattern\": \"user:*\" }",
     "sortPlaceholder": "sort: { \"field\": 1 }",
     "run": "Run",
     "explain": "Explain",
@@ -55,6 +54,16 @@
     "aggregating": "Running…",
     "presetPlaceholder": "Useful queries…",
     "collscanWarning": "Full collection scan — no index was used for this query."
+  },
+  "redisRunner": {
+    "placeholder": "GET key",
+    "run": "Run",
+    "running": "Running…",
+    "presetScan": "Scan this collection's keys",
+    "presetType": "Check a key's type",
+    "presetTtl": "Check a key's TTL",
+    "presetGet": "Get a key's value",
+    "presetDel": "Delete a key"
   },
   "results": {
     "loading": "Loading…",
@@ -175,9 +184,7 @@
     "whereFieldTrue": "Where {{field}} is true",
     "sortByFieldDesc": "Sort by {{field}} (descending)",
     "fieldLast24h": "{{field}} in the last 24 hours",
-    "countGroupedByField": "Count grouped by {{field}}",
-    "redisAllKeys": "All keys in this collection",
-    "redisKeyPattern": "Keys matching {{pattern}}"
+    "countGroupedByField": "Count grouped by {{field}}"
   },
   "toolsPanel": {
     "collectionsOverview": "Collections overview",

@@ -137,3 +137,11 @@ export interface Preset {
   sort?: string
   pipeline?: string
 }
+
+// CommandResult is the outcome of one line of a redis-cli-like script run
+// via POST /api/databases/:db/command — see pkg/api/handlers_command.go.
+export interface CommandResult {
+  command: string
+  result?: unknown
+  error?: string
+}

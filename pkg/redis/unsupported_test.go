@@ -47,7 +47,7 @@ func TestCapabilitiesListMatchesWhatWorks(t *testing.T) {
 	c := &Client{}
 	caps := c.Capabilities()
 
-	want := map[string]bool{driver.CapFind: true, driver.CapSchema: true, driver.CapTools: true}
+	want := map[string]bool{driver.CapFind: true, driver.CapSchema: true, driver.CapTools: true, driver.CapCommand: true}
 	if len(caps) != len(want) {
 		t.Fatalf("expected %d capabilities, got %+v", len(want), caps)
 	}

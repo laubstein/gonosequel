@@ -38,6 +38,7 @@ const (
 	CapIndexes   = "indexes"
 	CapSchema    = "schema"
 	CapTools     = "tools"
+	CapCommand   = "command"
 )
 
 // DatabaseAdmin creates, lists, and drops databases.
@@ -101,6 +102,13 @@ type ServerDiagnostics interface {
 	CurrentOps(ctx context.Context, minSecs int64) ([]CurrentOp, error)
 }
 
+// CommandRunner executes a single raw backend command, for consoles/CLIs
+// modeled after the target's own shell (redis-cli, for Redis/Valkey).
+// MongoDB has no equivalent concept in this UI and returns ErrUnsupported.
+type CommandRunner interface {
+	RunCommand(ctx context.Context, dbName string, args []string) (any, error)
+}
+
 // DocCodec is how a backend represents documents on the wire. MongoDB's
 // implementation handles Extended JSON (ObjectId, Decimal128, ...); a
 // CouchDB backend's would just be plain JSON with no surrogate types.
@@ -159,4 +167,5 @@ type Driver interface {
 	Aggregator
 	ServerDiagnostics
 	DocCodec
+	CommandRunner
 }

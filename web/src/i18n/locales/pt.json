@@ -40,7 +40,6 @@
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"ativo\" }",
-    "redisFilterPlaceholder": "{ \"$keyPattern\": \"user:*\" }",
     "sortPlaceholder": "sort: { \"campo\": 1 }",
     "run": "Executar",
     "explain": "Explain",
@@ -55,6 +54,16 @@
     "aggregating": "Executando…",
     "presetPlaceholder": "Queries úteis…",
     "collscanWarning": "Varredura completa da coleção — nenhum índice foi usado nesta consulta."
+  },
+  "redisRunner": {
+    "placeholder": "GET chave",
+    "run": "Executar",
+    "running": "Executando…",
+    "presetScan": "Escanear as chaves desta coleção",
+    "presetType": "Ver o tipo de uma chave",
+    "presetTtl": "Ver o TTL de uma chave",
+    "presetGet": "Obter o valor de uma chave",
+    "presetDel": "Apagar uma chave"
   },
   "results": {
     "loading": "Carregando…",
@@ -175,9 +184,7 @@
     "whereFieldTrue": "Onde {{field}} é verdadeiro",
     "sortByFieldDesc": "Ordenar por {{field}} (decrescente)",
     "fieldLast24h": "{{field}} nas últimas 24 horas",
-    "countGroupedByField": "Contar agrupado por {{field}}",
-    "redisAllKeys": "Todas as chaves desta coleção",
-    "redisKeyPattern": "Chaves que combinam com {{pattern}}"
+    "countGroupedByField": "Contar agrupado por {{field}}"
   },
   "toolsPanel": {
     "collectionsOverview": "Visão geral das coleções",

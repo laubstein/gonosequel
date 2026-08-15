@@ -28,6 +28,8 @@ func registerRoutes(app *fiber.App, d *deps) {
 	scoped.Get("/databases/:db/tools/collections-overview", d.handleCollectionsOverview)
 	scoped.Get("/databases/:db/tools/index-usage", d.handleIndexUsage)
 
+	scoped.Post("/databases/:db/command", d.handleRunCommand)
+
 	scoped.Get("/databases/:db/collections", d.handleListCollections)
 	scoped.Post("/databases/:db/collections", d.handleCreateCollection)
 	scoped.Get("/databases/:db/collections/:coll", d.handleCollectionStats)

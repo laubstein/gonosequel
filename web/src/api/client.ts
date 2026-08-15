@@ -13,6 +13,7 @@ import type {
   ServerStatus,
   IndexUsageStat,
   CurrentOp,
+  CommandResult,
 } from '../types'
 import { apiGet, apiSend } from './http'
 
@@ -31,6 +32,8 @@ export const api = {
   history: () => apiGet<HistoryEntry[]>('/api/history'),
 
   listDatabases: () => apiGet<DatabaseInfo[]>('/api/databases'),
+  runCommand: (db: string, script: string) =>
+    apiSend<CommandResult[]>('POST', `/api/databases/${encodeURIComponent(db)}/command`, { script }),
   createDatabase: (name: string, initialCollection?: string) =>
     apiSend<{ ok: true }>('POST', '/api/databases', { name, initialCollection }),
   dropDatabase: (db: string) => apiSend<{ ok: true }>('DELETE', `/api/databases/${encodeURIComponent(db)}`),

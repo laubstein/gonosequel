@@ -94,7 +94,7 @@ func (c *Client) Close(ctx context.Context) error {
 // supports: no aggregation pipeline, no query planner, and no secondary
 // indexes without the RediSearch module (not attempted here).
 func (c *Client) Capabilities() []string {
-	return []string{driver.CapFind, driver.CapSchema, driver.CapTools}
+	return []string{driver.CapFind, driver.CapSchema, driver.CapTools, driver.CapCommand}
 }
 
 // dbIndex parses "database" name as Redis's numbered database index (0-15
