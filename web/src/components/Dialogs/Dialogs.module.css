@@ -30,6 +30,16 @@
   line-height: 1.5;
 }
 
+.warning {
+  margin: 10px 16px 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .field {
   padding: 10px 16px 0;
   display: flex;

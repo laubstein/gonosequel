@@ -43,6 +43,7 @@ export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, dange
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.title}>{title}</div>
         <div className={styles.message}>{message}</div>
+        {danger && <div className={styles.warning}>{t('dialog.irreversibleWarning')}</div>}
         <form onSubmit={handleSubmit}>
           {requireText && (
             <div className={styles.field}>
