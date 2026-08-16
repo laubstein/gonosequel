@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -55,13 +54,21 @@ type Options struct {
 func Parse(args []string) (*Options, error) {
 	fs := flag.NewFlagSet("gonosequel", flag.ContinueOnError)
 
+	// Flag defaults are built before fs.Parse below runs, so opts.Driver
+	// isn't populated yet — but the MONGODB_* fallback tier for
+	// host/port/user/pass only applies for driver "mongodb", so that has
+	// to be known now. resolveDriver mirrors --driver's own default
+	// resolution (env, else "mongodb") and additionally honors an
+	// explicit -driver/--driver in args, without needing a full parse.
+	driver := resolveDriver(args)
+
 	opts := &Options{}
-	fs.StringVar(&opts.Driver, "driver", envOr("DRIVER", "mongodb"), "database backend to connect to ("+strings.Join(SupportedDrivers, ", ")+")")
+	fs.StringVar(&opts.Driver, "driver", driver, "database backend to connect to ("+strings.Join(SupportedDrivers, ", ")+")")
 	fs.StringVar(&opts.URL, "url", envOr("URL", ""), "connection URL (mongodb://... or redis://...)")
-	fs.StringVar(&opts.Host, "host", envOr("HOST", ""), "backend host")
-	fs.IntVar(&opts.Port, "port", 0, "backend port (default depends on --driver: mongodb 27017, redis/valkey 6379)")
-	fs.StringVar(&opts.User, "user", envOr("USER", ""), "backend username")
-	fs.StringVar(&opts.Pass, "pass", envOr("PASS", ""), "backend password")
+	fs.StringVar(&opts.Host, "host", envOrMongo(driver, "HOST", "MONGODB_HOST", ""), "backend host")
+	fs.IntVar(&opts.Port, "port", envIntOrMongo(driver, "PORT", "MONGODB_PORT", 0), "backend port (default depends on --driver: mongodb 27017, redis/valkey 6379)")
+	fs.StringVar(&opts.User, "user", envOrMongo(driver, "USER", "MONGODB_USERNAME", ""), "backend username")
+	fs.StringVar(&opts.Pass, "pass", envOrMongo(driver, "PASS", "MONGODB_PASSWORD", ""), "backend password")
 	fs.StringVar(&opts.DB, "db", envOr("DB", ""), "default database (MongoDB database name, or Redis/Valkey numbered database)")
 
 	fs.StringVar(&opts.Bind, "bind", envOr("BIND", "127.0.0.1"), "address to bind the HTTP server")
@@ -86,16 +93,10 @@ func Parse(args []string) (*Options, error) {
 	}
 
 	// --port has no fixed flag default (see above) because the right
-	// default depends on which --driver was chosen, known only after
-	// parsing. MONGO_PORT is kept as a MongoDB-specific fallback for
-	// mongo-express compatibility; anything else falls back to defaultPort.
-	if opts.Port == 0 {
-		if v, ok := envLookup("MONGO_PORT"); ok {
-			if n, err := strconv.Atoi(v); err == nil {
-				opts.Port = n
-			}
-		}
-	}
+	// default depends on which --driver was chosen — GNS_PORT/ME_PORT/
+	// MONGODB_PORT (see the flag default above) may also have left it at
+	// 0, so this is the final fallback, based on the driver actually
+	// parsed rather than resolveDriver's pre-parse guess.
 	if opts.Port == 0 {
 		opts.Port = defaultPort[opts.Driver]
 	}
@@ -154,6 +155,83 @@ func envLookup(key string) (string, bool) {
 		return os.ExpandEnv(v), true
 	}
 	return "", false
+}
+
+// resolveDriver determines the effective --driver before the full
+// flag.FlagSet has parsed args — needed because envOrMongo/envIntOrMongo's
+// MONGODB_* fallback tier only applies for "mongodb", and that decision
+// has to be made while building --host/--port/--user/--pass's own flag
+// defaults, before fs.Parse (see Parse). Mirrors --driver's own default
+// (env, else "mongodb"), overridden by an explicit -driver/--driver found
+// in args. The real --driver flag is still parsed normally afterward and
+// is what actually ends up in Options — this is only a best-effort
+// pre-scan to gate a default value, not the source of truth.
+func resolveDriver(args []string) string {
+	if v, ok := scanFlagValue(args, "driver"); ok {
+		return v
+	}
+	return envOr("DRIVER", "mongodb")
+}
+
+// scanFlagValue looks for -name/--name in args, in any of the standard
+// library flag package's accepted forms (-name=value, --name=value, -name
+// value, --name value), and returns its value. Used only by resolveDriver,
+// ahead of the real fs.Parse call.
+func scanFlagValue(args []string, name string) (string, bool) {
+	eq1, eq2 := "-"+name+"=", "--"+name+"="
+	for i, a := range args {
+		switch {
+		case strings.HasPrefix(a, eq1):
+			return strings.TrimPrefix(a, eq1), true
+		case strings.HasPrefix(a, eq2):
+			return strings.TrimPrefix(a, eq2), true
+		case a == "-"+name || a == "--"+name:
+			if i+1 < len(args) {
+				return args[i+1], true
+			}
+			return "", false
+		}
+	}
+	return "", false
+}
+
+// envLookupMongo extends envLookup with a third fallback tier —
+// MONGODB_<mongoKey> — consulted only when driver is "mongodb". These
+// names (MONGODB_HOST, MONGODB_PORT, MONGODB_USERNAME, MONGODB_PASSWORD)
+// match the convention used by official MongoDB Docker images and common
+// Helm chart deployments, so gonosequel can pick up connection details
+// already wired into the environment by those without any extra
+// configuration — meaningless for Redis/Valkey, so not consulted then.
+func envLookupMongo(driver, key, mongoKey string) (string, bool) {
+	if v, ok := envLookup(key); ok {
+		return v, true
+	}
+	if driver != "mongodb" {
+		return "", false
+	}
+	if v, ok := os.LookupEnv(mongoKey); ok {
+		return os.ExpandEnv(v), true
+	}
+	return "", false
+}
+
+func envOrMongo(driver, key, mongoKey, def string) string {
+	if v, ok := envLookupMongo(driver, key, mongoKey); ok {
+		return v
+	}
+	return def
+}
+
+func envIntOrMongo(driver, key, mongoKey string, def int) int {
+	v, ok := envLookupMongo(driver, key, mongoKey)
+	if !ok {
+		return def
+	}
+	var n int
+	if _, err := fmt.Sscanf(v, "%d", &n); err != nil {
+		return def
+	}
+	return n
 }
 
 func envOr(key, def string) string {

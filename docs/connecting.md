@@ -24,6 +24,12 @@ Redis/Valkey), `--user`/`--pass`, and `--db` (a database name for MongoDB, a num
 ./gonosequel --host db.internal --port 27018 --user admin --pass secret --db mydb
 ```
 
+For MongoDB specifically, `--host`/`--port`/`--user`/`--pass` also fall back to
+`MONGODB_HOST`/`MONGODB_PORT`/`MONGODB_USERNAME`/`MONGODB_PASSWORD` if set — the names official
+MongoDB Docker images and Helm charts already use, so a deployment that sets those doesn't need
+`--host`/`--user`/etc. duplicated. See [CLI reference](/cli-reference) for the full fallback
+chain (env var prefixes, `$VAR` expansion).
+
 `--url` always wins if both are given.
 
 ## Bookmarks

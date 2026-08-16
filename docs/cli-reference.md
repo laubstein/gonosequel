@@ -8,13 +8,20 @@ same substitution a shell does), so e.g. `GNS_URL=$MONGO_URL` resolves through t
 `MONGO_URL` is set to — handy when a value is already wired up by the surrounding deployment (a
 docker-compose service link, a Kubernetes downstream env var, etc).
 
+`--host`/`--port`/`--user`/`--pass` get one more fallback tier, consulted only when `--driver`
+is `mongodb`: `MONGODB_HOST`/`MONGODB_PORT`/`MONGODB_USERNAME`/`MONGODB_PASSWORD` — the
+convention used by official MongoDB Docker images and common Helm chart deployments, so
+gonosequel can pick up connection details already present in the environment without
+duplicating them under a `GNS_`/`ME_` name. Not consulted for `redis`/`valkey`, where it
+wouldn't mean anything.
+
 | Flag | Env var | Default | Description |
 |---|---|---|---|
 | `--driver` | `GNS_DRIVER` (`ME_DRIVER`) | `mongodb` | Backend to connect to: `mongodb`, `redis`, or `valkey` (the latter two are wire-compatible and route to the same driver). See [Redis & Valkey](/features/redis-valkey). |
 | `--url` | `GNS_URL` (`ME_URL`) | — | Full connection URL (`mongodb://...` or `redis://...`). Takes priority over `--host`/`--port`/`--user`/`--pass`/`--db`. |
-| `--host` | `GNS_HOST` (`ME_HOST`) | `localhost` | Backend host, used when `--url` isn't given. |
-| `--port` | `GNS_MONGO_PORT` (`ME_MONGO_PORT`) | `27017` (MongoDB) / `6379` (Redis/Valkey) | Backend port; the default depends on `--driver`. `GNS_MONGO_PORT` is a MongoDB-specific override kept for mongo-express compatibility. |
-| `--user` / `--pass` | `GNS_USER` / `GNS_PASS` (`ME_USER` / `ME_PASS`) | — | Backend credentials. |
+| `--host` | `GNS_HOST` (`ME_HOST`, then `MONGODB_HOST` for MongoDB) | `localhost` | Backend host, used when `--url` isn't given. |
+| `--port` | `GNS_PORT` (`ME_PORT`, then `MONGODB_PORT` for MongoDB) | `27017` (MongoDB) / `6379` (Redis/Valkey) | Backend port; the fallback default depends on `--driver`. |
+| `--user` / `--pass` | `GNS_USER` / `GNS_PASS` (`ME_USER` / `ME_PASS`, then `MONGODB_USERNAME` / `MONGODB_PASSWORD` for MongoDB) | — | Backend credentials. |
 | `--db` | `GNS_DB` (`ME_DB`) | — | Default database (MongoDB database name, or a Redis/Valkey numbered database 0-15). |
 | `--bookmark` | `GNS_BOOKMARK` (`ME_BOOKMARK`) | — | Load the connection from a saved bookmark instead of the flags above. Takes priority over `--url`. See [Connecting](/connecting). |
 | `--bind` | `GNS_BIND` (`ME_BIND`) | `127.0.0.1` | Address the HTTP server binds to. |
