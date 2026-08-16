@@ -10,7 +10,7 @@ VITE_PORT ?= 5173
 export PATH := $(PATH):$(shell go env GOROOT)/bin
 
 build: web/dist docs/.vitepress/dist
-	go build -o gonosequel .
+	CGO_ENABLED=0 go build -o gonosequel .
 
 web/dist:
 	cd web && npm ci && npm run build
