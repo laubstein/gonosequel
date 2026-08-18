@@ -39,6 +39,16 @@
   cursor: default;
 }
 
+.buttonDanger {
+  composes: button;
+  background: var(--color-danger);
+}
+
+.buttonDanger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .error {
   color: var(--color-danger);
   font-size: 12px;

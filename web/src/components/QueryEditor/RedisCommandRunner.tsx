@@ -7,6 +7,7 @@ import { keymap, type EditorView } from '@codemirror/view'
 import { Prec } from '@codemirror/state'
 import styles from './QueryEditor.module.css'
 import { api } from '../../api/client'
+import { readLocal, writeLocal } from '../../api/localCache'
 import { useIsDarkMode } from '../../hooks/useIsDarkMode'
 import { redisCommandCompletionSource } from './redisCommandCompletion'
 import { formatRedisResult } from './redisResultFormat'
@@ -18,15 +19,33 @@ interface Props {
 }
 
 // scriptCache persists each collection's in-progress command script across
-// collection switches — module-scoped (not component state) so it survives
-// this component staying mounted while the user picks a different
-// collection, and gets keyed per collection so switching away and back
+// collection switches — keyed per collection so switching away and back
 // restores the right script instead of leaking the previous collection's
-// content or wiping it back to empty.
+// content or wiping it back to empty. Backed by localStorage (with this
+// in-memory Map as a read cache in front of it) so it also survives a page
+// refresh and — since it isn't tied to a session ID — reconnecting and
+// revisiting the same collection later.
 const scriptCache = new Map<string, string>()
 
 function scriptKey(db: string, coll: string): string {
   return `${db}:${coll}`
+}
+
+function scriptStorageKey(key: string): string {
+  return `gonosequel.commandDraft:${key}`
+}
+
+function loadScript(key: string): string {
+  const cached = scriptCache.get(key)
+  if (cached !== undefined) return cached
+  const script = readLocal<string>(scriptStorageKey(key)) ?? ''
+  scriptCache.set(key, script)
+  return script
+}
+
+function saveScript(key: string, next: string) {
+  scriptCache.set(key, next)
+  writeLocal(scriptStorageKey(key), next)
 }
 
 // PRESETS inserts a ready-to-run command line into the textarea — the
@@ -51,7 +70,7 @@ const PRESETS: { labelKey: string; command: (coll: string) => string }[] = [
 export function RedisCommandRunner({ db, coll }: Props) {
   const { t } = useTranslation()
   const key = scriptKey(db, coll)
-  const [script, setScriptState] = useState(() => scriptCache.get(key) ?? '')
+  const [script, setScriptState] = useState(() => loadScript(key))
   const [presetIndex, setPresetIndex] = useState('')
   const [results, setResults] = useState<CommandResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -60,14 +79,14 @@ export function RedisCommandRunner({ db, coll }: Props) {
 
   function setScript(next: string) {
     setScriptState(next)
-    scriptCache.set(key, next)
+    saveScript(key, next)
   }
 
   const prevKeyRef = useRef(key)
   useEffect(() => {
     if (prevKeyRef.current === key) return
     prevKeyRef.current = key
-    setScriptState(scriptCache.get(key) ?? '')
+    setScriptState(loadScript(key))
     setPresetIndex('')
     setResults(null)
     setError(null)

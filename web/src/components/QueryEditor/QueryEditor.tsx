@@ -10,6 +10,7 @@ import type { ExtJSONDocument, FindQuery } from '../../types'
 import { exportURL } from '../../api/http'
 import { api } from '../../api/client'
 import { computeJsonFix } from '../../api/jsonFix'
+import { readLocal, writeLocal } from '../../api/localCache'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
 import { useConnectionInfo } from '../../hooks/useConnectionInfo'
 import { useIsDarkMode } from '../../hooks/useIsDarkMode'
@@ -66,27 +67,45 @@ function defaultDraft(query: FindQuery): DraftState {
 // text across collection switches and tab changes — this component used to
 // be force-remounted via a `key` tied to the selected collection, which
 // reset the editor to defaults every time and lost whatever was typed when
-// navigating back to a previously-visited collection. Keyed by "db:coll"
-// and module-scoped (not component state) so it survives this component
-// unmounting entirely, e.g. when the user switches away from the
-// Documents tab and back.
+// navigating back to a previously-visited collection. Keyed by "db:coll",
+// backed by localStorage (with this in-memory Map as a read cache in front
+// of it) so the same draft also survives a full page refresh and — since
+// it isn't tied to a session ID — reconnecting and revisiting the same
+// collection later.
 const draftCache = new Map<string, DraftState>()
 
 function draftKey(db: string, coll: string): string {
   return `${db}:${coll}`
 }
 
+function draftStorageKey(key: string): string {
+  return `gonosequel.queryDraft:${key}`
+}
+
+function loadDraft(key: string, fallback: () => DraftState): DraftState {
+  const cached = draftCache.get(key)
+  if (cached) return cached
+  const draft = readLocal<DraftState>(draftStorageKey(key)) ?? fallback()
+  draftCache.set(key, draft)
+  return draft
+}
+
+function saveDraft(key: string, next: DraftState) {
+  draftCache.set(key, next)
+  writeLocal(draftStorageKey(key), next)
+}
+
 export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument, onAggregateResult }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const key = draftKey(db, coll)
-  const [draft, setDraft] = useState<DraftState>(() => draftCache.get(key) ?? defaultDraft(query))
+  const [draft, setDraft] = useState<DraftState>(() => loadDraft(key, () => defaultDraft(query)))
   const { mode, filterText, sortText, pipelineText, updateText } = draft
 
   function patchDraft(patch: Partial<DraftState>) {
     setDraft((prev) => {
       const next = { ...prev, ...patch }
-      draftCache.set(key, next)
+      saveDraft(key, next)
       return next
     })
   }
@@ -122,17 +141,18 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
     if (!keyChanged && !replayed) return
 
     if (replayed) {
+      const existing = loadDraft(key, () => defaultDraft(query))
       const next: DraftState = {
         mode: 'find',
         filterText: query.filter ?? '{}',
         sortText: query.sort ?? '',
-        pipelineText: draftCache.get(key)?.pipelineText ?? '[]',
-        updateText: draftCache.get(key)?.updateText ?? '{\n  "$set": {}\n}',
+        pipelineText: existing.pipelineText,
+        updateText: existing.updateText,
       }
-      draftCache.set(key, next)
+      saveDraft(key, next)
       setDraft(next)
     } else {
-      setDraft(draftCache.get(key) ?? defaultDraft(query))
+      setDraft(loadDraft(key, () => defaultDraft(query)))
     }
     setError(null)
     setExplainResult(null)
@@ -443,14 +463,14 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
       {canFix && <div className={styles.hint}>{t('queryEditor.fixJsonHint')}</div>}
 
       <div className={styles.row}>
-        <button className={styles.button} onClick={run} disabled={running}>
-          {running ? (mode === 'update' ? t('queryEditor.updating') : t('queryEditor.aggregating')) : t('queryEditor.run')}
-        </button>
         {canFix && (
-          <button className={styles.button} onClick={applyFix}>
+          <button className={styles.buttonDanger} onClick={applyFix}>
             {t('queryEditor.fixJson')}
           </button>
         )}
+        <button className={styles.button} onClick={run} disabled={running}>
+          {running ? (mode === 'update' ? t('queryEditor.updating') : t('queryEditor.aggregating')) : t('queryEditor.run')}
+        </button>
         {mode === 'find' && canExplain && (
           <button className={styles.button} onClick={() => void explain()} disabled={explaining}>
             {explaining ? t('queryEditor.explaining') : t('queryEditor.explain')}

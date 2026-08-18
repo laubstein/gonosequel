@@ -136,7 +136,7 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
           )}
           <div className={styles.footerSpacer} />
           {typeof fixedJson === 'string' && (
-            <button className={styles.button} onClick={applyFix}>
+            <button className={styles.buttonDanger} onClick={applyFix}>
               {t('documentEditor.fixJson')}
             </button>
           )}
