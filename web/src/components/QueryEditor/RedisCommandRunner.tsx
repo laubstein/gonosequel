@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import CodeMirror from '@uiw/react-codemirror'
@@ -15,6 +15,18 @@ import type { CommandResult } from '../../types'
 interface Props {
   db: string
   coll: string
+}
+
+// scriptCache persists each collection's in-progress command script across
+// collection switches — module-scoped (not component state) so it survives
+// this component staying mounted while the user picks a different
+// collection, and gets keyed per collection so switching away and back
+// restores the right script instead of leaking the previous collection's
+// content or wiping it back to empty.
+const scriptCache = new Map<string, string>()
+
+function scriptKey(db: string, coll: string): string {
+  return `${db}:${coll}`
 }
 
 // PRESETS inserts a ready-to-run command line into the textarea — the
@@ -38,12 +50,28 @@ const PRESETS: { labelKey: string; command: (coll: string) => string }[] = [
 // by clicking a key, or "+ New key") are unrelated to this and unaffected.
 export function RedisCommandRunner({ db, coll }: Props) {
   const { t } = useTranslation()
-  const [script, setScript] = useState('')
+  const key = scriptKey(db, coll)
+  const [script, setScriptState] = useState(() => scriptCache.get(key) ?? '')
   const [presetIndex, setPresetIndex] = useState('')
   const [results, setResults] = useState<CommandResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const viewRef = useRef<EditorView | null>(null)
   const isDark = useIsDarkMode()
+
+  function setScript(next: string) {
+    setScriptState(next)
+    scriptCache.set(key, next)
+  }
+
+  const prevKeyRef = useRef(key)
+  useEffect(() => {
+    if (prevKeyRef.current === key) return
+    prevKeyRef.current = key
+    setScriptState(scriptCache.get(key) ?? '')
+    setPresetIndex('')
+    setResults(null)
+    setError(null)
+  }, [key])
 
   const run = useMutation({
     mutationFn: (text: string) => api.runCommand(db, text),
@@ -105,7 +133,7 @@ export function RedisCommandRunner({ db, coll }: Props) {
     const preset = PRESETS[Number(index)]
     if (!preset) return
     const line = preset.command(coll)
-    setScript((s) => (s.trim() ? `${s}\n${line}` : line))
+    setScript(script.trim() ? `${script}\n${line}` : line)
   }
 
   return (

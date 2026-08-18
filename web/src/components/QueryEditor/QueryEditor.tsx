@@ -37,19 +37,109 @@ interface Props {
   db: string
   coll: string
   query: FindQuery
+  replayNonce: number
   onRun: (filter: string, sort: string) => void
   onNewDocument: () => void
   onAggregateResult: (documents: ExtJSONDocument[] | null) => void
 }
 
-export function QueryEditor({ db, coll, query, onRun, onNewDocument, onAggregateResult }: Props) {
+interface DraftState {
+  mode: Mode
+  filterText: string
+  sortText: string
+  pipelineText: string
+  updateText: string
+}
+
+function defaultDraft(query: FindQuery): DraftState {
+  return {
+    mode: 'find',
+    filterText: query.filter ?? '{}',
+    sortText: query.sort ?? '',
+    pipelineText: '[]',
+    updateText: '{\n  "$set": {}\n}',
+  }
+}
+
+// draftCache persists each collection's in-progress query/pipeline/update
+// text across collection switches and tab changes — this component used to
+// be force-remounted via a `key` tied to the selected collection, which
+// reset the editor to defaults every time and lost whatever was typed when
+// navigating back to a previously-visited collection. Keyed by "db:coll"
+// and module-scoped (not component state) so it survives this component
+// unmounting entirely, e.g. when the user switches away from the
+// Documents tab and back.
+const draftCache = new Map<string, DraftState>()
+
+function draftKey(db: string, coll: string): string {
+  return `${db}:${coll}`
+}
+
+export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument, onAggregateResult }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [mode, setMode] = useState<Mode>('find')
-  const [filterText, setFilterText] = useState(query.filter ?? '{}')
-  const [sortText, setSortText] = useState(query.sort ?? '')
-  const [pipelineText, setPipelineText] = useState('[]')
-  const [updateText, setUpdateText] = useState('{\n  "$set": {}\n}')
+  const key = draftKey(db, coll)
+  const [draft, setDraft] = useState<DraftState>(() => draftCache.get(key) ?? defaultDraft(query))
+  const { mode, filterText, sortText, pipelineText, updateText } = draft
+
+  function patchDraft(patch: Partial<DraftState>) {
+    setDraft((prev) => {
+      const next = { ...prev, ...patch }
+      draftCache.set(key, next)
+      return next
+    })
+  }
+
+  function setMode(next: Mode) {
+    patchDraft({ mode: next })
+  }
+  function setFilterText(next: string) {
+    patchDraft({ filterText: next })
+  }
+  function setSortText(next: string) {
+    patchDraft({ sortText: next })
+  }
+  function setPipelineText(next: string) {
+    patchDraft({ pipelineText: next })
+  }
+  function setUpdateText(next: string) {
+    patchDraft({ updateText: next })
+  }
+
+  // Reload the draft cached for this collection whenever the selected
+  // collection changes, and force-overwrite it with the incoming query when
+  // a history entry is replayed (even if that replay targets the
+  // currently-selected collection, in which case `key` alone wouldn't
+  // change) — replay takes priority when both happen in the same commit.
+  const prevKeyRef = useRef(key)
+  const prevReplayRef = useRef(replayNonce)
+  useEffect(() => {
+    const keyChanged = prevKeyRef.current !== key
+    const replayed = prevReplayRef.current !== replayNonce
+    prevKeyRef.current = key
+    prevReplayRef.current = replayNonce
+    if (!keyChanged && !replayed) return
+
+    if (replayed) {
+      const next: DraftState = {
+        mode: 'find',
+        filterText: query.filter ?? '{}',
+        sortText: query.sort ?? '',
+        pipelineText: draftCache.get(key)?.pipelineText ?? '[]',
+        updateText: draftCache.get(key)?.updateText ?? '{\n  "$set": {}\n}',
+      }
+      draftCache.set(key, next)
+      setDraft(next)
+    } else {
+      setDraft(draftCache.get(key) ?? defaultDraft(query))
+    }
+    setError(null)
+    setExplainResult(null)
+    setExplainCollscan(false)
+    setUpdateResult(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, replayNonce])
+
   const [error, setError] = useState<string | null>(null)
   const [explainResult, setExplainResult] = useState<string | null>(null)
   const [explainCollscan, setExplainCollscan] = useState(false)

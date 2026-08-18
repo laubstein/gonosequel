@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import styles from './App.module.css'
@@ -104,11 +104,76 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTabs.join(',')])
 
+  // Browser back/forward navigation: every database/collection/tab pick
+  // pushes a history entry carrying that selection, and a popstate listener
+  // restores it when the user navigates with the browser's own Back/Forward
+  // buttons (or a bookmarked/shared deep link on first load). `poppingRef`
+  // suppresses the push that would otherwise happen while a popstate
+  // handler itself is updating state — without it, hitting Back would
+  // immediately push a fresh entry forward again and the button would feel
+  // like it does nothing.
+  const poppingRef = useRef(false)
+
+  function historyUrl(next: { db: string | null; coll: string | null; tab: Tab }): string {
+    const params = new URLSearchParams()
+    if (next.db) params.set('db', next.db)
+    if (next.coll) params.set('coll', next.coll)
+    if (next.tab !== 'documents') params.set('tab', next.tab)
+    const search = params.toString()
+    return window.location.pathname + (search ? `?${search}` : '')
+  }
+
+  function pushHistory(next: { db: string | null; coll: string | null; tab: Tab }) {
+    if (poppingRef.current) return
+    window.history.pushState(next, '', historyUrl(next))
+  }
+
+  useEffect(() => {
+    // Normalize the current URL into a history state object on first load,
+    // so the very first Back press has something concrete to return to
+    // (rather than the `null` state a plain page load starts with), and
+    // pick up a deep link's db/coll/tab if one was in the URL.
+    const params = new URLSearchParams(window.location.search)
+    const initialDb = params.get('db')
+    const initialColl = params.get('coll')
+    const initialTabParam = params.get('tab') as Tab | null
+    const initialTab = initialTabParam && TAB_IDS.includes(initialTabParam) ? initialTabParam : 'documents'
+    if (initialDb) setSelectedDb(initialDb)
+    if (initialDb && initialColl) setSelection({ db: initialDb, coll: initialColl })
+    setTab(initialTab)
+    window.history.replaceState({ db: initialDb, coll: initialColl, tab: initialTab }, '', historyUrl({ db: initialDb, coll: initialColl, tab: initialTab }))
+
+    function onPopState(e: PopStateEvent) {
+      poppingRef.current = true
+      const state = e.state as { db: string | null; coll: string | null; tab: Tab } | null
+      const params = new URLSearchParams(window.location.search)
+      const db = state?.db ?? params.get('db')
+      const coll = state?.coll ?? params.get('coll')
+      const tabParam = state?.tab ?? (params.get('tab') as Tab | null)
+      const tab = tabParam && TAB_IDS.includes(tabParam) ? tabParam : 'documents'
+      setSelectedDb(db)
+      setSelection(db && coll ? { db, coll } : null)
+      setQuery(DEFAULT_QUERY)
+      setAggregateResult(null)
+      setTab(tab)
+      poppingRef.current = false
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function selectTab(next: Tab) {
+    setTab(next)
+    pushHistory({ db: selectedDb, coll: selection?.coll ?? null, tab: next })
+  }
+
   function selectDatabase(db: string | null) {
     setSelectedDb(db)
     setSelection(null)
     setQuery(DEFAULT_QUERY)
     setAggregateResult(null)
+    pushHistory({ db, coll: null, tab })
   }
 
   function selectCollection(db: string, coll: string) {
@@ -116,6 +181,7 @@ export default function App() {
     setSelection({ db, coll })
     setQuery(DEFAULT_QUERY)
     setAggregateResult(null)
+    pushHistory({ db, coll, tab })
   }
 
   function collectionRenamed(oldName: string, newName: string) {
@@ -141,6 +207,7 @@ export default function App() {
     setAggregateResult(null)
     setReplayNonce((n) => n + 1)
     setTab('documents')
+    pushHistory({ db: entry.database, coll: entry.collection, tab: 'documents' })
   }
 
   // /api/info never touches the database (see its own doc comment) — a
@@ -190,7 +257,7 @@ export default function App() {
           <button
             key={id}
             className={tab === id ? styles.tabActive : styles.tab}
-            onClick={() => setTab(id)}
+            onClick={() => selectTab(id)}
           >
             {t(`app.tabs.${id}`)}
           </button>
@@ -256,10 +323,10 @@ export default function App() {
                 <RedisCommandRunner db={selection.db} coll={selection.coll} />
               ) : (
                 <QueryEditor
-                  key={`${selection.db}:${selection.coll}:${replayNonce}`}
                   db={selection.db}
                   coll={selection.coll}
                   query={query}
+                  replayNonce={replayNonce}
                   onRun={runQuery}
                   onNewDocument={() => setEditorTarget({ mode: 'new' })}
                   onAggregateResult={setAggregateResult}
