@@ -63,6 +63,8 @@
     "exportJson": "Export JSON",
     "exportCsv": "Export CSV",
     "invalidJson": "Invalid JSON",
+    "fixJson": "Fix JSON",
+    "fixJsonHint": "This looks like a JS object literal, not valid JSON (e.g. unquoted keys or single quotes) — Fix JSON will convert it.",
     "modeFind": "Find",
     "modeAggregate": "Aggregate",
     "modeUpdate": "Update",

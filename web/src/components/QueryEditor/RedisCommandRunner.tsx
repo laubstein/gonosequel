@@ -160,7 +160,7 @@ export function RedisCommandRunner({ db, coll }: Props) {
             viewRef.current = view
           }}
           placeholder={t('redisRunner.placeholder')}
-          basicSetup={{ lineNumbers: true, foldGutter: false }}
+          basicSetup={{ lineNumbers: true, foldGutter: false, closeBrackets: false }}
         />
 
         <div className={styles.row}>

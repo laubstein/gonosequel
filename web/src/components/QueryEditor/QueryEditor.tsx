@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import CodeMirror from '@uiw/react-codemirror'
@@ -9,6 +9,7 @@ import styles from './QueryEditor.module.css'
 import type { ExtJSONDocument, FindQuery } from '../../types'
 import { exportURL } from '../../api/http'
 import { api } from '../../api/client'
+import { computeJsonFix } from '../../api/jsonFix'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
 import { useConnectionInfo } from '../../hooks/useConnectionInfo'
 import { useIsDarkMode } from '../../hooks/useIsDarkMode'
@@ -163,6 +164,32 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
   const isDark = useIsDarkMode()
 
   const presets = buildPresets(schemaFields ?? [])
+
+  // Same "Fix JSON" treatment as DocumentEditor: catches the common case of
+  // typing a JS object literal (unquoted keys, single quotes) into a box
+  // that only accepts strict JSON. Computed per box since find/update mode
+  // show more than one at once, but a single button covers whichever
+  // box(es) are active and fixable in the current mode.
+  const filterFix = useMemo(() => computeJsonFix(filterText), [filterText])
+  const pipelineFix = useMemo(() => computeJsonFix(pipelineText), [pipelineText])
+  const updateFix = useMemo(() => computeJsonFix(updateText), [updateText])
+  const canFix =
+    mode === 'find'
+      ? typeof filterFix === 'string'
+      : mode === 'aggregate'
+        ? typeof pipelineFix === 'string'
+        : typeof filterFix === 'string' || typeof updateFix === 'string'
+
+  function applyFix() {
+    if (mode === 'find') {
+      if (typeof filterFix === 'string') setFilterText(filterFix)
+    } else if (mode === 'aggregate') {
+      if (typeof pipelineFix === 'string') setPipelineText(pipelineFix)
+    } else {
+      if (typeof filterFix === 'string') setFilterText(filterFix)
+      if (typeof updateFix === 'string') setUpdateText(updateFix)
+    }
+  }
 
   function applyPreset(index: string) {
     setPresetIndex(index)
@@ -370,7 +397,7 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
             queryViewRef.current = view
           }}
           placeholder={t('queryEditor.pipelinePlaceholder')}
-          basicSetup={{ lineNumbers: false, foldGutter: false }}
+          basicSetup={{ lineNumbers: false, foldGutter: false, closeBrackets: false }}
         />
       ) : (
         <CodeMirror
@@ -383,7 +410,7 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
             queryViewRef.current = view
           }}
           placeholder={t('queryEditor.filterPlaceholder')}
-          basicSetup={{ lineNumbers: false, foldGutter: false }}
+          basicSetup={{ lineNumbers: false, foldGutter: false, closeBrackets: false }}
         />
       )}
 
@@ -398,7 +425,7 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
             updateViewRef.current = view
           }}
           placeholder={t('queryEditor.updatePlaceholder')}
-          basicSetup={{ lineNumbers: false, foldGutter: false }}
+          basicSetup={{ lineNumbers: false, foldGutter: false, closeBrackets: false }}
         />
       )}
 
@@ -413,11 +440,17 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
           />
         </div>
       )}
+      {canFix && <div className={styles.hint}>{t('queryEditor.fixJsonHint')}</div>}
 
       <div className={styles.row}>
         <button className={styles.button} onClick={run} disabled={running}>
           {running ? (mode === 'update' ? t('queryEditor.updating') : t('queryEditor.aggregating')) : t('queryEditor.run')}
         </button>
+        {canFix && (
+          <button className={styles.button} onClick={applyFix}>
+            {t('queryEditor.fixJson')}
+          </button>
+        )}
         {mode === 'find' && canExplain && (
           <button className={styles.button} onClick={() => void explain()} disabled={explaining}>
             {explaining ? t('queryEditor.explaining') : t('queryEditor.explain')}

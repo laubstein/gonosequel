@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
-import JSON5 from 'json5'
 import styles from './DocumentEditor.module.css'
 import { api } from '../../api/client'
+import { computeJsonFix } from '../../api/jsonFix'
 import { useIsDarkMode } from '../../hooks/useIsDarkMode'
 
 export type EditorTarget = { mode: 'new' } | { mode: 'edit'; encodedId: string }
@@ -26,25 +26,7 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
   const [text, setText] = useState('{}')
   const [error, setError] = useState<string | null>(null)
 
-  // JSON5 is a strict superset of JSON: it also accepts the JS-object-literal
-  // syntax people naturally type by hand (unquoted keys, single-quoted
-  // strings, trailing commas) — content real JSON parsers reject. When
-  // `text` fails JSON.parse but succeeds under JSON5, it's very likely one
-  // of those cases rather than genuinely malformed input, so a "Fix JSON"
-  // button can offer to re-serialize it as strict JSON instead of just
-  // showing an error the user has to hand-edit around.
-  const fixedJson = useMemo(() => {
-    try {
-      JSON.parse(text)
-      return null
-    } catch {
-      try {
-        return JSON.stringify(JSON5.parse(text), null, 2)
-      } catch {
-        return undefined
-      }
-    }
-  }, [text])
+  const fixedJson = useMemo(() => computeJsonFix(text), [text])
 
   function applyFix() {
     if (typeof fixedJson !== 'string') return
