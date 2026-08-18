@@ -56,8 +56,20 @@
   resize: vertical;
 }
 
+.codeEditor {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
 .error {
   color: var(--color-danger);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.hint {
+  color: var(--color-text-muted);
   font-size: 13px;
   margin-top: 8px;
 }

@@ -105,7 +105,9 @@
     "delete": "Excluir",
     "cancel": "Cancelar",
     "save": "Salvar",
-    "invalidJson": "JSON inválido"
+    "invalidJson": "JSON inválido",
+    "fixJson": "Corrigir JSON",
+    "fixJsonHint": "Isso parece um objeto JS, não um JSON válido (ex: chaves sem aspas ou aspas simples) — Corrigir JSON vai convertê-lo."
   },
   "redisEditor": {
     "key": "Chave",

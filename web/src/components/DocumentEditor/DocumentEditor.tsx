@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import CodeMirror from '@uiw/react-codemirror'
+import { json } from '@codemirror/lang-json'
+import JSON5 from 'json5'
 import styles from './DocumentEditor.module.css'
 import { api } from '../../api/client'
+import { useIsDarkMode } from '../../hooks/useIsDarkMode'
 
 export type EditorTarget = { mode: 'new' } | { mode: 'edit'; encodedId: string }
 
@@ -13,11 +17,40 @@ interface Props {
   onClose: () => void
 }
 
+const jsonExtensions = [json()]
+
 export function DocumentEditor({ db, coll, target, onClose }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const isDark = useIsDarkMode()
   const [text, setText] = useState('{}')
   const [error, setError] = useState<string | null>(null)
+
+  // JSON5 is a strict superset of JSON: it also accepts the JS-object-literal
+  // syntax people naturally type by hand (unquoted keys, single-quoted
+  // strings, trailing commas) — content real JSON parsers reject. When
+  // `text` fails JSON.parse but succeeds under JSON5, it's very likely one
+  // of those cases rather than genuinely malformed input, so a "Fix JSON"
+  // button can offer to re-serialize it as strict JSON instead of just
+  // showing an error the user has to hand-edit around.
+  const fixedJson = useMemo(() => {
+    try {
+      JSON.parse(text)
+      return null
+    } catch {
+      try {
+        return JSON.stringify(JSON5.parse(text), null, 2)
+      } catch {
+        return undefined
+      }
+    }
+  }, [text])
+
+  function applyFix() {
+    if (typeof fixedJson !== 'string') return
+    setText(fixedJson)
+    setError(null)
+  }
 
   const existing = useQuery({
     queryKey: ['document', db, coll, target.mode === 'edit' ? target.encodedId : null],
@@ -99,9 +132,18 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
           {target.mode === 'edit' && existing.isLoading ? (
             <div>{t('documentEditor.loading')}</div>
           ) : (
-            <textarea className={styles.textarea} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
+            <CodeMirror
+              className={styles.codeEditor}
+              value={text}
+              minHeight="320px"
+              extensions={jsonExtensions}
+              theme={isDark ? 'dark' : 'light'}
+              onChange={setText}
+              basicSetup={{ lineNumbers: true, foldGutter: false, closeBrackets: false }}
+            />
           )}
           {error && <div className={styles.error}>{error}</div>}
+          {typeof fixedJson === 'string' && <div className={styles.hint}>{t('documentEditor.fixJsonHint')}</div>}
         </div>
 
         <div className={styles.footer}>
@@ -111,6 +153,11 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
             </button>
           )}
           <div className={styles.footerSpacer} />
+          {typeof fixedJson === 'string' && (
+            <button className={styles.button} onClick={applyFix}>
+              {t('documentEditor.fixJson')}
+            </button>
+          )}
           <button className={styles.button} onClick={onClose}>
             {t('documentEditor.cancel')}
           </button>
