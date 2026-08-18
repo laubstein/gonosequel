@@ -23,7 +23,7 @@ import { useInfo } from './hooks/useInfo'
 import { useConnectionInfo } from './hooks/useConnectionInfo'
 import { docId } from './api/extjson'
 import { api } from './api/client'
-import { setSessionId } from './api/http'
+import { getSessionId, setSessionId } from './api/http'
 import { DRIVER_LABEL } from './drivers'
 import type { Capability, ExtJSONDocument, FindQuery, HistoryEntry } from './types'
 
@@ -68,6 +68,20 @@ export default function App() {
     setSessionId(null)
     setForcedDisconnect(true)
   }
+
+  // The session ID persisted by api/http.ts survives a refresh, but the
+  // session it names might not (server restarted, or disconnected from
+  // another tab) — once the real session list is in, drop back to the
+  // connect screen instead of leaving every session-scoped request 400ing
+  // against a session ID that no longer exists anywhere.
+  useEffect(() => {
+    if (sessionsLoading || !sessions) return
+    const current = getSessionId()
+    if (current && !sessions.some((s) => s.id === current)) {
+      setSessionId(null)
+      setForcedDisconnect(true)
+    }
+  }, [sessions, sessionsLoading])
 
   const disconnect = useMutation({
     mutationFn: () => api.disconnect(),
