@@ -30,6 +30,8 @@ export default defineConfig({
       { text: 'Features', link: '/features/documents' },
     ],
 
+    socialLinks: [{ icon: 'github', link: 'https://github.com/laubstein/gonosequel' }],
+
     sidebar: [
       {
         text: 'Guide',

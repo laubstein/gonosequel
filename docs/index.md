@@ -14,6 +14,9 @@ hero:
     - theme: alt
       text: CLI reference
       link: /cli-reference
+    - theme: alt
+      text: GitHub
+      link: https://github.com/laubstein/gonosequel
 
 features:
   - title: One binary, no dependencies
