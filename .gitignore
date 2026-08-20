@@ -7,3 +7,4 @@
 *.log
 .DS_Store
 /.playwright-mcp/
+PLAN.md
