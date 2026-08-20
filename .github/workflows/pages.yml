@@ -1,0 +1,64 @@
+name: Deploy docs to GitHub Pages
+
+# Publishes docs/ (built by VitePress) to GitHub Pages. This is a
+# separate build from the one embedded into the gonosequel binary
+# (pkg/api served at /doc, built by `make build`/release.yml): a project
+# Pages site is served from https://<owner>.github.io/<repo>/ rather than
+# the domain root, so DOCS_BASE overrides docs/.vitepress/config.ts's
+# default /doc/ base to match.
+#
+# Requires GitHub Pages to be configured with source "GitHub Actions" in
+# the repo's Settings > Pages — this workflow won't create that setting
+# itself.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Build docs
+        working-directory: docs
+        env:
+          DOCS_BASE: /${{ github.event.repository.name }}/
+        run: |
+          npm ci
+          npm run docs:build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.vitepress/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

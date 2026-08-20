@@ -4,8 +4,11 @@ export default defineConfig({
   title: 'Go NoSequel',
   description: 'A web-based NoSQL explorer (MongoDB, Redis/Valkey) — usage and configuration',
   // Served under /doc by the Go binary (pkg/api/assets.go), embedded via
-  // go:embed alongside the main React app served at /.
-  base: '/doc/',
+  // go:embed alongside the main React app served at /. The GitHub Pages
+  // workflow (.github/workflows/pages.yml) builds this same site a second
+  // time with DOCS_BASE set to /<repo>/ instead, since a project Pages
+  // site is served from a subpath rather than the domain root.
+  base: process.env.DOCS_BASE || '/doc/',
   // Left off deliberately: cleanUrls relies on server-side rewriting
   // (e.g. Netlify/Vercel's "no extension -> try adding .html"), which
   // Fiber's static.New here doesn't do — it serves by exact path and
