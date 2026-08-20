@@ -1,14 +1,10 @@
 # Contributing
 
 This page is a pointer, not a duplicate — the authoritative contributor documentation lives in
-the repository itself, next to the code it describes, so it can't drift out of sync the way a
-copy here would:
-
-- **`AGENTS.md`** — package layout, fixed dependency versions, Effective Go conventions used
-  throughout, and the invariants that matter most if you're touching `pkg/client` or `pkg/api`
-  (how Extended JSON is handled, how `_id` is encoded for routes, how `--readonly` is enforced).
-- **`PLAN.md`** — the original design rationale and phased build order, for the "why" behind
-  decisions that aren't obvious from the code alone.
+`AGENTS.md`, next to the code it describes, so it can't drift out of sync the way a copy here
+would: package layout, fixed dependency versions, Effective Go conventions used throughout, and
+the invariants that matter most if you're touching `pkg/client` or `pkg/api` (how Extended JSON
+is handled, how `_id` is encoded for routes, how `--readonly` is enforced).
 
 ## Quick reference
 

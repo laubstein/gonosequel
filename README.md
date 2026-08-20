@@ -154,7 +154,6 @@ make lint           # gofmt, go vet, staticcheck, errcheck
 
 See [`AGENTS.md`](AGENTS.md) for the package layout, coding conventions, and the invariants
 around Extended JSON handling that matter most if you're changing `pkg/client` or `pkg/api`.
-[`PLAN.md`](PLAN.md) has the original design rationale and phased build order.
 
 ## License
 

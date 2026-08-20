@@ -1,8 +1,7 @@
 # AGENTS.md
 
-Instruções para agentes que trabalham neste repositório. O racional, o escopo e as decisões de
-produto estão em [`PLAN.md`](./PLAN.md) — este arquivo é normativo e diz o que fazer e o que não
-fazer.
+Instruções para agentes que trabalham neste repositório. Este arquivo é normativo e diz o que
+fazer e o que não fazer.
 
 ## O que é
 
@@ -13,9 +12,7 @@ o frontend embutido. Conecta a **MongoDB** ou **Redis/Valkey** via `--driver`
 (`pkg/driver.Driver` é a interface que abstrai o backend — `pkg/client` implementa para MongoDB,
 `pkg/redis` para Redis/Valkey).
 
-**Estado atual: MongoDB e Redis/Valkey implementados e em uso.** `PLAN.md` tem o racional de
-design original; não é mais um roteiro de "o que falta fazer" — trate como histórico, não como
-lista de pendências.
+**Estado atual: MongoDB e Redis/Valkey implementados e em uso.**
 
 ## Comandos
 
@@ -66,7 +63,14 @@ pkg/history/         histórico de queries, em memória, por sessão
 pkg/export/          JSON e CSV em streaming
 pkg/api/             *fiber.App: server.go, routes.go, handlers_*.go, middleware.go, assets.go
 web/                 React 19 + TypeScript + Vite
+docs/                VitePress site, embedded at /doc via go:embed (main.go's docsFS)
+.github/workflows/   release.yml (binários por tag v*), pages.yml (docs/ no GitHub Pages)
 ```
+
+`docs/.vitepress/config.ts`'s `base` é lido de `DOCS_BASE` (default `/doc/`, o caminho onde o
+binário serve os docs embutidos). Só `pages.yml` sobrescreve para `/<repo>/`, já que um GitHub
+Pages de projeto serve a partir de um subcaminho, não da raiz — não hardcode um dos dois valores
+sem essa distinção.
 
 Nem `pkg/client` nem `pkg/redis` importam `pkg/api` ou conhecem HTTP. `pkg/api` só fala com
 `driver.Driver` — nunca importa `pkg/client`/`pkg/redis` diretamente (só `main.go` faz esse
@@ -153,3 +157,15 @@ O layout é o do pgweb, três painéis: abas no topo; sidebar com seletor de ban
 e painel de estatísticas; corpo com editor em cima, resultados no meio, filtro e paginação no rodapé.
 A diferença essencial em relação ao pgweb é o **alternador tabela/JSON** nos resultados: documentos
 aninhados não cabem em uma tabela relacional, então a visão JSON com nós recolhíveis não é opcional.
+
+O rascunho do `QueryEditor` e do `RedisCommandRunner` (texto ainda não rodado) é persistido em
+`localStorage` (`web/src/api/localCache.ts`), chaveado por `db:coll` — não pelo ID de sessão, de
+propósito, para sobreviver tanto a um refresh quanto a uma reconexão (nova sessão) na mesma
+collection. O `sessionId` em si (`web/src/api/http.ts`) também é persistido em `localStorage` pelo
+mesmo motivo: em modo `--sessions`, perdê-lo a cada refresh derrubava toda chamada com sessão
+(sem sessão "default" para cair de volta fora do modo single-connection). Não volte nenhum dos
+dois a viver só em memória.
+
+Entrada JSON solta (chaves sem aspas, aspas simples) é detectada via `json5`
+(`web/src/api/jsonFix.ts`) e oferece um botão "Fix JSON" no `QueryEditor` e no `DocumentEditor` —
+reaproveite esse helper em vez de duplicar a lógica de detecção/correção.
