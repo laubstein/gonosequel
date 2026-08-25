@@ -116,7 +116,11 @@ wouldn't mean anything.
 | `--http-port` | `GNS_HTTP_PORT` (`ME_HTTP_PORT`) | `8081` | HTTP server port. |
 | `--sessions` | `GNS_SESSIONS` (`ME_SESSIONS`) | `false` | Multi-session mode: don't connect at startup: the UI prompts to connect (by URL or bookmark), and can hold several connections open at once. |
 | `--readonly` | `GNS_READONLY` (`ME_READONLY`) | `false` | Reject every non-GET API request with 403, enforced server-side. |
-| `--auth-user` / `--auth-pass` | `GNS_AUTH_USER` / `GNS_AUTH_PASS` (`ME_AUTH_USER` / `ME_AUTH_PASS`) | — | Basic auth in front of the web UI itself. |
+| `--auth-user` / `--auth-pass` | `GNS_AUTH_USER` / `GNS_AUTH_PASS` (`ME_AUTH_USER` / `ME_AUTH_PASS`, then `ME_CONFIG_BASICAUTH_USERNAME` / `ME_CONFIG_BASICAUTH_PASSWORD`) | — | Basic auth in front of the web UI itself. |
+| `--auth-enabled` | `GNS_AUTH_ENABLED` (`ME_AUTH_ENABLED`, then `ME_CONFIG_BASICAUTH_ENABLED`) | `true` | Whether `--auth-user`/`--auth-pass` take effect. Set to `false` to keep credentials configured but inactive (e.g. an imported `ME_CONFIG_BASICAUTH_ENABLED=false`). |
+| `--tls-cert` / `--tls-key` | `GNS_TLS_CERT` / `GNS_TLS_KEY` (`ME_TLS_CERT` / `ME_TLS_KEY`, then `ME_CONFIG_SITE_SSL_CRT_PATH` / `ME_CONFIG_SITE_SSL_KEY_PATH`) | — | Serve HTTPS instead of plain HTTP, using this certificate and private key. Set both or neither — passing only one is a startup error. |
+| `--tls-enabled` | `GNS_TLS_ENABLED` (`ME_TLS_ENABLED`, then `ME_CONFIG_SITE_SSL_ENABLED`) | `true` | Whether `--tls-cert`/`--tls-key` take effect. Set to `false` to keep them configured but inactive. |
+| `--session-secret` | `GNS_SESSION_SECRET` (`ME_SESSION_SECRET`, then `ME_CONFIG_SITE_SESSIONSECRET`) | — | HMAC-signs the session ID handed out by `/api/connect` in `--sessions` mode, so a client can't forge or guess another session's ID. Unset means today's unsigned, opaque session IDs. |
 | `--dev-proxy` | `GNS_DEV_PROXY` (`ME_DEV_PROXY`) | — | Reverse-proxy non-API requests to this URL instead of serving the embedded frontend. Used internally by `make dev`; prefer browsing Vite's own URL directly, since this path doesn't support the WebSocket upgrade hot module reload needs. |
 
 ## Bookmarks
@@ -154,6 +158,10 @@ make lint           # gofmt, go vet, staticcheck, errcheck
 
 See [`AGENTS.md`](AGENTS.md) for the package layout, coding conventions, and the invariants
 around Extended JSON handling that matter most if you're changing `pkg/client` or `pkg/api`.
+
+## Changelog
+
+See [`CHANGELOG.md`](CHANGELOG.md) for what changed in each release.
 
 ## License
 

@@ -733,6 +733,79 @@ func TestAPIRunCommandMultiLineContinuesAfterError(t *testing.T) {
 	}
 }
 
+// TestAPISessionSecretSignsAndValidatesSessionID covers --session-secret:
+// with it set, /api/connect must return a signed token (not the raw
+// registry key), requests carrying that token must work, and requests
+// carrying the raw unsigned id (or a tampered token) must be rejected —
+// see pkg/session.SignID/VerifyID and resolveSessionID.
+func TestAPISessionSecretSignsAndValidatesSessionID(t *testing.T) {
+	registry := session.NewRegistry()
+	app := New(Config{
+		Registry: registry,
+		Sessions: true,
+		Connect: func(ctx context.Context, driverName, uri string) (driver.Driver, error) {
+			return client.Connect(ctx, uri)
+		},
+		SessionSecret: "test-secret",
+	})
+
+	resp, body := doJSON(t, app, http.MethodPost, "/api/connect", map[string]string{
+		"url":    testMongoURI,
+		"driver": "mongodb",
+		"name":   "signed-session",
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("connect: status=%d body=%v", resp.StatusCode, body)
+	}
+	token, _ := body["sessionId"].(string)
+
+	rawID, ok := session.VerifyID("test-secret", token)
+	if !ok {
+		t.Fatalf("sessionId %q is not a validly signed token", token)
+	}
+	t.Cleanup(func() {
+		if cl, err := registry.Get(rawID); err == nil {
+			_ = cl.Close(context.Background())
+		}
+	})
+
+	// The signed token works.
+	req := httptest.NewRequest(http.MethodGet, "/api/connection", nil)
+	req.Header.Set(sessionIDHeader, token)
+	okResp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test /api/connection: %v", err)
+	}
+	defer okResp.Body.Close()
+	if okResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /api/connection with signed token: status = %d, want 200", okResp.StatusCode)
+	}
+
+	// The raw, unsigned registry key must be rejected once a secret is set.
+	rawReq := httptest.NewRequest(http.MethodGet, "/api/connection", nil)
+	rawReq.Header.Set(sessionIDHeader, rawID)
+	rawResp, err := app.Test(rawReq)
+	if err != nil {
+		t.Fatalf("app.Test /api/connection (raw id): %v", err)
+	}
+	defer rawResp.Body.Close()
+	if rawResp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("GET /api/connection with raw unsigned id: status = %d, want 400", rawResp.StatusCode)
+	}
+
+	// A tampered token must be rejected too.
+	tamperedReq := httptest.NewRequest(http.MethodGet, "/api/connection", nil)
+	tamperedReq.Header.Set(sessionIDHeader, token+"tampered")
+	tamperedResp, err := app.Test(tamperedReq)
+	if err != nil {
+		t.Fatalf("app.Test /api/connection (tampered): %v", err)
+	}
+	defer tamperedResp.Body.Close()
+	if tamperedResp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("GET /api/connection with tampered token: status = %d, want 400", tamperedResp.StatusCode)
+	}
+}
+
 func TestAPIRunCommandRejectedInReadonlyMode(t *testing.T) {
 	app := newRedisTestApp(t, true)
 

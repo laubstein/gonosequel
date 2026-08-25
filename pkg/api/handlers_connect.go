@@ -106,14 +106,18 @@ func (d *deps) handleConnect(c fiber.Ctx) error {
 	readonly := req.Readonly || d.readonly
 	d.registry.Put(id, cl, session.Info{ID: id, URI: redactURI(targetURL), Name: displayName, Driver: driverName, Readonly: readonly})
 
-	return c.JSON(fiber.Map{"sessionId": id})
+	token := id
+	if d.sessionSecret != "" {
+		token = session.SignID(d.sessionSecret, id)
+	}
+	return c.JSON(fiber.Map{"sessionId": token})
 }
 
 // handleDisconnect closes and removes a session's connection.
 func (d *deps) handleDisconnect(c fiber.Ctx) error {
-	id := c.Get(sessionIDHeader)
-	if id == "" {
-		id = session.DefaultID
+	id, ok := resolveSessionID(d, c)
+	if !ok {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid session id")
 	}
 	if err := d.registry.Remove(c.Context(), id); err != nil {
 		return fmt.Errorf("disconnect: %w", err)

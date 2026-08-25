@@ -44,6 +44,11 @@ type Config struct {
 	Readonly bool
 	AuthUser string
 	AuthPass string
+	// SessionSecret, if set, HMAC-signs the session ID handed out by
+	// /api/connect (see pkg/session.SignID) and requires a valid signature
+	// on every subsequent request carrying X-Session-Id — otherwise session
+	// IDs are unsigned opaque strings, as before. Empty by default.
+	SessionSecret string
 
 	// Assets, if non-nil, is the built frontend (web/dist) served for
 	// every non-API route. Nil in tests that only exercise /api routes.
@@ -63,13 +68,14 @@ type Config struct {
 
 // deps bundles the dependencies handlers need, avoiding globals.
 type deps struct {
-	registry     *session.Registry
-	history      *history.Store
-	driver       string
-	connect      func(ctx context.Context, driverName, uri string) (driver.Driver, error)
-	sessions     bool
-	readonly     bool
-	bookmarksDir string
+	registry      *session.Registry
+	history       *history.Store
+	driver        string
+	connect       func(ctx context.Context, driverName, uri string) (driver.Driver, error)
+	sessions      bool
+	readonly      bool
+	bookmarksDir  string
+	sessionSecret string
 }
 
 // New builds a *fiber.App with middleware and routes registered, but does
@@ -101,13 +107,14 @@ func New(cfg Config) *fiber.App {
 	}
 
 	d := &deps{
-		registry:     cfg.Registry,
-		history:      history.NewStore(),
-		driver:       cfg.Driver,
-		connect:      cfg.Connect,
-		sessions:     cfg.Sessions,
-		readonly:     cfg.Readonly,
-		bookmarksDir: cfg.BookmarksDir,
+		registry:      cfg.Registry,
+		history:       history.NewStore(),
+		driver:        cfg.Driver,
+		connect:       cfg.Connect,
+		sessions:      cfg.Sessions,
+		readonly:      cfg.Readonly,
+		bookmarksDir:  cfg.BookmarksDir,
+		sessionSecret: cfg.SessionSecret,
 	}
 	registerRoutes(app, d)
 	// Registered before the SPA's own catch-all (inside registerAssets),

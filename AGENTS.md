@@ -158,6 +158,31 @@ e painel de estatísticas; corpo com editor em cima, resultados no meio, filtro 
 A diferença essencial em relação ao pgweb é o **alternador tabela/JSON** nos resultados: documentos
 aninhados não cabem em uma tabela relacional, então a visão JSON com nós recolhíveis não é opcional.
 
+`pkg/command/options.go` tem duas camadas de compat com nomes de env var de outro sistema, além
+da genérica `GNS_<NAME>`/`ME_<NAME>` (`envLookup`): `envLookupMongo` (condicionada a `--driver
+mongodb`, para `MONGODB_HOST`/`MONGODB_PORT`/`MONGODB_USERNAME`/`MONGODB_PASSWORD`) e
+`envLookupCompat` (incondicional, para os nomes reais do mongo-express —
+`ME_CONFIG_BASICAUTH_USERNAME`/`_PASSWORD`, `ME_CONFIG_SITE_SSL_CRT_PATH`/`_KEY_PATH`,
+`ME_CONFIG_SITE_SESSIONSECRET` — em `--auth-user`/`--auth-pass`/`--tls-cert`/`--tls-key`/
+`--session-secret`). Ao adicionar uma flag nova que espelhe uma variável real do mongo-express,
+prefira estender uma dessas duas em vez de inventar uma terceira camada.
+
+`--auth-enabled`/`--tls-enabled` (default `true`) existem só pra honrar um
+`ME_CONFIG_BASICAUTH_ENABLED`/`ME_CONFIG_SITE_SSL_ENABLED=false` importado — no mongo-express
+essas variáveis são o interruptor principal (default `false`); no gonosequel a convenção já
+é presença de `--auth-user`/`--tls-cert`+`--tls-key` ligar a feature, então essas duas só têm
+efeito quando setadas explicitamente para `false` (main.go zera as credenciais/cert antes de
+montar `api.Config`/decidir o `Listen`, em vez de repassar um "enabled" pra dentro de
+`pkg/api`).
+
+Em `--sessions` mode, o ID de sessão devolvido por `/api/connect` é opaco e sem assinatura por
+padrão — trafega no header `X-Session-Id` (`pkg/api/middleware.go`), nunca em cookie. Se
+`--session-secret` estiver configurado, `pkg/session/sign.go` (`SignID`/`VerifyID`, HMAC-SHA256)
+assina o ID devolvido ao cliente, e `resolveSessionID` (`pkg/api/middleware.go`) passa a exigir
+essa assinatura em todo request com `X-Session-Id` — um ID cru ou adulterado vira 400. A chave do
+`session.Registry` continua sendo sempre o ID não assinado; só o token que atravessa o header
+carrega a assinatura. Sem secret configurado, nada muda (comportamento atual, sem assinatura).
+
 O rascunho do `QueryEditor` e do `RedisCommandRunner` (texto ainda não rodado) é persistido em
 `localStorage` (`web/src/api/localCache.ts`), chaveado por `db:coll` — não pelo ID de sessão, de
 propósito, para sobreviver tanto a um refresh quanto a uma reconexão (nova sessão) na mesma

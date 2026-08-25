@@ -12,6 +12,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
+
 	"github.com/laubstein/gonosequel/pkg/api"
 	"github.com/laubstein/gonosequel/pkg/bookmarks"
 	"github.com/laubstein/gonosequel/pkg/client"
@@ -63,23 +65,40 @@ func main() {
 		registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "default", Driver: opts.Driver, Readonly: opts.Readonly})
 	}
 
+	// AuthEnabled/TLSEnabled default true and only matter when explicitly
+	// set to false (e.g. an imported ME_CONFIG_BASICAUTH_ENABLED=false or
+	// ME_CONFIG_SITE_SSL_ENABLED=false) — cleared here rather than in
+	// api.Config so pkg/api keeps its existing, simpler "AuthUser set
+	// means auth is on" gating unchanged.
+	authUser, authPass := opts.AuthUser, opts.AuthPass
+	if !opts.AuthEnabled {
+		authUser, authPass = "", ""
+	}
+
 	app := api.New(api.Config{
-		Registry:     registry,
-		Driver:       opts.Driver,
-		Connect:      connect,
-		Sessions:     opts.Sessions,
-		Readonly:     opts.Readonly,
-		AuthUser:     opts.AuthUser,
-		AuthPass:     opts.AuthPass,
-		Assets:       assetsFS(),
-		DevProxy:     opts.DevProxy,
-		BookmarksDir: bookmarksDir,
-		Docs:         docsFSSub(),
+		Registry:      registry,
+		Driver:        opts.Driver,
+		Connect:       connect,
+		Sessions:      opts.Sessions,
+		Readonly:      opts.Readonly,
+		AuthUser:      authUser,
+		AuthPass:      authPass,
+		Assets:        assetsFS(),
+		DevProxy:      opts.DevProxy,
+		BookmarksDir:  bookmarksDir,
+		Docs:          docsFSSub(),
+		SessionSecret: opts.SessionSecret,
 	})
 
 	addr := fmt.Sprintf("%s:%d", opts.Bind, opts.HTTPPort)
-	log.Printf("gonosequel listening on %s", addr)
-	if err := app.Listen(addr); err != nil {
+	if opts.TLSCert != "" && opts.TLSEnabled {
+		log.Printf("gonosequel listening on %s (tls)", addr)
+		err = app.Listen(addr, fiber.ListenConfig{CertFile: opts.TLSCert, CertKeyFile: opts.TLSKey})
+	} else {
+		log.Printf("gonosequel listening on %s", addr)
+		err = app.Listen(addr)
+	}
+	if err != nil {
 		log.Fatalf("serve: %v", err)
 	}
 }

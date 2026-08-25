@@ -29,21 +29,36 @@ var defaultPort = map[string]int{
 // Options holds every runtime setting the application accepts, sourced from
 // CLI flags with environment variable fallbacks.
 type Options struct {
-	Driver   string
-	URL      string
-	Host     string
-	Port     int
-	User     string
-	Pass     string
-	DB       string
-	Bind     string
-	HTTPPort int
-	Bookmark string
-	Sessions bool
-	AuthUser string
-	AuthPass string
-	Readonly bool
-	DevProxy string
+	Driver        string
+	URL           string
+	Host          string
+	Port          int
+	User          string
+	Pass          string
+	DB            string
+	Bind          string
+	HTTPPort      int
+	Bookmark      string
+	Sessions      bool
+	AuthUser      string
+	AuthPass      string
+	Readonly      bool
+	DevProxy      string
+	TLSCert       string
+	TLSKey        string
+	SessionSecret string
+	// AuthEnabled/TLSEnabled default true and only matter as an explicit
+	// override: mongo-express's own ME_CONFIG_BASICAUTH_ENABLED/
+	// ME_CONFIG_SITE_SSL_ENABLED default *false*, gating on/off a
+	// username+password or cert+key that may already be sitting in the
+	// environment. gonosequel's own convention is simpler — basic
+	// auth/TLS activate from the mere presence of --auth-user or
+	// --tls-cert+--tls-key, no separate enable flag needed — so these two
+	// exist only so an imported ME_CONFIG_*_ENABLED=false is honored
+	// (main.go clears the corresponding credentials/cert when false)
+	// rather than silently ignored.
+	AuthEnabled bool
+	TLSEnabled  bool
 
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
@@ -76,10 +91,15 @@ func Parse(args []string) (*Options, error) {
 
 	fs.StringVar(&opts.Bookmark, "bookmark", envOr("BOOKMARK", ""), "load connection from a saved bookmark")
 	fs.BoolVar(&opts.Sessions, "sessions", envBoolOr("SESSIONS", false), "enable multi-session mode")
-	fs.StringVar(&opts.AuthUser, "auth-user", envOr("AUTH_USER", ""), "basic auth username for the web UI")
-	fs.StringVar(&opts.AuthPass, "auth-pass", envOr("AUTH_PASS", ""), "basic auth password for the web UI")
+	fs.StringVar(&opts.AuthUser, "auth-user", envOrCompat("AUTH_USER", "ME_CONFIG_BASICAUTH_USERNAME", ""), "basic auth username for the web UI")
+	fs.StringVar(&opts.AuthPass, "auth-pass", envOrCompat("AUTH_PASS", "ME_CONFIG_BASICAUTH_PASSWORD", ""), "basic auth password for the web UI")
 	fs.BoolVar(&opts.Readonly, "readonly", envBoolOr("READONLY", false), "reject all non-GET requests")
 	fs.StringVar(&opts.DevProxy, "dev-proxy", envOr("DEV_PROXY", ""), "proxy non-API requests to this URL (dev mode)")
+	fs.StringVar(&opts.TLSCert, "tls-cert", envOrCompat("TLS_CERT", "ME_CONFIG_SITE_SSL_CRT_PATH", ""), "path to TLS certificate file; enables HTTPS together with --tls-key")
+	fs.StringVar(&opts.TLSKey, "tls-key", envOrCompat("TLS_KEY", "ME_CONFIG_SITE_SSL_KEY_PATH", ""), "path to TLS private key file; enables HTTPS together with --tls-cert")
+	fs.StringVar(&opts.SessionSecret, "session-secret", envOrCompat("SESSION_SECRET", "ME_CONFIG_SITE_SESSIONSECRET", ""), "secret used to HMAC-sign session IDs handed out in --sessions mode; empty disables signing")
+	fs.BoolVar(&opts.AuthEnabled, "auth-enabled", envBoolOrCompat("AUTH_ENABLED", "ME_CONFIG_BASICAUTH_ENABLED", true), "whether --auth-user/--auth-pass take effect; set to false to keep them configured but inactive")
+	fs.BoolVar(&opts.TLSEnabled, "tls-enabled", envBoolOrCompat("TLS_ENABLED", "ME_CONFIG_SITE_SSL_ENABLED", true), "whether --tls-cert/--tls-key take effect; set to false to keep them configured but inactive")
 
 	readTimeout := fs.Duration("read-timeout", 30*time.Second, "HTTP read timeout")
 	writeTimeout := fs.Duration("write-timeout", 30*time.Second, "HTTP write timeout")
@@ -90,6 +110,10 @@ func Parse(args []string) (*Options, error) {
 
 	if !slices.Contains(SupportedDrivers, opts.Driver) {
 		return nil, fmt.Errorf("unsupported --driver %q (supported: %s)", opts.Driver, strings.Join(SupportedDrivers, ", "))
+	}
+
+	if (opts.TLSCert == "") != (opts.TLSKey == "") {
+		return nil, fmt.Errorf("--tls-cert and --tls-key must be set together")
 	}
 
 	// --port has no fixed flag default (see above) because the right
@@ -213,6 +237,39 @@ func envLookupMongo(driver, key, mongoKey string) (string, bool) {
 		return os.ExpandEnv(v), true
 	}
 	return "", false
+}
+
+// envLookupCompat extends envLookup with a third fallback tier —
+// compatKey, looked up unconditionally (unlike envLookupMongo's MONGODB_*
+// tier, which only applies for --driver mongodb). Used for settings that
+// mean the same thing regardless of backend (basic auth, TLS, session
+// secret), where compatKey is the name mongo-express itself used
+// (ME_CONFIG_BASICAUTH_USERNAME, ME_CONFIG_SITE_SSL_CRT_PATH,
+// ME_CONFIG_SITE_SESSIONSECRET, ...), so an existing mongo-express
+// deployment's environment keeps working without renaming anything.
+func envLookupCompat(key, compatKey string) (string, bool) {
+	if v, ok := envLookup(key); ok {
+		return v, true
+	}
+	if v, ok := os.LookupEnv(compatKey); ok {
+		return os.ExpandEnv(v), true
+	}
+	return "", false
+}
+
+func envOrCompat(key, compatKey, def string) string {
+	if v, ok := envLookupCompat(key, compatKey); ok {
+		return v
+	}
+	return def
+}
+
+func envBoolOrCompat(key, compatKey string, def bool) bool {
+	v, ok := envLookupCompat(key, compatKey)
+	if !ok {
+		return def
+	}
+	return v == "1" || v == "true" || v == "yes"
 }
 
 func envOrMongo(driver, key, mongoKey, def string) string {

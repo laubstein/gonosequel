@@ -31,3 +31,20 @@ connection screen to add another without losing the current one.
 
 In single-connection mode there's always exactly one entry here, and no switcher UI beyond
 Disconnect/reconnect.
+
+## Signed session IDs
+
+In `--sessions` mode, `/api/connect` hands the browser a session ID that every later request
+echoes back in an `X-Session-Id` header to say which open connection it's for. By default that
+ID is just an opaque string — anyone who guesses or intercepts another session's ID can use it.
+
+Setting `--session-secret` (see [CLI reference](/cli-reference)) turns the ID the server hands
+out into an HMAC-signed token instead: the raw ID plus a signature only the server (holding the
+secret) could have produced. Every request's `X-Session-Id` is verified against that signature
+before it's allowed to resolve to a connection — an unsigned or tampered value is rejected with
+400, even if it happens to match a real session's raw ID. The browser doesn't need to do
+anything differently: it already just stores and replays whatever `sessionId` `/api/connect`
+returned, signed or not.
+
+Leaving `--session-secret` unset keeps today's behavior (a plain, unsigned ID) — nothing about
+existing deployments changes unless this flag is set.

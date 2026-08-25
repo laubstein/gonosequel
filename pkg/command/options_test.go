@@ -190,6 +190,138 @@ func TestParseMongodbTierExpandsVarReferences(t *testing.T) {
 	}
 }
 
+// --- driver-agnostic compat tier for auth/TLS/session-secret ---
+
+func TestParseCompatTierAppliesWhenNothingElseSet(t *testing.T) {
+	setEnv(t, "ME_CONFIG_BASICAUTH_USERNAME", "compat-user")
+	setEnv(t, "ME_CONFIG_BASICAUTH_PASSWORD", "compat-pass")
+	setEnv(t, "ME_CONFIG_SITE_SSL_CRT_PATH", "/compat/cert.pem")
+	setEnv(t, "ME_CONFIG_SITE_SSL_KEY_PATH", "/compat/key.pem")
+	setEnv(t, "ME_CONFIG_SITE_SESSIONSECRET", "compat-secret")
+
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if opts.AuthUser != "compat-user" {
+		t.Errorf("AuthUser = %q, want compat-user", opts.AuthUser)
+	}
+	if opts.AuthPass != "compat-pass" {
+		t.Errorf("AuthPass = %q, want compat-pass", opts.AuthPass)
+	}
+	if opts.TLSCert != "/compat/cert.pem" {
+		t.Errorf("TLSCert = %q, want /compat/cert.pem", opts.TLSCert)
+	}
+	if opts.TLSKey != "/compat/key.pem" {
+		t.Errorf("TLSKey = %q, want /compat/key.pem", opts.TLSKey)
+	}
+	if opts.SessionSecret != "compat-secret" {
+		t.Errorf("SessionSecret = %q, want compat-secret", opts.SessionSecret)
+	}
+}
+
+func TestParseGNSAuthUserBeatsCompatTier(t *testing.T) {
+	setEnv(t, "ME_CONFIG_BASICAUTH_USERNAME", "compat-user")
+	setEnv(t, "GNS_AUTH_USER", "gns-user")
+
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if opts.AuthUser != "gns-user" {
+		t.Errorf("AuthUser = %q, want gns-user (GNS_AUTH_USER should win over compat tier)", opts.AuthUser)
+	}
+}
+
+func TestParseMEAuthUserBeatsCompatTier(t *testing.T) {
+	setEnv(t, "ME_CONFIG_BASICAUTH_USERNAME", "compat-user")
+	setEnv(t, "ME_AUTH_USER", "me-user")
+
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if opts.AuthUser != "me-user" {
+		t.Errorf("AuthUser = %q, want me-user (ME_AUTH_USER should win over compat tier)", opts.AuthUser)
+	}
+}
+
+func TestParseTLSCertWithoutKeyIsError(t *testing.T) {
+	_, err := Parse([]string{"-tls-cert", "/tmp/cert.pem"})
+	if err == nil {
+		t.Fatal("Parse: want error when --tls-cert is set without --tls-key")
+	}
+}
+
+func TestParseTLSKeyWithoutCertIsError(t *testing.T) {
+	_, err := Parse([]string{"-tls-key", "/tmp/key.pem"})
+	if err == nil {
+		t.Fatal("Parse: want error when --tls-key is set without --tls-cert")
+	}
+}
+
+func TestParseTLSCertAndKeyTogetherIsValid(t *testing.T) {
+	opts, err := Parse([]string{"-tls-cert", "/tmp/cert.pem", "-tls-key", "/tmp/key.pem"})
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if opts.TLSCert != "/tmp/cert.pem" || opts.TLSKey != "/tmp/key.pem" {
+		t.Errorf("TLSCert/TLSKey = %q/%q, want /tmp/cert.pem//tmp/key.pem", opts.TLSCert, opts.TLSKey)
+	}
+}
+
+// --- AuthEnabled/TLSEnabled: explicit-disable override, default true ---
+
+func TestParseAuthEnabledDefaultsTrue(t *testing.T) {
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if !opts.AuthEnabled {
+		t.Errorf("AuthEnabled = false, want true (default)")
+	}
+	if !opts.TLSEnabled {
+		t.Errorf("TLSEnabled = false, want true (default)")
+	}
+}
+
+func TestParseAuthEnabledFalseFromCompatVar(t *testing.T) {
+	setEnv(t, "ME_CONFIG_BASICAUTH_ENABLED", "false")
+
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if opts.AuthEnabled {
+		t.Errorf("AuthEnabled = true, want false (ME_CONFIG_BASICAUTH_ENABLED=false)")
+	}
+}
+
+func TestParseTLSEnabledFalseFromCompatVar(t *testing.T) {
+	setEnv(t, "ME_CONFIG_SITE_SSL_ENABLED", "false")
+
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if opts.TLSEnabled {
+		t.Errorf("TLSEnabled = true, want false (ME_CONFIG_SITE_SSL_ENABLED=false)")
+	}
+}
+
+func TestParseGNSAuthEnabledBeatsCompatVar(t *testing.T) {
+	setEnv(t, "ME_CONFIG_BASICAUTH_ENABLED", "false")
+	setEnv(t, "GNS_AUTH_ENABLED", "true")
+
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if !opts.AuthEnabled {
+		t.Errorf("AuthEnabled = false, want true (GNS_AUTH_ENABLED should win over compat tier)")
+	}
+}
+
 func TestParseFlagOverridesEnv(t *testing.T) {
 	setEnv(t, "GNS_URL", "mongodb://env-host:27017")
 
