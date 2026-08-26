@@ -1,6 +1,9 @@
 package command
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // setEnv sets an environment variable for the duration of the test,
 // restoring (or unsetting) whatever was there before on cleanup — tests in
@@ -331,5 +334,121 @@ func TestParseFlagOverridesEnv(t *testing.T) {
 	}
 	if opts.URL != "mongodb://flag-host:27017" {
 		t.Errorf("URL = %q, want mongodb://flag-host:27017 (explicit flag should win over env)", opts.URL)
+	}
+}
+
+// --- --verbose ---
+
+func TestParseVerboseDefaultsFalse(t *testing.T) {
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if opts.Verbose {
+		t.Errorf("Verbose = true, want false (default)")
+	}
+}
+
+func TestParseVerboseEnvVar(t *testing.T) {
+	setEnv(t, "GNS_VERBOSE", "true")
+
+	opts, err := Parse(nil)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if !opts.Verbose {
+		t.Errorf("Verbose = false, want true (GNS_VERBOSE=true)")
+	}
+}
+
+// --- Banner() ---
+
+func TestBannerRedactsBackendPassword(t *testing.T) {
+	opts := &Options{Driver: "mongodb", Host: "dbhost", Port: 27017, User: "dbuser", Pass: "s3cr3t-pass"}
+
+	banner := opts.Banner()
+	if strings.Contains(banner, "s3cr3t-pass") {
+		t.Errorf("Banner() leaked the raw backend password: %s", banner)
+	}
+	if !strings.Contains(banner, "dbuser") {
+		t.Errorf("Banner() should still show the username: %s", banner)
+	}
+	if !strings.Contains(banner, "****") {
+		t.Errorf("Banner() should mask the password with ****: %s", banner)
+	}
+}
+
+func TestBannerRedactsURLPassword(t *testing.T) {
+	opts := &Options{Driver: "mongodb", URL: "mongodb://urluser:urlpass@host:27017/db"}
+
+	banner := opts.Banner()
+	if strings.Contains(banner, "urlpass") {
+		t.Errorf("Banner() leaked the raw password from --url: %s", banner)
+	}
+	if !strings.Contains(banner, "urluser") {
+		t.Errorf("Banner() should still show the username from --url: %s", banner)
+	}
+}
+
+func TestBannerShowsBookmarkWithoutResolvingURL(t *testing.T) {
+	opts := &Options{Driver: "mongodb", Bookmark: "prod"}
+
+	banner := opts.Banner()
+	if !strings.Contains(banner, `bookmark "prod"`) {
+		t.Errorf("Banner() = %q, want it to mention bookmark \"prod\"", banner)
+	}
+}
+
+func TestBannerSessionsModeSkipsConnectionURI(t *testing.T) {
+	opts := &Options{Driver: "mongodb", Sessions: true, Host: "should-not-appear", User: "should-not-appear"}
+
+	banner := opts.Banner()
+	if strings.Contains(banner, "should-not-appear") {
+		t.Errorf("Banner() in --sessions mode should not expose per-connection fields: %s", banner)
+	}
+	if !strings.Contains(banner, "--sessions mode") {
+		t.Errorf("Banner() = %q, want a mention of --sessions mode", banner)
+	}
+}
+
+func TestBannerRedactsAuthPassword(t *testing.T) {
+	opts := &Options{Driver: "mongodb", AuthUser: "admin", AuthPass: "top-secret", AuthEnabled: true}
+
+	banner := opts.Banner()
+	if strings.Contains(banner, "top-secret") {
+		t.Errorf("Banner() leaked the raw auth password: %s", banner)
+	}
+	if !strings.Contains(banner, "admin") {
+		t.Errorf("Banner() should still show the auth username: %s", banner)
+	}
+}
+
+func TestBannerRedactsSessionSecret(t *testing.T) {
+	opts := &Options{Driver: "mongodb", SessionSecret: "my-signing-secret"}
+
+	banner := opts.Banner()
+	if strings.Contains(banner, "my-signing-secret") {
+		t.Errorf("Banner() leaked the raw session secret: %s", banner)
+	}
+	if !strings.Contains(banner, "configured") {
+		t.Errorf("Banner() should say the session secret is configured: %s", banner)
+	}
+}
+
+func TestBannerAuthConfiguredButDisabled(t *testing.T) {
+	opts := &Options{Driver: "mongodb", AuthUser: "admin", AuthPass: "pass", AuthEnabled: false}
+
+	banner := opts.Banner()
+	if !strings.Contains(banner, "configured but disabled") {
+		t.Errorf("Banner() = %q, want it to say basic auth is configured but disabled", banner)
+	}
+}
+
+func TestBannerTLSConfiguredButDisabled(t *testing.T) {
+	opts := &Options{Driver: "mongodb", TLSCert: "/c.pem", TLSKey: "/k.pem", TLSEnabled: false}
+
+	banner := opts.Banner()
+	if !strings.Contains(banner, "configured but disabled") {
+		t.Errorf("Banner() = %q, want it to say TLS is configured but disabled", banner)
 	}
 }

@@ -49,6 +49,11 @@ type Config struct {
 	// on every subsequent request carrying X-Session-Id — otherwise session
 	// IDs are unsigned opaque strings, as before. Empty by default.
 	SessionSecret string
+	// Verbose enables extra diagnostic logging for request-handling
+	// lifecycle events (currently: session connect/disconnect in
+	// --sessions mode) beyond the fiber access logger already installed
+	// below (logger.New()), which covers every request/response already.
+	Verbose bool
 
 	// Assets, if non-nil, is the built frontend (web/dist) served for
 	// every non-API route. Nil in tests that only exercise /api routes.
@@ -76,6 +81,7 @@ type deps struct {
 	readonly      bool
 	bookmarksDir  string
 	sessionSecret string
+	verbose       bool
 }
 
 // New builds a *fiber.App with middleware and routes registered, but does
@@ -115,6 +121,7 @@ func New(cfg Config) *fiber.App {
 		readonly:      cfg.Readonly,
 		bookmarksDir:  cfg.BookmarksDir,
 		sessionSecret: cfg.SessionSecret,
+		verbose:       cfg.Verbose,
 	}
 	registerRoutes(app, d)
 	// Registered before the SPA's own catch-all (inside registerAssets),

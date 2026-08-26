@@ -122,6 +122,12 @@ wouldn't mean anything.
 | `--tls-enabled` | `GNS_TLS_ENABLED` (`ME_TLS_ENABLED`, then `ME_CONFIG_SITE_SSL_ENABLED`) | `true` | Whether `--tls-cert`/`--tls-key` take effect. Set to `false` to keep them configured but inactive. |
 | `--session-secret` | `GNS_SESSION_SECRET` (`ME_SESSION_SECRET`, then `ME_CONFIG_SITE_SESSIONSECRET`) | — | HMAC-signs the session ID handed out by `/api/connect` in `--sessions` mode, so a client can't forge or guess another session's ID. Unset means today's unsigned, opaque session IDs. |
 | `--dev-proxy` | `GNS_DEV_PROXY` (`ME_DEV_PROXY`) | — | Reverse-proxy non-API requests to this URL instead of serving the embedded frontend. Used internally by `make dev`; prefer browsing Vite's own URL directly, since this path doesn't support the WebSocket upgrade hot module reload needs. |
+| `--verbose` | `GNS_VERBOSE` (`ME_VERBOSE`) | `false` | Print extra diagnostic logging during startup and request handling (e.g. session connect/disconnect in `--sessions` mode), beyond the startup banner (always printed) and the per-request access log. |
+
+On startup, gonosequel always prints a banner summarizing the effective configuration (driver,
+connection target, bind address, whether auth/TLS/readonly/sessions mode are on). Any
+credential-shaped value — backend password, basic auth password, session secret — is masked as
+`****`, never printed in the clear.
 
 ## Bookmarks
 

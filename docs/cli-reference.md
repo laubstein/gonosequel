@@ -51,11 +51,21 @@ looks at them, rather than being silently ignored.
 | `--tls-enabled` | `GNS_TLS_ENABLED` (`ME_TLS_ENABLED`, then `ME_CONFIG_SITE_SSL_ENABLED`) | `true` | Whether `--tls-cert`/`--tls-key` take effect — see below. |
 | `--session-secret` | `GNS_SESSION_SECRET` (`ME_SESSION_SECRET`, then `ME_CONFIG_SITE_SESSIONSECRET`) | — | HMAC-signs the session ID handed out by `/api/connect` in `--sessions` mode — see [Server & sessions](/features/server-and-sessions). Unset means today's unsigned, opaque session IDs. |
 | `--dev-proxy` | `GNS_DEV_PROXY` (`ME_DEV_PROXY`) | — | Reverse-proxy non-API requests to this URL instead of serving the embedded frontend. Used internally by `make dev`; prefer browsing Vite's own URL directly in development, since this path doesn't support the WebSocket upgrade hot module reload needs. |
+| `--verbose` | `GNS_VERBOSE` (`ME_VERBOSE`) | `false` | Print extra diagnostic logging during startup and request handling (e.g. session connect/disconnect in `--sessions` mode). gonosequel-only, no mongo-express equivalent — no compat tier. |
 
 Every flag also has a `--read-timeout` / `--write-timeout` pair (both default `30s`) for the
 HTTP server's own timeouts, and standard Go `flag` package behavior applies: `-flag=value`,
 `-flag value`, and `--flag` are all accepted, and `--help` prints this same list from the
 binary itself.
+
+## Startup banner
+
+On every startup, gonosequel prints a banner with the effective configuration — driver,
+connection target, bind address, and whether sessions mode/readonly/basic auth/TLS/the session
+secret are on — regardless of `--verbose`. Any credential-shaped value (backend password, basic
+auth password, session secret) is masked as `****`, never printed in the clear. `--verbose` adds
+further lines beyond the banner (bookmarks directory, connect/disconnect lifecycle events), but
+does not change what the banner itself shows.
 
 ## Example: read-only, bound to all interfaces, behind basic auth
 

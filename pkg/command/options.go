@@ -5,6 +5,7 @@ package command
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -59,6 +60,11 @@ type Options struct {
 	// rather than silently ignored.
 	AuthEnabled bool
 	TLSEnabled  bool
+	// Verbose enables extra diagnostic logging during startup and request
+	// handling, beyond the always-printed startup Banner. gonosequel-only
+	// (no mongo-express equivalent), so only the generic GNS_/ME_ tier
+	// applies — no compat tier.
+	Verbose bool
 
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
@@ -100,6 +106,7 @@ func Parse(args []string) (*Options, error) {
 	fs.StringVar(&opts.SessionSecret, "session-secret", envOrCompat("SESSION_SECRET", "ME_CONFIG_SITE_SESSIONSECRET", ""), "secret used to HMAC-sign session IDs handed out in --sessions mode; empty disables signing")
 	fs.BoolVar(&opts.AuthEnabled, "auth-enabled", envBoolOrCompat("AUTH_ENABLED", "ME_CONFIG_BASICAUTH_ENABLED", true), "whether --auth-user/--auth-pass take effect; set to false to keep them configured but inactive")
 	fs.BoolVar(&opts.TLSEnabled, "tls-enabled", envBoolOrCompat("TLS_ENABLED", "ME_CONFIG_SITE_SSL_ENABLED", true), "whether --tls-cert/--tls-key take effect; set to false to keep them configured but inactive")
+	fs.BoolVar(&opts.Verbose, "verbose", envBoolOr("VERBOSE", false), "print extra diagnostic logging during startup and request handling")
 
 	readTimeout := fs.Duration("read-timeout", 30*time.Second, "HTTP read timeout")
 	writeTimeout := fs.Duration("write-timeout", 30*time.Second, "HTTP write timeout")
@@ -159,6 +166,102 @@ func (o *Options) URI() string {
 		uri += "/" + o.DB
 	}
 	return uri
+}
+
+// Banner renders a human-readable summary of the effective configuration,
+// meant to be printed once at startup so an operator can see what the
+// process is actually running with. Every credential-shaped value (backend
+// password, basic auth password, session secret) is masked as a fixed
+// "****" — never the raw value, and never a length-preserving mask either,
+// so nothing about the secret leaks into logs.
+func (o *Options) Banner() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "  driver:         %s\n", o.Driver)
+
+	switch {
+	case o.Sessions:
+		fmt.Fprintf(&b, "  connection:     (configured per-connection in --sessions mode)\n")
+	case o.Bookmark != "":
+		fmt.Fprintf(&b, "  connection:     bookmark %q\n", o.Bookmark)
+	default:
+		fmt.Fprintf(&b, "  connection:     %s\n", redactURI(o.URI()))
+	}
+
+	fmt.Fprintf(&b, "  bind address:   %s:%d\n", o.Bind, o.HTTPPort)
+	fmt.Fprintf(&b, "  sessions mode:  %s\n", enabledStr(o.Sessions))
+	fmt.Fprintf(&b, "  readonly:       %s\n", enabledStr(o.Readonly))
+
+	switch {
+	case o.AuthUser != "" && o.AuthEnabled:
+		fmt.Fprintf(&b, "  basic auth:     enabled (user=%s, pass=****)\n", o.AuthUser)
+	case o.AuthUser != "":
+		fmt.Fprintf(&b, "  basic auth:     configured but disabled (--auth-enabled=false)\n")
+	default:
+		fmt.Fprintf(&b, "  basic auth:     disabled\n")
+	}
+
+	switch {
+	case o.TLSCert != "" && o.TLSEnabled:
+		fmt.Fprintf(&b, "  tls:            enabled (cert=%s, key=%s)\n", o.TLSCert, o.TLSKey)
+	case o.TLSCert != "":
+		fmt.Fprintf(&b, "  tls:            configured but disabled (--tls-enabled=false)\n")
+	default:
+		fmt.Fprintf(&b, "  tls:            disabled\n")
+	}
+
+	if o.SessionSecret != "" {
+		fmt.Fprintf(&b, "  session secret: configured (****)\n")
+	} else {
+		fmt.Fprintf(&b, "  session secret: not set\n")
+	}
+
+	if o.DevProxy != "" {
+		fmt.Fprintf(&b, "  dev proxy:      %s\n", o.DevProxy)
+	}
+
+	fmt.Fprintf(&b, "  verbose:        %s", enabledStr(o.Verbose))
+	return b.String()
+}
+
+func enabledStr(v bool) string {
+	if v {
+		return "enabled"
+	}
+	return "disabled"
+}
+
+// redactURI masks the password in a connection string with **** before
+// it's ever printed — unlike pkg/api/handlers_connect.go's own redactURI
+// (which drops the password entirely from a URL shown in the frontend),
+// this one leaves a visible placeholder in its place, since the startup
+// banner is meant to show that a password *is* set, just not what it is.
+// A small local copy rather than shared: the two redact for different
+// purposes, and promoting either to exported (or a shared package) for
+// ~12 lines would cost more than it saves.
+func redactURI(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	if u.User == nil {
+		return u.String()
+	}
+	username := u.User.Username()
+	if username == "" {
+		u.User = nil
+		return u.String()
+	}
+	_, hasPass := u.User.Password()
+	if !hasPass {
+		u.User = url.User(username)
+		return u.String()
+	}
+	// url.String() percent-encodes "*" in userinfo (it's not in the
+	// allowed set), so building the masked password through
+	// url.UserPassword would render as %2A%2A%2A%2A instead of ****.
+	// Placeholder text, then swap the encoded form back afterward.
+	u.User = url.UserPassword(username, "****")
+	return strings.ReplaceAll(u.String(), "%2A%2A%2A%2A", "****")
 }
 
 // envLookup resolves a setting from the environment: GNS_<key> first, then

@@ -42,10 +42,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("parse flags: %v", err)
 	}
+	log.Printf("gonosequel %s starting\n%s", api.Version, opts.Banner())
 
 	bookmarksDir, err := bookmarks.DefaultDir()
 	if err != nil {
 		log.Fatalf("resolve bookmarks directory: %v", err)
+	}
+	if opts.Verbose {
+		log.Printf("bookmarks directory: %s", bookmarksDir)
 	}
 
 	registry := session.NewRegistry()
@@ -56,11 +60,17 @@ func main() {
 			log.Fatalf("resolve connection: %v", err)
 		}
 
+		if opts.Verbose {
+			log.Printf("connecting to %s...", opts.Driver)
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		cl, err := connect(ctx, opts.Driver, uri)
 		cancel()
 		if err != nil {
 			log.Fatalf("connect: %v", err)
+		}
+		if opts.Verbose {
+			log.Printf("connected to %s", opts.Driver)
 		}
 		registry.Put(session.DefaultID, cl, session.Info{ID: session.DefaultID, Name: "default", Driver: opts.Driver, Readonly: opts.Readonly})
 	}
@@ -88,6 +98,7 @@ func main() {
 		BookmarksDir:  bookmarksDir,
 		Docs:          docsFSSub(),
 		SessionSecret: opts.SessionSecret,
+		Verbose:       opts.Verbose,
 	})
 
 	addr := fmt.Sprintf("%s:%d", opts.Bind, opts.HTTPPort)

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -105,6 +106,9 @@ func (d *deps) handleConnect(c fiber.Ctx) error {
 	// this per-session flag anyway.
 	readonly := req.Readonly || d.readonly
 	d.registry.Put(id, cl, session.Info{ID: id, URI: redactURI(targetURL), Name: displayName, Driver: driverName, Readonly: readonly})
+	if d.verbose {
+		log.Printf("session %s connected (driver=%s, name=%s)", id, driverName, displayName)
+	}
 
 	token := id
 	if d.sessionSecret != "" {
@@ -121,6 +125,9 @@ func (d *deps) handleDisconnect(c fiber.Ctx) error {
 	}
 	if err := d.registry.Remove(c.Context(), id); err != nil {
 		return fmt.Errorf("disconnect: %w", err)
+	}
+	if d.verbose {
+		log.Printf("session %s disconnected", id)
 	}
 	return c.JSON(fiber.Map{"ok": true})
 }

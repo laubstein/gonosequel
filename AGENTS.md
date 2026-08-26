@@ -183,6 +183,19 @@ essa assinatura em todo request com `X-Session-Id` — um ID cru ou adulterado v
 `session.Registry` continua sendo sempre o ID não assinado; só o token que atravessa o header
 carrega a assinatura. Sem secret configurado, nada muda (comportamento atual, sem assinatura).
 
+`main.go` sempre imprime um banner no startup (`Options.Banner()`, em `pkg/command/options.go`)
+com a config efetiva — driver, alvo de conexão, bind, se sessions/readonly/auth/TLS/session
+secret estão ligados. Qualquer campo com cara de credencial (`Pass`, `AuthPass`, `SessionSecret`,
+ou a senha embutida numa URI) é mascarado como `****` — nunca logue nenhum desses em texto puro
+em lugar nenhum do código; passe por `Banner()`/`redactURI` (a cópia local em
+`pkg/command/options.go`, distinta da de `pkg/api/handlers_connect.go` — a mesma ideia, mas cada
+uma existe pro seu próprio pacote e propósito) em vez de montar uma string com o segredo cru.
+`--verbose` (`Options.Verbose`, e `Config.Verbose`/`deps.verbose` em `pkg/api`) liga linhas de log
+extras além do banner (sempre impresso) — hoje só ciclo de vida de sessão em `--sessions` mode
+(`handleConnect`/`handleDisconnect` em `pkg/api/handlers_connect.go`). Ao instrumentar um novo
+ponto do código, siga o mesmo padrão (`if d.verbose { log.Printf(...) }` / `if opts.Verbose { ... }`)
+em vez de introduzir uma abstração de logger nova.
+
 O rascunho do `QueryEditor` e do `RedisCommandRunner` (texto ainda não rodado) é persistido em
 `localStorage` (`web/src/api/localCache.ts`), chaveado por `db:coll` — não pelo ID de sessão, de
 propósito, para sobreviver tanto a um refresh quanto a uma reconexão (nova sessão) na mesma

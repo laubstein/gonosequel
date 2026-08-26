@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.3] - 2026-08-26
+
+### Added
+
+- Startup banner: gonosequel now always prints the effective configuration on startup (driver,
+  connection target, bind address, whether sessions mode/readonly/basic auth/TLS/the session
+  secret are on). Any credential-shaped value — backend password, basic auth password, session
+  secret — is masked as `****`, never printed in the clear.
+- `--verbose` (`GNS_VERBOSE`/`ME_VERBOSE`, default `false`): prints extra diagnostic logging
+  beyond the banner — bookmarks directory, the initial connect lifecycle in main.go, and session
+  connect/disconnect events in `--sessions` mode.
+
 ## [0.0.2] - 2026-08-25
 
 ### Added
