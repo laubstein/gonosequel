@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 
@@ -24,6 +26,12 @@ func (d *deps) handleListCollections(c fiber.Ctx) error {
 	if err != nil {
 		return fmt.Errorf("list collections: %w", err)
 	}
+	// MongoDB's listCollections returns catalog order (not alphabetical),
+	// and pkg/redis synthesizes this list from a Go map — unordered by
+	// construction, so without this it visibly reshuffles on every refresh.
+	sort.Slice(colls, func(i, j int) bool {
+		return strings.ToLower(colls[i].Name) < strings.ToLower(colls[j].Name)
+	})
 	return c.JSON(colls)
 }
 

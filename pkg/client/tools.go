@@ -26,7 +26,11 @@ func (c *Client) CollectionsOverview(ctx context.Context, dbName string) ([]driv
 	for _, coll := range colls {
 		stats, err := c.Stats(ctx, dbName, coll.Name)
 		if err != nil {
-			return nil, fmt.Errorf("collections overview: stats for %q: %w", coll.Name, err)
+			// One collection collStats can't answer for (a view, or one
+			// dropped mid-scan) used to abort the whole overview, hiding
+			// every other collection in the database behind it — skip it
+			// instead so the rest still shows up.
+			continue
 		}
 		stats.Name = coll.Name
 		out = append(out, stats)
@@ -47,7 +51,10 @@ func (c *Client) IndexUsage(ctx context.Context, dbName string) ([]driver.IndexU
 	for _, coll := range colls {
 		docs, err := c.Aggregate(ctx, dbName, coll.Name, []driver.Doc{{"$indexStats": driver.Doc{}}})
 		if err != nil {
-			return nil, fmt.Errorf("index usage: $indexStats for %q: %w", coll.Name, err)
+			// Same reasoning as CollectionsOverview above: don't let one
+			// collection's failure (e.g. a view, which $indexStats can't
+			// run against) hide index usage for every other collection.
+			continue
 		}
 		for _, doc := range docs {
 			var raw struct {

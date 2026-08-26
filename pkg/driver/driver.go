@@ -17,10 +17,13 @@ type Doc = map[string]any
 
 // Entry is one ordered key/value pair. OrderedDoc is used exactly where
 // key order is semantically significant — index key specs and sort specs
-// — the generic equivalent of MongoDB's bson.D/bson.E.
+// — the generic equivalent of MongoDB's bson.D/bson.E. JSON-tagged (unlike
+// most types here, which travel as pre-serialized Extended JSON) because
+// IndexInfo.Keys is the one OrderedDoc value that does cross the wire as
+// plain JSON, straight to the frontend's index list.
 type Entry struct {
-	Key   string
-	Value any
+	Key   string `json:"key"`
+	Value any    `json:"value"`
 }
 
 // OrderedDoc is an ordered sequence of key/value pairs; see Entry.
@@ -71,8 +74,13 @@ type DocumentStore interface {
 // IndexAdmin creates, lists, and drops indexes on a collection.
 type IndexAdmin interface {
 	ListIndexes(ctx context.Context, dbName, collName string) ([]IndexInfo, error)
-	CreateIndex(ctx context.Context, dbName, collName string, keys OrderedDoc, unique bool) (string, error)
+	CreateIndex(ctx context.Context, dbName, collName string, keys OrderedDoc, opts CreateIndexOptions) (string, error)
 	DropIndex(ctx context.Context, dbName, collName, name string) error
+	// UpdateIndexTTL changes an existing TTL index's expireAfterSeconds in
+	// place (MongoDB's collMod) — the one index property that doesn't
+	// require dropping and recreating the index. Backends without a TTL
+	// index concept (Redis/Valkey) return ErrUnsupported.
+	UpdateIndexTTL(ctx context.Context, dbName, collName, indexName string, expireAfterSeconds int64) error
 }
 
 // SchemaInferrer samples a collection's documents to infer field types,

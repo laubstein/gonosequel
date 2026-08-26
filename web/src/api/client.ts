@@ -3,6 +3,7 @@ import type {
   CollectionInfo,
   CollectionStats,
   IndexInfo,
+  CreateIndexOptions,
   SchemaField,
   SessionInfo,
   ExtJSONDocument,
@@ -101,16 +102,22 @@ export const api = {
 
   listIndexes: (db: string, coll: string) =>
     apiGet<IndexInfo[]>(`/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/indexes`),
-  createIndex: (db: string, coll: string, keys: Record<string, number>, unique: boolean) =>
+  createIndex: (db: string, coll: string, keys: { field: string; direction: number }[], opts: CreateIndexOptions) =>
     apiSend<{ name: string }>(
       'POST',
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/indexes`,
-      { keys, unique },
+      { keys, ...opts },
     ),
   dropIndex: (db: string, coll: string, name: string) =>
     apiSend<{ ok: true }>(
       'DELETE',
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/indexes/${encodeURIComponent(name)}`,
+    ),
+  updateIndexTTL: (db: string, coll: string, name: string, expireAfterSeconds: number) =>
+    apiSend<{ ok: true }>(
+      'PATCH',
+      `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/indexes/${encodeURIComponent(name)}`,
+      { expireAfterSeconds },
     ),
 
   collectionsOverview: (db: string) =>

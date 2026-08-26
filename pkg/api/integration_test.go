@@ -191,6 +191,87 @@ func TestAPIDatabaseAndCollectionLifecycle(t *testing.T) {
 	}
 }
 
+// TestAPIDatabasesListedAlphabetically covers handleListDatabases's sort:
+// MongoDB's own listDatabases command returns server/catalog order, not
+// alphabetical, so this only holds because the handler sorts explicitly.
+func TestAPIDatabasesListedAlphabetically(t *testing.T) {
+	app := newTestApp(t, false)
+
+	names := []string{"zzz_test_order_db", "aaa_test_order_db", "mmm_test_order_db"}
+	for _, name := range names {
+		if resp, body := doJSON(t, app, http.MethodPost, "/api/databases", map[string]string{"name": name, "initialCollection": "seed"}); resp.StatusCode != http.StatusCreated {
+			t.Fatalf("create database %q: status=%d body=%v", name, resp.StatusCode, body)
+		}
+		t.Cleanup(func() {
+			doJSON(t, app, http.MethodDelete, "/api/databases/"+name, nil)
+		})
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/databases", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("list databases: %v", err)
+	}
+	defer resp.Body.Close()
+	var all []struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&all); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	var seen []string
+	for _, db := range all {
+		for _, name := range names {
+			if db.Name == name {
+				seen = append(seen, db.Name)
+			}
+		}
+	}
+	if len(seen) != 3 {
+		t.Fatalf("expected to find all 3 test databases in the response, found %v", seen)
+	}
+	if seen[0] != "aaa_test_order_db" || seen[1] != "mmm_test_order_db" || seen[2] != "zzz_test_order_db" {
+		t.Errorf("databases not alphabetically ordered: %v", seen)
+	}
+}
+
+// TestAPICollectionsListedAlphabetically covers handleListCollections's
+// sort — this also fixes pkg/redis's collection list, which is otherwise
+// built from a Go map and iterated in nondeterministic order.
+func TestAPICollectionsListedAlphabetically(t *testing.T) {
+	app := newTestApp(t, false)
+	dbName := "api_test_coll_order"
+
+	for _, name := range []string{"zzz", "aaa", "mmm"} {
+		if resp, body := doJSON(t, app, http.MethodPost, "/api/databases/"+dbName+"/collections", map[string]string{"name": name}); resp.StatusCode != http.StatusCreated {
+			t.Fatalf("create collection %q: status=%d body=%v", name, resp.StatusCode, body)
+		}
+	}
+	t.Cleanup(func() {
+		doJSON(t, app, http.MethodDelete, "/api/databases/"+dbName, nil)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/databases/"+dbName+"/collections", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("list collections: %v", err)
+	}
+	defer resp.Body.Close()
+	var colls []struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&colls); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(colls) != 3 {
+		t.Fatalf("expected 3 collections, got %+v", colls)
+	}
+	if colls[0].Name != "aaa" || colls[1].Name != "mmm" || colls[2].Name != "zzz" {
+		t.Errorf("collections not alphabetically ordered: %+v", colls)
+	}
+}
+
 func TestAPIDocumentCRUDPreservesExtJSONTypes(t *testing.T) {
 	app := newTestApp(t, false)
 

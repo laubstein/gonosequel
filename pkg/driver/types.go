@@ -81,6 +81,24 @@ type IndexInfo struct {
 	Name   string     `json:"name"`
 	Keys   OrderedDoc `json:"keys"`
 	Unique bool       `json:"unique"`
+	Sparse bool       `json:"sparse,omitempty"`
+	// ExpireAfterSeconds is set only on a TTL index. Unlike every other
+	// index property, MongoDB allows changing this in place (via collMod,
+	// see Driver.UpdateIndexTTL) without dropping and recreating the index.
+	ExpireAfterSeconds *int64 `json:"expireAfterSeconds,omitempty"`
+	// PartialFilterExpression is the filter that limits which documents
+	// this index covers, if any.
+	PartialFilterExpression Doc `json:"partialFilterExpression,omitempty"`
+}
+
+// CreateIndexOptions configures index creation. Every field here is
+// immutable once the index exists — except ExpireAfterSeconds, which
+// Driver.UpdateIndexTTL can change without dropping the index.
+type CreateIndexOptions struct {
+	Unique                  bool
+	Sparse                  bool
+	ExpireAfterSeconds      *int64
+	PartialFilterExpression Doc
 }
 
 // FieldType describes one observed value type at a field path, with how

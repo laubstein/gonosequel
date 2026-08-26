@@ -13,11 +13,14 @@ import (
 func TestUnsupportedCapabilitiesReturnErrUnsupported(t *testing.T) {
 	c, ctx := newTestClient(t, 8)
 
-	if _, err := c.CreateIndex(ctx, "8", "widgets", driver.OrderedDoc{{Key: "f", Value: 1}}, false); !errors.Is(err, driver.ErrUnsupported) {
+	if _, err := c.CreateIndex(ctx, "8", "widgets", driver.OrderedDoc{{Key: "f", Value: 1}}, driver.CreateIndexOptions{}); !errors.Is(err, driver.ErrUnsupported) {
 		t.Errorf("CreateIndex: expected ErrUnsupported, got %v", err)
 	}
 	if err := c.DropIndex(ctx, "8", "widgets", "some_index"); !errors.Is(err, driver.ErrUnsupported) {
 		t.Errorf("DropIndex: expected ErrUnsupported, got %v", err)
+	}
+	if err := c.UpdateIndexTTL(ctx, "8", "widgets", "some_index", 60); !errors.Is(err, driver.ErrUnsupported) {
+		t.Errorf("UpdateIndexTTL: expected ErrUnsupported, got %v", err)
 	}
 	if _, err := c.Explain(ctx, "8", "widgets", nil); !errors.Is(err, driver.ErrUnsupported) {
 		t.Errorf("Explain: expected ErrUnsupported, got %v", err)

@@ -3,6 +3,36 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.5] - 2026-08-26
+
+### Added
+
+- Databases and collections are now listed alphabetically (case-insensitive) — this also fixes
+  Redis/Valkey's collection list, previously built from a Go map and shown in nondeterministic
+  order that reshuffled on every refresh.
+- Index details: sparse, TTL (`expireAfterSeconds`), and partial filter expression are now shown
+  per index, and the create-index form supports compound indexes (any number of fields) plus
+  sparse/TTL/partial filter options — previously limited to a single field.
+- Index editing: a TTL index's `expireAfterSeconds` can now be changed in place (MongoDB's
+  `collMod`, the one index property it allows altering without recreating the index). Any other
+  change reuses the create form, pre-filled with the index's current spec, and drops + recreates
+  the index on save — the UI says so explicitly.
+- The Collections overview (Tools tab) now also shows average document size.
+- Sidebar's per-collection quick stats now also show storage size, index size, and average
+  document size (previously only document count, data size, and index count).
+
+### Fixed
+
+- The Tools tab showed "No collections"/"No indexes" even when data existed, whenever a single
+  collection failed to report stats (e.g. a view) — one bad collection no longer hides every
+  other collection's numbers, and a genuine request failure now shows as a distinct error instead
+  of looking identical to an empty database.
+- Compound index creation lost field order: the API accepted index keys as a JSON object, which
+  neither Go's `map[string]int` nor JSON itself reliably preserves the order of — order matters
+  for a compound index's usability. Keys now travel as an ordered array.
+- The index list's "Fields" column rendered as `0: [object Object]` — the API and frontend
+  disagreed on whether an index's key spec was a JSON object or an ordered array.
+
 ## [0.0.4] - 2026-08-26
 
 ### Fixed

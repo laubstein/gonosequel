@@ -113,6 +113,19 @@ Além dessas: na paginação, use `EstimatedDocumentCount` (O(1)) quando não h�
 `CountDocuments` só quando há — contar dezenas de milhões de documentos a cada página trava a UI.
 No export, escreva direto do cursor com `c.SendStreamWriter`, sem materializar o resultado.
 
+`driver.OrderedDoc`/`Entry` (`pkg/driver/driver.go`) sempre trafega como array (`Entry` tem tags
+JSON `key`/`value`), nunca como objeto — a ordem das chaves é semanticamente significativa (spec
+de índice composto, sort), e tanto `map[string]T` do Go quanto objeto JSON não garantem ordem.
+Isso vale tanto pro que a API devolve (`IndexInfo.Keys`) quanto pro que ela recebe
+(`createIndexRequest.Keys` em `pkg/api/handlers_indexes.go` é um array de `{field, direction}`,
+não um `map[string]int`) — não volte nenhum dos dois a um mapa/objeto plano.
+
+`handleListDatabases`/`handleListCollections` (`pkg/api/handlers_databases.go`/
+`handlers_collections.go`) ordenam a lista devolvida pelo driver (case-insensitive) — nem
+MongoDB nem o driver garantem ordem alfabética por conta própria, e a lista de collections do
+`pkg/redis` é montada a partir de um `map[string]struct{}`, cuja iteração é não-determinística em
+Go. A ordenação fica só na API, não em cada driver.
+
 ## Convenções Go (Effective Go)
 
 - **Nomes**: pacotes curtos, minúsculos, sem underscores. Sem stutter: `client.New()`, não

@@ -217,8 +217,11 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
       {stats && (
         <div className={styles.statsPanel}>
           <span>{t('sidebar.documentCount', { count: stats.count, formattedCount: stats.count.toLocaleString() })}</span>
-          <span>{formatBytes(stats.sizeBytes)}</span>
+          <span>{t('sidebar.dataSize', { size: formatBytes(stats.sizeBytes) })}</span>
+          <span>{t('sidebar.storageSize', { size: formatBytes(stats.storageBytes) })}</span>
           <span>{t('sidebar.indexCount', { count: stats.indexCount })}</span>
+          <span>{t('sidebar.indexSize', { size: formatBytes(stats.indexBytes) })}</span>
+          <span>{t('sidebar.avgObjSize', { size: formatBytes(stats.avgObjSize) })}</span>
         </div>
       )}
 

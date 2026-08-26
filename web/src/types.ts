@@ -38,10 +38,29 @@ export interface CurrentOp {
   description: string
 }
 
+export interface IndexKeyEntry {
+  key: string
+  value: number
+}
+
 export interface IndexInfo {
   name: string
-  keys: Record<string, number>
+  // An ordered array, not a plain object — index key order is
+  // semantically significant (it decides which sorts/range queries a
+  // compound index can serve), and JSON objects don't reliably preserve
+  // key order the way an array does.
+  keys: IndexKeyEntry[]
   unique: boolean
+  sparse?: boolean
+  expireAfterSeconds?: number
+  partialFilterExpression?: Record<string, unknown>
+}
+
+export interface CreateIndexOptions {
+  unique?: boolean
+  sparse?: boolean
+  expireAfterSeconds?: number
+  partialFilterExpression?: Record<string, unknown>
 }
 
 export interface FieldType {

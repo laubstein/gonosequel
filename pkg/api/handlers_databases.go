@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -16,6 +18,12 @@ func (d *deps) handleListDatabases(c fiber.Ctx) error {
 	if err != nil {
 		return fmt.Errorf("list databases: %w", err)
 	}
+	// Neither backend guarantees an order of its own — MongoDB's
+	// listDatabases returns server/catalog order, and Redis (numbered 0-15)
+	// happens to already be sorted, but nothing here should depend on that.
+	sort.Slice(dbs, func(i, j int) bool {
+		return strings.ToLower(dbs[i].Name) < strings.ToLower(dbs[j].Name)
+	})
 	return c.JSON(dbs)
 }
 

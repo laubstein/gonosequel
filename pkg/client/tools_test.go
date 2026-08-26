@@ -44,7 +44,7 @@ func TestIndexUsage(t *testing.T) {
 	if _, err := c.InsertOne(ctx, "test_tools_indexusage", "items", bson.M{"sku": "abc"}); err != nil {
 		t.Fatalf("InsertOne: %v", err)
 	}
-	if _, err := c.CreateIndex(ctx, "test_tools_indexusage", "items", driver.OrderedDoc{{Key: "sku", Value: 1}}, false); err != nil {
+	if _, err := c.CreateIndex(ctx, "test_tools_indexusage", "items", driver.OrderedDoc{{Key: "sku", Value: 1}}, driver.CreateIndexOptions{}); err != nil {
 		t.Fatalf("CreateIndex: %v", err)
 	}
 

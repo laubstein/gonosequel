@@ -70,7 +70,7 @@ export async function apiGet<T>(path: string, params?: Record<string, string | n
   return handle<T>(res)
 }
 
-export async function apiSend<T>(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+export async function apiSend<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, {
     method,
     headers: headers(),

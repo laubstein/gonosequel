@@ -49,6 +49,7 @@ func registerRoutes(app *fiber.App, d *deps) {
 	scoped.Get("/databases/:db/collections/:coll/indexes", d.handleListIndexes)
 	scoped.Post("/databases/:db/collections/:coll/indexes", d.handleCreateIndex)
 	scoped.Delete("/databases/:db/collections/:coll/indexes/:name", d.handleDropIndex)
+	scoped.Patch("/databases/:db/collections/:coll/indexes/:name", d.handleUpdateIndexTTL)
 
 	scoped.Get("/databases/:db/collections/:coll/export", d.handleExport)
 }

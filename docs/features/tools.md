@@ -7,14 +7,22 @@ three read-only panels for spotting problem hotspots without hand-writing querie
 ## Collections overview
 
 Every collection in the selected database, with document count, data size, storage size,
-index size, and index count — sorted by storage size descending, so bloated collections
-(storage size far exceeding data size) surface first without clicking anything.
+index size, average document size, and index count — sorted by storage size descending, so
+bloated collections (storage size far exceeding data size) surface first without clicking
+anything. A collection that can't report stats (a view, for instance, or one dropped mid-scan)
+is skipped rather than hiding every other collection's numbers behind it.
 
 ## Index usage
 
 `$indexStats` for every index in every collection of the database, sorted by operation count
 ascending. An index with **0** operations (highlighted in red) hasn't been used by any query
-since the server last restarted — a real candidate for dropping, not a guess.
+since the server last restarted — a real candidate for dropping, not a guess. As with the
+collections overview, a collection `$indexStats` can't run against is skipped, not fatal to the
+whole tab.
+
+A failed request (a network error, an unreachable server) shows as a distinct error message —
+never silently as "no collections"/"no indexes", which would look identical to an empty
+database.
 
 ## Running operations
 

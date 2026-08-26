@@ -22,9 +22,14 @@ function formatBytes(n: number): string {
 
 export function ToolsPanel({ db }: Props) {
   const { t } = useTranslation()
-  const { data: overview, isLoading: overviewLoading } = useCollectionsOverview(db)
-  const { data: usage, isLoading: usageLoading } = useIndexUsage(db)
-  const { data: ops, isLoading: opsLoading } = useCurrentOps()
+  const {
+    data: overview,
+    isLoading: overviewLoading,
+    isError: overviewIsError,
+    error: overviewError,
+  } = useCollectionsOverview(db)
+  const { data: usage, isLoading: usageLoading, isError: usageIsError, error: usageError } = useIndexUsage(db)
+  const { data: ops, isLoading: opsLoading, isError: opsIsError, error: opsError } = useCurrentOps()
 
   const sortedOverview = overview ? [...overview].sort((a, b) => b.storageBytes - a.storageBytes) : []
   const sortedUsage = usage ? [...usage].sort((a, b) => a.ops - b.ops) : []
@@ -35,6 +40,10 @@ export function ToolsPanel({ db }: Props) {
         <div className={styles.sectionTitle}>{t('toolsPanel.collectionsOverview')}</div>
         {overviewLoading ? (
           <div className={styles.loading}>{t('toolsPanel.loading')}</div>
+        ) : overviewIsError ? (
+          <div className={styles.error}>
+            {t('toolsPanel.error', { message: overviewError instanceof Error ? overviewError.message : String(overviewError) })}
+          </div>
         ) : sortedOverview.length === 0 ? (
           <div className={styles.empty}>{t('toolsPanel.noCollections')}</div>
         ) : (
@@ -46,6 +55,7 @@ export function ToolsPanel({ db }: Props) {
                 <th>{t('toolsPanel.dataSize')}</th>
                 <th>{t('toolsPanel.storageSize')}</th>
                 <th>{t('toolsPanel.indexSize')}</th>
+                <th>{t('toolsPanel.avgObjSize')}</th>
                 <th>{t('toolsPanel.indexCount')}</th>
               </tr>
             </thead>
@@ -57,6 +67,7 @@ export function ToolsPanel({ db }: Props) {
                   <td>{formatBytes(s.sizeBytes)}</td>
                   <td>{formatBytes(s.storageBytes)}</td>
                   <td>{formatBytes(s.indexBytes)}</td>
+                  <td>{formatBytes(s.avgObjSize)}</td>
                   <td>{s.indexCount}</td>
                 </tr>
               ))}
@@ -69,6 +80,10 @@ export function ToolsPanel({ db }: Props) {
         <div className={styles.sectionTitle}>{t('toolsPanel.indexUsage')}</div>
         {usageLoading ? (
           <div className={styles.loading}>{t('toolsPanel.loading')}</div>
+        ) : usageIsError ? (
+          <div className={styles.error}>
+            {t('toolsPanel.error', { message: usageError instanceof Error ? usageError.message : String(usageError) })}
+          </div>
         ) : sortedUsage.length === 0 ? (
           <div className={styles.empty}>{t('toolsPanel.noIndexes')}</div>
         ) : (
@@ -99,6 +114,10 @@ export function ToolsPanel({ db }: Props) {
         <div className={styles.sectionTitle}>{t('toolsPanel.currentOps')}</div>
         {opsLoading ? (
           <div className={styles.loading}>{t('toolsPanel.loading')}</div>
+        ) : opsIsError ? (
+          <div className={styles.error}>
+            {t('toolsPanel.error', { message: opsError instanceof Error ? opsError.message : String(opsError) })}
+          </div>
         ) : !ops || ops.length === 0 ? (
           <div className={styles.empty}>{t('toolsPanel.noCurrentOps')}</div>
         ) : (
