@@ -31,8 +31,10 @@ export function ToolsPanel({ db }: Props) {
   const { data: usage, isLoading: usageLoading, isError: usageIsError, error: usageError } = useIndexUsage(db)
   const { data: ops, isLoading: opsLoading, isError: opsIsError, error: opsError } = useCurrentOps()
 
-  const sortedOverview = overview ? [...overview].sort((a, b) => b.storageBytes - a.storageBytes) : []
-  const sortedUsage = usage ? [...usage].sort((a, b) => a.ops - b.ops) : []
+  const sortedOverview = overview ? [...overview].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')) : []
+  const sortedUsage = usage
+    ? [...usage].sort((a, b) => a.collection.localeCompare(b.collection) || a.index.localeCompare(b.index))
+    : []
 
   return (
     <div className={styles.panel}>

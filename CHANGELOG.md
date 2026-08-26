@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.6] - 2026-08-26
+
+### Changed
+
+- Tools tab: "Collections overview" now sorts alphabetically by collection name, and "Index
+  usage" alphabetically by collection then index name — both previously sorted by a size/usage
+  metric (storage size descending, operation count ascending).
+
 ## [0.0.5] - 2026-08-26
 
 ### Added
