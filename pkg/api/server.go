@@ -7,6 +7,8 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"io/fs"
 
@@ -103,8 +105,15 @@ func New(cfg Config) *fiber.App {
 	app.Use(compress.New())
 
 	if cfg.AuthUser != "" {
+		// fiber v3's basicauth.Config.Users holds a *hash* of the password,
+		// not the password itself (see parseHashedPassword in
+		// middleware/basicauth/config.go) — passing cfg.AuthPass straight
+		// through panics at startup ("decode SHA256 password: ..."), since
+		// it tries to decode the plaintext as a hex/base64 SHA-256 digest.
+		// The unadorned hex form below is what that fallback branch expects.
+		sum := sha256.Sum256([]byte(cfg.AuthPass))
 		app.Use(basicauth.New(basicauth.Config{
-			Users: map[string]string{cfg.AuthUser: cfg.AuthPass},
+			Users: map[string]string{cfg.AuthUser: hex.EncodeToString(sum[:])},
 		}))
 	}
 

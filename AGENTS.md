@@ -32,6 +32,11 @@ Rode `make lint` e `make test` antes de dar qualquer trabalho por concluído. Se
 estiver disponível no ambiente, rode `make test-short` e **diga explicitamente** que os testes de
 integração não foram executados — não relate a suíte como verde.
 
+## Commits
+
+Nunca inclua uma linha `Claude-Session:` na mensagem de commit — nenhum trailer apontando pra uma
+sessão de conversa. `Co-Authored-By: Claude ...` pode continuar.
+
 ## Dependências
 
 Fixadas nestas versões; não faça downgrade nem troque sem justificar.

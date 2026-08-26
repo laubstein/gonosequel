@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.4] - 2026-08-26
+
+### Fixed
+
+- Startup panic ("decode SHA256 password: illegal base64 data at input byte 1") whenever
+  `--auth-user`/`--auth-pass` were set: fiber v3.5.0's `basicauth.Config.Users` holds a *hash* of
+  the password, not the plaintext — the plaintext was being passed straight through, which fiber
+  then tried (and failed) to decode as a hex/base64 SHA-256 digest. Basic auth now hashes the
+  configured password with SHA-256 before handing it to fiber.
+
 ## [0.0.3] - 2026-08-26
 
 ### Added
