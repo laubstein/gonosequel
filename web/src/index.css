@@ -1,59 +1,69 @@
+/* Every colour is declared once, with both themes side by side via
+   light-dark(). The light and dark palettes used to be two byte-identical
+   copies — one under prefers-color-scheme, one under [data-theme='dark'] —
+   so changing a token meant changing it twice, and dark mode could
+   silently disagree with itself depending on how it had been activated.
+
+   color-scheme also makes native UI (scrollbars, <select> popups, the
+   CodeMirror scrollbar) follow the theme; it was never set, so those
+   rendered light even in dark mode. */
 :root {
-  --color-bg: #ffffff;
-  --color-bg-alt: #f5f6f8;
-  --color-bg-inset: #eef0f3;
-  --color-border: #d8dbe0;
-  --color-text: #1d2129;
-  --color-text-muted: #5f6774;
-  --color-accent: #2f6fed;
-  --color-accent-fg: #ffffff;
-  --color-danger: #d1373f;
-  --color-success: #1e8e5a;
-  --color-json-key: #0550ae;
-  --color-json-string: #116329;
-  --color-json-number: #953800;
-  --color-json-boolean: #8250df;
-  --color-json-null: #cf222e;
+  color-scheme: light dark;
+
+  --color-bg: light-dark(#ffffff, #1a1d23);
+  --color-bg-alt: light-dark(#f5f6f8, #22252c);
+  --color-bg-inset: light-dark(#eef0f3, #2a2e36);
+  --color-border: light-dark(#d8dbe0, #383d47);
+  --color-text: light-dark(#1d2129, #e6e8eb);
+  --color-text-muted: light-dark(#5f6774, #9aa1ac);
+  --color-accent: light-dark(#2f6fed, #5b8ff9);
+  --color-accent-fg: light-dark(#ffffff, #0d1117);
+  --color-danger: light-dark(#d1373f, #ef5b64);
+  --color-success: light-dark(#1e8e5a, #3ecf8e);
+  --color-json-key: light-dark(#0550ae, #79c0ff);
+  --color-json-string: light-dark(#116329, #7ee787);
+  --color-json-number: light-dark(#953800, #ffa657);
+  --color-json-boolean: light-dark(#8250df, #d2a8ff);
+  --color-json-null: light-dark(#cf222e, #ff7b72);
+
+  /* Scrim and elevation were hardcoded rgba() in three stylesheets each,
+     making them the only colours in the app blind to the theme: a 40%
+     black scrim over an already-dark background barely separates the
+     modal from the page, and a light drop shadow is invisible against it. */
+  --color-overlay: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.66));
+  --shadow-1: light-dark(0 4px 16px rgb(0 0 0 / 0.2), 0 4px 16px rgb(0 0 0 / 0.5));
+  --shadow-2: light-dark(0 12px 40px rgb(0 0 0 / 0.25), 0 12px 40px rgb(0 0 0 / 0.6));
+
+  /* Sizes that were repeated as literals across the component styles, at
+     three different values for the same semantic role. */
+  --font-size-sm: 13px;
+  --font-size-xs: 12px;
+  --font-size-xxs: 11px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* An explicit order, replacing four ad-hoc values where the results
+     context menu tied the connection modal at 100. */
+  --z-sticky: 10;
+  --z-menu: 200;
+  --z-modal: 300;
+  --z-blocking: 400;
+
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --color-bg: #1a1d23;
-    --color-bg-alt: #22252c;
-    --color-bg-inset: #2a2e36;
-    --color-border: #383d47;
-    --color-text: #e6e8eb;
-    --color-text-muted: #9aa1ac;
-    --color-accent: #5b8ff9;
-    --color-accent-fg: #0d1117;
-    --color-danger: #ef5b64;
-    --color-success: #3ecf8e;
-    --color-json-key: #79c0ff;
-    --color-json-string: #7ee787;
-    --color-json-number: #ffa657;
-    --color-json-boolean: #d2a8ff;
-    --color-json-null: #ff7b72;
-  }
+/* An explicit choice pins color-scheme; "system" leaves the attribute off
+   and falls through to the pair declared above. useTheme.ts already
+   sets/removes the attribute exactly this way and needs no change. */
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-  --color-bg: #1a1d23;
-  --color-bg-alt: #22252c;
-  --color-bg-inset: #2a2e36;
-  --color-border: #383d47;
-  --color-text: #e6e8eb;
-  --color-text-muted: #9aa1ac;
-  --color-accent: #5b8ff9;
-  --color-accent-fg: #0d1117;
-  --color-danger: #ef5b64;
-  --color-success: #3ecf8e;
-  --color-json-key: #79c0ff;
-  --color-json-string: #7ee787;
-  --color-json-number: #ffa657;
-  --color-json-boolean: #d2a8ff;
-  --color-json-null: #ff7b72;
+  color-scheme: dark;
 }
 
 * {

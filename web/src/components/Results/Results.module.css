@@ -130,15 +130,15 @@ tbody tr:hover {
 
 .contextMenu {
   position: fixed;
-  z-index: 100;
+  z-index: var(--z-menu);
   display: flex;
   flex-direction: column;
   min-width: 180px;
   padding: 4px;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--color-bg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-1);
 }
 
 .contextMenuItem {
