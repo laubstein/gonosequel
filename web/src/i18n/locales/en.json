@@ -59,8 +59,10 @@
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"active\" }",
-    "sortPlaceholder": "sort: { \"field\": 1 }",
-    "projectionPlaceholder": "projection: { \"field\": 0 }",
+    "sortLabel": "Sort",
+    "sortPlaceholder": "{ \"field\": 1 }",
+    "projectionLabel": "Projection",
+    "projectionPlaceholder": "{ \"field\": 0 }",
     "run": "Run",
     "pendingChangesHint": "The filter/sort/projection prepared here don't match what's currently shown — click Run to apply them.",
     "hiddenFieldsLabel": "Hidden fields:",
@@ -106,6 +108,7 @@
     "sizeGuardLoadAnyway": "Load anyway",
     "sizeGuardReduceTo": "Show {{count}} per page instead",
     "filterByValue": "Filter by value",
+    "excludeValue": "Exclude value",
     "hideField": "Hide field"
   },
   "pagination": {
@@ -123,7 +126,10 @@
     "save": "Save",
     "invalidJson": "Invalid JSON",
     "fixJson": "Fix JSON",
-    "fixJsonHint": "This looks like a JS object literal, not valid JSON (e.g. unquoted keys or single quotes) — Fix JSON will convert it."
+    "fixJsonHint": "This looks like a JS object literal, not valid JSON (e.g. unquoted keys or single quotes) — Fix JSON will convert it.",
+    "riskyNumberTitle": "Precision may change",
+    "riskyNumberWarning": "came from a MongoDB Long or Decimal128 value too large or precise to show exactly as a plain number here — saving as shown will change its exact value or type (e.g. Decimal128 becomes Double). To keep it exact instead, edit the field back to its wrapped form, e.g. {\"$numberLong\": \"...\"} or {\"$numberDecimal\": \"...\"}, before saving. Save anyway?",
+    "riskyNumberConfirm": "Save anyway"
   },
   "redisEditor": {
     "key": "Key",

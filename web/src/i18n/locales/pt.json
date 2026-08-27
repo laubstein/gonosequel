@@ -59,8 +59,10 @@
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"ativo\" }",
-    "sortPlaceholder": "sort: { \"campo\": 1 }",
-    "projectionPlaceholder": "projection: { \"campo\": 0 }",
+    "sortLabel": "Sort",
+    "sortPlaceholder": "{ \"campo\": 1 }",
+    "projectionLabel": "Projection",
+    "projectionPlaceholder": "{ \"campo\": 0 }",
     "run": "Executar",
     "pendingChangesHint": "O filtro/sort/projection preparados aqui não batem com o que está sendo exibido — clique em Executar pra aplicar.",
     "hiddenFieldsLabel": "Campos ocultos:",
@@ -106,6 +108,7 @@
     "sizeGuardLoadAnyway": "Carregar mesmo assim",
     "sizeGuardReduceTo": "Mostrar {{count}} por página",
     "filterByValue": "Filtrar por valor",
+    "excludeValue": "Excluir valor",
     "hideField": "Ocultar campo"
   },
   "pagination": {
@@ -123,7 +126,10 @@
     "save": "Salvar",
     "invalidJson": "JSON inválido",
     "fixJson": "Corrigir JSON",
-    "fixJsonHint": "Isso parece um objeto JS, não um JSON válido (ex: chaves sem aspas ou aspas simples) — Corrigir JSON vai convertê-lo."
+    "fixJsonHint": "Isso parece um objeto JS, não um JSON válido (ex: chaves sem aspas ou aspas simples) — Corrigir JSON vai convertê-lo.",
+    "riskyNumberTitle": "A precisão pode mudar",
+    "riskyNumberWarning": "veio de um Long ou Decimal128 do MongoDB grande/preciso demais pra ser exibido aqui como número simples sem perda — salvar como está vai mudar seu valor exato ou seu tipo (ex: Decimal128 vira Double). Pra manter o valor exato, edite o campo de volta pra sua forma com wrapper, ex: {\"$numberLong\": \"...\"} ou {\"$numberDecimal\": \"...\"}, antes de salvar. Salvar mesmo assim?",
+    "riskyNumberConfirm": "Salvar mesmo assim"
   },
   "redisEditor": {
     "key": "Chave",

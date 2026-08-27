@@ -3,6 +3,26 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.9] - 2026-08-27
+
+### Added
+
+- Results table context menu gained a third action, **Exclude value** — the negative of "Filter by
+  value", staging `{ "field": { "$ne": <value> } }` to drop rows carrying that value.
+- Sort and Projection now have visible labels, and both accept JS-object-literal shorthand: typing
+  `{cpu: 1}` and pressing Run rewrites it to `{"cpu": 1}` automatically, with no "Fix JSON" click.
+
+### Changed
+
+- The document editor shows and downloads numbers unwrapped — a field stored as int32 reads as
+  `"cpu": 1` instead of `{"$numberInt": "1"}`, so a downloaded document is the plain JSON a script
+  would expect. Non-numeric wrappers (`$oid`, `$date`, …) are untouched, and the document is still
+  fetched in canonical Extended JSON, so the exact BSON type survives the trip.
+- Saving a document warns first when a value can't round-trip exactly as displayed: a `Long`
+  beyond JavaScript's safe integer range, or any `Decimal128` (plain JSON has no literal for it).
+  The warning names the fields and explains that rewriting one in its wrapped form
+  (`{"$numberLong": "..."}`) keeps it exact. Everything else saves unchanged, as before.
+
 ## [0.0.8] - 2026-08-27
 
 ### Added

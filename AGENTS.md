@@ -88,10 +88,26 @@ violadas. Não as contorne.
 
 **1. Documentos trafegam como Extended JSON, nunca como JSON comum.**
 BSON não mapeia para JSON sem perda. Use `bson.MarshalExtJSON` / `bson.UnmarshalExtJSON`.
-Backend → frontend em **relaxed** (legível); ao servir um documento para **edição**, em
-**canonical**, para que o round-trip ver→editar→salvar não converta um `Long` em `Double` em
-silêncio. Nos handlers, devolva o extended JSON já serializado com `c.Type("json").Send(raw)` —
-**nunca** `c.JSON(...)`, que aplicaria um segundo passe de marshaling e destruiria os tipos.
+Backend → frontend em **relaxed** (legível); ao servir um documento para **edição**
+(`handleGetDocument`), em **canonical**, para preservar o tipo BSON exato no transporte. Nos
+handlers, devolva o extended JSON já serializado com `c.Type("json").Send(raw)` — **nunca**
+`c.JSON(...)`, que aplicaria um segundo passe de marshaling e destruiria os tipos.
+
+O canonical vale para o **transporte**, não para o que o usuário vê. O `DocumentEditor` exibe e
+baixa o documento com os wrappers numéricos desembrulhados (`unwrapNumberWrappers`,
+`web/src/api/extjson.ts`): `{"cpu": {"$numberInt": "1"}}` é exibido como `{"cpu": 1}`, porque o
+documento serve para ser lido, editado à mão e baixado para um script que espera `cpu === 1`.
+Isso é deliberado e **não deve ser "consertado" de volta** — mas tem um preço: um `Long` fora da
+faixa segura de um `Number` do JS, ou qualquer `Decimal128` (que não tem forma bare em Extended
+JSON), não faz round-trip exato se for salvo como exibido. Por isso `findRiskyNumberFields`
+(mesmo arquivo) detecta exatamente esses campos a partir do documento canonical original, e o
+editor **avisa antes de salvar** quando um deles continua como foi desembrulhado, explicando que
+reescrever o campo na forma com wrapper preserva o valor. Note que **relaxed não serve** para
+esse endpoint: neste driver (`mongo-driver/v2` v2.8.0, `bson/extjson_writer.go`, `WriteInt64`) o
+modo relaxed bare qualquer int64 sem checar se cabe em 2^53 — verificado por
+`TestAPIDocumentCRUDPreservesExtJSONTypes`, que falha se `handleGetDocument` virar relaxed.
+
+`$oid` e os demais wrappers não numéricos continuam intactos na exibição.
 
 **2. `_id` pode ser qualquer tipo BSON.**
 Nunca assuma ObjectID hex. O path param de documento é o base64url do extended JSON canonical do

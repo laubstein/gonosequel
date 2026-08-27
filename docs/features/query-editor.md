@@ -29,9 +29,13 @@ Every exclusion currently in the Projection field also shows as a removable chip
 button; removing one (✕) edits the Projection text to drop it. This box, and the chip row,
 share the same state — editing one updates the other.
 
+Sort and Projection both accept JS-object-literal shorthand: type `{cpu: 1}` and Run rewrites it
+to `{"cpu": 1}` for you. Unlike the filter editor's "Fix JSON" button, this happens
+automatically on Run, with no extra click.
+
 ## Filtering and hiding fields from the results table
 
-Right-click a value in the results table (not the JSON view) for two actions:
+Right-click a value in the results table (not the JSON view) for three actions:
 
 - **Filter by value** — replaces the filter editor's text with `{ "field": <that value> }`. It
   only edits the filter, it does **not** run the query — Run gets a highlighted outline (and a
@@ -40,8 +44,11 @@ Right-click a value in the results table (not the JSON view) for two actions:
   what's staged. Only available for a cell holding a single plain value (a string, number,
   boolean, `null`, or an ObjectId/Date/Decimal128/Long) — a nested subdocument with several
   fields, or an array, has no single value to filter by, so the option is disabled there.
+- **Exclude value** — the negative of the above: stages
+  `{ "field": { "$ne": <that value> } }`, to drop the rows carrying that value out of the
+  results. Same staging behavior and the same restriction on which cells it works for.
 - **Hide field** — adds `"field": 0` to the Projection field above (creating it if empty),
-  excluding that field from the query itself, not just from the display. Like "Filter by value",
+  excluding that field from the query itself, not just from the display. Like the other two,
   this only stages the change — Run applies it.
 
 ## Aggregate mode

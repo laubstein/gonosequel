@@ -20,12 +20,20 @@ BSON doesn't map onto JSON without loss — an `ObjectId`, a `Date`, a `Decimal1
 integer would otherwise all collapse into ambiguous plain numbers or strings. Documents are
 therefore shown and edited as MongoDB's Extended JSON: a document listed in the table or JSON
 view uses the relaxed form (readable — dates as ISO strings, not `{"$date": ...}` wrappers),
-while opening a document *for editing* fetches it fresh in canonical form (every type spelled
-out explicitly). This means a save round-trip can't silently turn a `Long` into a `Double`, or
-a `Decimal128` into a plain float.
+while opening a document *for editing* fetches it fresh in canonical form, so the exact BSON
+type survives the trip.
 
-When editing, the textarea expects the same Extended JSON syntax you see — `{"$oid": "..."}`
-for ObjectIds, `{"$numberLong": "..."}` for 64-bit integers, and so on.
+Numbers, however, are shown **unwrapped** in the editor: a field stored as an `int32` reads as
+`"cpu": 1`, not `"cpu": {"$numberInt": "1"}`. The document you see and download is the plain
+JSON a downstream script would expect. Non-numeric wrappers stay as they are — `{"$oid": "..."}`
+for ObjectIds, `{"$date": "..."}` for dates — and the editor accepts that same syntax back.
+
+Two numeric types can't survive that unwrapping exactly: a `Long` larger than JavaScript's safe
+integer range, and any `Decimal128` (plain JSON simply has no literal that means "Decimal128").
+Saving one of those as displayed would change its value or its type. The editor detects this and
+**warns before saving**, naming the affected fields. To keep such a value exactly as stored,
+rewrite the field in its wrapped form — `{"$numberLong": "..."}` or `{"$numberDecimal": "..."}` —
+before saving; the editor accepts wrapped and bare numbers side by side in the same document.
 
 ## Creating and deleting
 
@@ -35,14 +43,14 @@ click deleting something.
 
 ## Downloading a document
 
-The document editor has a **Download** button that saves the document currently shown (in
-Extended JSON, exactly as displayed — canonical form when editing an existing document) as a
-`.json` file, entirely client-side. Handy for a document too large to comfortably read inline,
-or to keep a copy before editing it.
+The document editor has a **Download** button that saves the document currently shown — exactly
+as displayed, numbers unwrapped — as a `.json` file, entirely client-side. Handy for a document
+too large to comfortably read inline, to keep a copy before editing it, or to feed straight into
+a script that expects ordinary JSON numbers.
 
 ## Pagination and the large-document size guard
 
-The page size defaults to 50 documents per page (up to 1000 via the per-page dropdown). For a
+The page size defaults to 50 documents per page (up to 250 via the per-page dropdown). For a
 collection whose documents are small this is a non-issue, but some collections average tens of
 megabytes *per document* — a page of 50 of those could mean transferring hundreds of megabytes
 in one request without any warning.
