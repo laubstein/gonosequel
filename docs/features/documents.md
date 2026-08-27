@@ -33,6 +33,34 @@ for ObjectIds, `{"$numberLong": "..."}` for 64-bit integers, and so on.
 the document editor itself, not a separate action in the table — this avoids an accidental
 click deleting something.
 
+## Downloading a document
+
+The document editor has a **Download** button that saves the document currently shown (in
+Extended JSON, exactly as displayed — canonical form when editing an existing document) as a
+`.json` file, entirely client-side. Handy for a document too large to comfortably read inline,
+or to keep a copy before editing it.
+
+## Pagination and the large-document size guard
+
+The page size defaults to 50 documents per page (up to 1000 via the per-page dropdown). For a
+collection whose documents are small this is a non-issue, but some collections average tens of
+megabytes *per document* — a page of 50 of those could mean transferring hundreds of megabytes
+in one request without any warning.
+
+To avoid that, the Documents tab checks the collection's average document size (the same
+`avgObjSize` already shown in the sidebar's stats and in the Tools tab's collections overview)
+against the requested page size. If the estimated transfer for the current page size would
+exceed roughly 5 MB, the page doesn't load automatically — instead you get a warning naming the
+average document size and the estimated transfer, with two ways forward: **Load anyway**, or, if
+a smaller page size would fit comfortably, **Show N per page instead**, which switches to that
+size and loads immediately (now safely under the threshold). A collection with normal-sized
+documents never sees this — pages load exactly as before.
+
+This only applies to the Documents tab's own paginated list; opening a single document in the
+editor (an explicit, one-at-a-time action) and the Aggregate pipeline's output (which hides
+pagination entirely, since skip/limit don't mean anything for a pipeline — see
+[Query editor](/features/query-editor)) are both unaffected.
+
 ## Export
 
 **Export JSON** / **Export CSV** links next to the query editor download the *current filter's*

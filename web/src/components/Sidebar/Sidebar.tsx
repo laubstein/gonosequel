@@ -6,6 +6,7 @@ import { useCollections } from '../../hooks/useCollections'
 import { useCollectionStats } from '../../hooks/useCollectionStats'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
+import { formatBytes } from '../../api/format'
 import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
 import { PromptDialog } from '../Dialogs/PromptDialog'
 
@@ -35,18 +36,6 @@ interface Props {
   // Redis/Valkey equivalent of "+ New collection", since a collection
   // there only exists once a key with that prefix does.
   onNewKey?: () => void
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  const units = ['KB', 'MB', 'GB', 'TB']
-  let value = n / 1024
-  let i = 0
-  while (value >= 1024 && i < units.length - 1) {
-    value /= 1024
-    i++
-  }
-  return `${value.toFixed(1)} ${units[i]}`
 }
 
 export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollectionRenamed, driver, onNewKey }: Props) {

@@ -17,6 +17,8 @@ import { RedisValueEditor } from './components/RedisValueEditor/RedisValueEditor
 import { ConnectionModal } from './components/ConnectionModal/ConnectionModal'
 import { ConnectionLost } from './components/ConnectionLost/ConnectionLost'
 import { useDocuments } from './hooks/useDocuments'
+import { useCollectionStats } from './hooks/useCollectionStats'
+import { SIZE_GUARD_THRESHOLD_BYTES } from './api/sizeGuard'
 import { useTheme } from './hooks/useTheme'
 import { useSessions } from './hooks/useSessions'
 import { useInfo } from './hooks/useInfo'
@@ -108,7 +110,24 @@ export default function App() {
   const [replayNonce, setReplayNonce] = useState(0)
   const [aggregateResult, setAggregateResult] = useState<ExtJSONDocument[] | null>(null)
 
-  const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query)
+  // Size guard: a collection with very large documents (tens of MB each)
+  // could turn "list the first page" into a multi-hundred-MB request with
+  // no warning, so the documents query doesn't fire until either the
+  // estimate is safe or the user confirms — see Results.tsx for the UI.
+  // Lives here, not in Results.tsx, because this same "should we fetch
+  // right now" decision also has to gate the useDocuments call below,
+  // whose only purpose is feeding Pagination's total count.
+  const stats = useCollectionStats(selection?.db ?? null, selection?.coll ?? null)
+  const docLimit = query.limit ?? 50
+  const avgObjSize = stats.data?.avgObjSize ?? 0
+  const isDangerous = !aggregateResult && avgObjSize > 0 && avgObjSize * docLimit > SIZE_GUARD_THRESHOLD_BYTES
+  const sizeGuardKey = `${selection?.db}:${selection?.coll}:${docLimit}`
+  const [confirmedSizeGuardKey, setConfirmedSizeGuardKey] = useState<string | null>(null)
+  const sizeGuardConfirmed = confirmedSizeGuardKey === sizeGuardKey
+  const statsSettled = stats.isSuccess || stats.isError
+  const documentsEnabled = statsSettled && (!isDangerous || sizeGuardConfirmed)
+
+  const { data } = useDocuments(selection?.db ?? null, selection?.coll ?? null, query, documentsEnabled)
 
   // If the active tab loses its capability (e.g. switching to a
   // lower-capability connection), fall back to Documents rather than
@@ -352,6 +371,19 @@ export default function App() {
                 query={query}
                 onOpenDocument={openDocument}
                 overrideDocuments={aggregateResult}
+                enabled={documentsEnabled}
+                onPaginate={paginate}
+                sizeGuard={
+                  aggregateResult
+                    ? undefined
+                    : {
+                        avgObjSize,
+                        isDangerous,
+                        confirmed: sizeGuardConfirmed,
+                        settled: statsSettled,
+                        onConfirm: () => setConfirmedSizeGuardKey(sizeGuardKey),
+                      }
+                }
               />
               {!aggregateResult && (
                 <Pagination

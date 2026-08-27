@@ -3,6 +3,20 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.7] - 2026-08-26
+
+### Added
+
+- Size guard for large documents: the Documents tab now checks the collection's average
+  document size (`avgObjSize`, already shown in the sidebar and Tools tab) against the current
+  page size before fetching. If the estimated transfer would exceed ~5 MB, the page doesn't load
+  automatically — a warning shows the average and estimated size, with "Load anyway" or (when a
+  smaller page size would fit) "Show N per page instead". Collections with normal-sized
+  documents are unaffected; opening a single document and the Aggregate pipeline's output are
+  unaffected too.
+- Document editor: a **Download** button saves the currently shown document (Extended JSON, as
+  displayed) as a `.json` file, client-side — no server round-trip.
+
 ## [0.0.6] - 2026-08-26
 
 ### Changed

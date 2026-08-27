@@ -97,7 +97,10 @@
     "table": "Table",
     "json": "JSON",
     "documentCount_one": "{{formattedCount}} document",
-    "documentCount_other": "{{formattedCount}} documents"
+    "documentCount_other": "{{formattedCount}} documents",
+    "sizeGuardWarning": "Documents in this collection average {{avgSize}} each — loading {{count}} of them could transfer roughly {{estimatedSize}}.",
+    "sizeGuardLoadAnyway": "Load anyway",
+    "sizeGuardReduceTo": "Show {{count}} per page instead"
   },
   "pagination": {
     "page": "page {{page}} of {{total}}",
@@ -109,6 +112,7 @@
     "close": "Close",
     "loading": "Loading…",
     "delete": "Delete",
+    "download": "Download",
     "cancel": "Cancel",
     "save": "Save",
     "invalidJson": "Invalid JSON",

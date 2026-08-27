@@ -3,10 +3,25 @@ import { useTranslation } from 'react-i18next'
 import styles from './Results.module.css'
 import { useDocuments } from '../../hooks/useDocuments'
 import { summarizeValue, docId } from '../../api/extjson'
+import { formatBytes } from '../../api/format'
+import { safeLimitSuggestion } from '../../api/sizeGuard'
 import { JsonView } from '../JsonView/JsonView'
 import type { ExtJSONDocument, FindQuery } from '../../types'
 
 type ViewMode = 'table' | 'json'
+
+// Owned by App.tsx (see its own comment for why) — Results only renders
+// the warning UI and reports the user's choice back up via onConfirm.
+interface SizeGuard {
+  avgObjSize: number
+  isDangerous: boolean
+  confirmed: boolean
+  // Whether the collection-stats fetch that avgObjSize/isDangerous depend
+  // on has resolved yet (success or error) — while false, it's not yet
+  // known whether this page is safe to auto-fetch.
+  settled: boolean
+  onConfirm: () => void
+}
 
 interface Props {
   db: string
@@ -19,6 +34,12 @@ interface Props {
   // correspond to any real stored document (a synthetic _id, or none of
   // the original fields at all).
   overrideDocuments?: ExtJSONDocument[] | null
+  // Whether the documents query should actually run — false while the
+  // size guard (sizeGuard, below) hasn't been confirmed yet. Always true
+  // in aggregate mode (overrideDocuments set), where sizeGuard is absent.
+  enabled: boolean
+  onPaginate: (skip: number, limit: number) => void
+  sizeGuard?: SizeGuard
 }
 
 function collectColumns(docs: ExtJSONDocument[]): string[] {
@@ -35,10 +56,10 @@ function collectColumns(docs: ExtJSONDocument[]): string[] {
   return ordered
 }
 
-export function Results({ db, coll, query, onOpenDocument, overrideDocuments }: Props) {
+export function Results({ db, coll, query, onOpenDocument, overrideDocuments, enabled, onPaginate, sizeGuard }: Props) {
   const { t } = useTranslation()
   const [mode, setMode] = useState<ViewMode>('table')
-  const fetched = useDocuments(db, coll, query)
+  const fetched = useDocuments(db, coll, query, enabled)
 
   const editable = overrideDocuments == null
   const documents = overrideDocuments ?? fetched.data?.documents ?? []
@@ -47,6 +68,34 @@ export function Results({ db, coll, query, onOpenDocument, overrideDocuments }: 
 
   const columns = useMemo(() => collectColumns(documents), [documents])
 
+  if (sizeGuard && !sizeGuard.settled) {
+    return <div className={styles.empty}>{t('results.loading')}</div>
+  }
+  if (sizeGuard && sizeGuard.isDangerous && !sizeGuard.confirmed) {
+    const limit = query.limit ?? 50
+    const suggestion = safeLimitSuggestion(sizeGuard.avgObjSize)
+    return (
+      <div className={styles.empty}>
+        <div>
+          {t('results.sizeGuardWarning', {
+            avgSize: formatBytes(sizeGuard.avgObjSize),
+            estimatedSize: formatBytes(sizeGuard.avgObjSize * limit),
+            count: limit,
+          })}
+        </div>
+        <div className={styles.sizeGuardActions}>
+          <button className={styles.sizeGuardButton} onClick={sizeGuard.onConfirm}>
+            {t('results.sizeGuardLoadAnyway')}
+          </button>
+          {suggestion !== undefined && suggestion < limit && (
+            <button className={styles.sizeGuardButton} onClick={() => onPaginate(0, suggestion)}>
+              {t('results.sizeGuardReduceTo', { count: suggestion })}
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
   if (!overrideDocuments && fetched.isLoading) {
     return <div className={styles.empty}>{t('results.loading')}</div>
   }

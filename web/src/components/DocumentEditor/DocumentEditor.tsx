@@ -61,6 +61,16 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
     void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
   }
 
+  function downloadDocument() {
+    const blob = new Blob([text], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${coll}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const save = useMutation({
     mutationFn: async () => {
       const doc = JSON.parse(text)
@@ -132,6 +142,11 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
           {target.mode === 'edit' && (
             <button className={styles.buttonDanger} onClick={() => remove.mutate()} disabled={remove.isPending}>
               {t('documentEditor.delete')}
+            </button>
+          )}
+          {!(target.mode === 'edit' && existing.isLoading) && (
+            <button className={styles.button} onClick={downloadDocument}>
+              {t('documentEditor.download')}
             </button>
           )}
           <div className={styles.footerSpacer} />
