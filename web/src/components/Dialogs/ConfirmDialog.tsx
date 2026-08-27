@@ -1,10 +1,10 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './Dialogs.module.css'
 
 interface Props {
   title: string
-  message: string
+  message: ReactNode
   confirmLabel: string
   cancelLabel: string
   // danger renders the confirm button in the destructive (red) style —
