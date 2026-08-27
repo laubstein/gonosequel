@@ -3,6 +3,55 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.10] - 2026-08-27
+
+First batch from a full interface audit: the things that were simply wrong.
+
+### Fixed
+
+- **Export now exports what's on screen.** It received only the filter, and the *draft* filter at
+  that — so hidden fields reappeared, sort order was lost, and exporting mid-edit produced a
+  different set of documents than the one being looked at. It now sends the applied query's
+  filter, sort and projection.
+- **Export works in `--sessions` mode.** The download was a plain browser navigation, which
+  cannot carry the `X-Session-Id` header, so every export failed with "no active connection for
+  this session". Downloads are now authorized by a single-use, 30-second ticket fetched over a
+  normal request. The direct, header-authenticated route is unchanged for scripted use.
+- **A failed document load could overwrite the real document.** Neither the document editor nor
+  the Redis key editor handled the fetch failing: the editor sat on its initial empty state,
+  looking like a document that had loaded empty, and saving wrote that emptiness over the stored
+  value. Both now show the error and disable Save.
+- **The index editor no longer loses an index when a recreate fails.** Editing is drop-then-create
+  (MongoDB cannot alter or rename an index in place); if the create failed, the original was
+  already gone with nothing said about it. The original is now restored, and the message
+  distinguishes "restored unchanged" from "the index really is missing".
+- **Explain described a query you never ran** — it took only the filter, so with a sort or
+  projection set, both the plan and the collection-scan warning were about something else.
+- Redis commands typed in the console left the whole UI stale: a `DEL` or `FLUSHDB` never
+  refreshed the key table or the collection list.
+- Every database created from the UI was born with a stray collection called `_init`. The new
+  database dialog now asks what the first collection should be called.
+- The results grid showed the previous page's rows with no indication they were stale while the
+  next page loaded, and claimed a count of 0 when paging past the end.
+- An estimated document count was presented as an exact page count ("page 3 of 412" from a
+  guess); it is now marked as an estimate, and an approximate total no longer decides that
+  there is no next page.
+- Removing one projection chip wiped the entire projection whenever the text wasn't strict JSON.
+- A trailing space in the projection pinned Run in its "unapplied changes" state forever.
+- The theme tooltip showed the raw setting name, so the Portuguese UI read "Tema: system".
+- Every downloaded document was named after its collection, so saving several produced files
+  that overwrote each other.
+- Dropping an index and changing a TTL failed silently; the TTL field also discarded what was
+  typed when the request failed.
+
+### Added
+
+- **A Redis key's TTL can be set.** It was displayed but read-only, and no write path read the
+  field back — there was no way to set an expiry at all. Note every Redis write recreates the
+  key, so a key's expiry is now preserved across saves instead of being silently dropped.
+- The preset dropdown clears when switching editor modes, instead of labelling contents it no
+  longer describes.
+
 ## [0.0.9] - 2026-08-27
 
 ### Added
