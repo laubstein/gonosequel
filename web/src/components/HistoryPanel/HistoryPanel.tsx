@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import styles from './HistoryPanel.module.css'
+import ui from '../../styles/ui.module.css'
 import { useHistory } from '../../hooks/useHistory'
 import { QueryState } from '../QueryState/QueryState'
 import type { HistoryEntry } from '../../types'
@@ -22,7 +23,7 @@ export function HistoryPanel({ onReplay }: Props) {
       loadingLabel={t('historyPanel.loading')}
     >
       <div className={styles.panel}>
-        <table>
+        <table className={`${ui.table} ${ui.tableRows}`}>
           <thead>
             <tr>
               <th>{t('historyPanel.database')}</th>

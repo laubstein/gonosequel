@@ -50,34 +50,6 @@
   overflow: auto;
 }
 
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 13px;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-th {
-  background: var(--color-bg-alt);
-  position: sticky;
-  top: 0;
-}
-
-tbody tr:hover {
-  background: var(--color-bg-inset);
-  cursor: pointer;
-}
-
 .jsonView {
   flex: 1;
   overflow: auto;

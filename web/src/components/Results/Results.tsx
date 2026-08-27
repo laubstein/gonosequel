@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './Results.module.css'
+import ui from '../../styles/ui.module.css'
 import { useDocuments } from '../../hooks/useDocuments'
 import { summarizeValue, docId, rawFilterValue } from '../../api/extjson'
 import { formatBytes } from '../../api/format'
@@ -226,7 +227,7 @@ export function Results({
 
       {mode === 'table' ? (
         <div className={styles.tableWrap}>
-          <table>
+          <table className={`${ui.table} ${ui.tableSticky} ${ui.tableRows} ${ui.tableNowrap} ${ui.tableTruncate}`}>
             <thead>
               <tr>
                 {columns.map((c) => (

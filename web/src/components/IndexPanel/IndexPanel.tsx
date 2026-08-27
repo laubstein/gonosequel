@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import styles from './IndexPanel.module.css'
+import ui from '../../styles/ui.module.css'
 import { api } from '../../api/client'
 import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
 import type { CreateIndexOptions, IndexInfo } from '../../types'
@@ -235,7 +236,7 @@ export function IndexPanel({ db, coll }: Props) {
           {indexesError instanceof Error ? indexesError.message : t('indexPanel.loadFailed')}
         </div>
       ) : (
-        <table>
+        <table className={`${ui.table} ${ui.tableRows} ${styles.indexTable}`}>
           <thead>
             <tr>
               <th>{t('indexPanel.name')}</th>

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import styles from './SchemaPanel.module.css'
+import ui from '../../styles/ui.module.css'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
 import { QueryState } from '../QueryState/QueryState'
 
@@ -22,7 +23,7 @@ export function SchemaPanel({ db, coll }: Props) {
       loadingLabel={t('schemaPanel.loading')}
     >
       <div className={styles.panel}>
-        <table>
+        <table className={ui.table}>
           <thead>
             <tr>
               <th>{t('schemaPanel.field')}</th>

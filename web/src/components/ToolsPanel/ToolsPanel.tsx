@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './ToolsPanel.module.css'
+import ui from '../../styles/ui.module.css'
 import { useCollectionsOverview } from '../../hooks/useCollectionsOverview'
 import { useIndexUsage } from '../../hooks/useIndexUsage'
 import { useCurrentOps } from '../../hooks/useCurrentOps'
@@ -69,7 +70,7 @@ export function ToolsPanel({ db }: Props) {
         ) : sortedOverview.length === 0 ? (
           <div className={styles.empty}>{t('toolsPanel.noCollections')}</div>
         ) : (
-          <table>
+          <table className={`${ui.table} ${ui.tableNowrap}`}>
             <thead>
               <tr>
                 <th aria-sort={overviewAriaSort('name')}>
@@ -172,7 +173,7 @@ export function ToolsPanel({ db }: Props) {
         ) : sortedUsage.length === 0 ? (
           <div className={styles.empty}>{t('toolsPanel.noIndexes')}</div>
         ) : (
-          <table>
+          <table className={`${ui.table} ${ui.tableNowrap}`}>
             <thead>
               <tr>
                 <th>{t('toolsPanel.collection')}</th>
@@ -206,7 +207,7 @@ export function ToolsPanel({ db }: Props) {
         ) : !ops || ops.length === 0 ? (
           <div className={styles.empty}>{t('toolsPanel.noCurrentOps')}</div>
         ) : (
-          <table>
+          <table className={`${ui.table} ${ui.tableNowrap}`}>
             <thead>
               <tr>
                 <th>{t('toolsPanel.namespace')}</th>

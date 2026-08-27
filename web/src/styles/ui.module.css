@@ -1,0 +1,65 @@
+/* Styles shared across components.
+ *
+ * CSS Modules only scopes class selectors — a bare `table {}` or `th, td {}`
+ * inside a .module.css is emitted globally. Five panels each declared their
+ * own such block, so in the built stylesheet they all applied to every table
+ * in the app and CSS source order decided which won. That made the panels'
+ * appearance depend on Vite's chunk emission order rather than on anything
+ * in their own file. Everything here hangs off a hashed class, so it is
+ * actually scoped to the elements that opt in.
+ *
+ * Rule for anything added here: this file owns paint (colour, border,
+ * background, radius, padding, weight, size); component modules own layout
+ * (margin, width, flex, grid, position). A component module must not
+ * redeclare a property this file already sets on the same element, or the
+ * winner depends on load order again.
+ */
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--font-size-sm);
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th {
+  background: var(--color-bg-alt);
+}
+
+/* Keeps the header visible while the body scrolls. Only the results grid
+   scrolls far enough to need it. */
+.tableSticky th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+/* For a table whose rows are activatable (open a document, replay a query,
+   expand an index). Previously some clickable rows had no hover feedback
+   and some unclickable ones did, purely by accident of load order. */
+.tableRows tbody tr {
+  cursor: pointer;
+}
+
+.tableRows tbody tr:hover {
+  background: var(--color-bg-inset);
+}
+
+.tableNowrap th,
+.tableNowrap td {
+  white-space: nowrap;
+}
+
+/* Caps a cell so one long value can't stretch the table; the JSON view is
+   for reading a value in full. */
+.tableTruncate td {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

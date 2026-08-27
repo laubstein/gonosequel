@@ -21,24 +21,6 @@
   letter-spacing: 0.03em;
 }
 
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 13px;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-th {
-  background: var(--color-bg-alt);
-}
-
 /* A real <button> inside the <th>, so sorting is keyboard reachable. The
    resets keep it looking like the header text it replaced. */
 .sortableHeader {
