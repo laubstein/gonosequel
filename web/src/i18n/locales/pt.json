@@ -71,6 +71,7 @@
     "explaining": "Explicando…",
     "newDocument": "+ Novo documento",
     "exportJson": "Exportar JSON",
+    "exportHint": "Exporta todos os documentos da consulta exibida nos resultados — não as edições ainda não aplicadas acima.",
     "exportCsv": "Exportar CSV",
     "invalidJson": "JSON inválido",
     "fixJson": "Corrigir JSON",

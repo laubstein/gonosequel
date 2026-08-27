@@ -7,7 +7,7 @@ import { autocompletion } from '@codemirror/autocomplete'
 import type { EditorView } from '@codemirror/view'
 import styles from './QueryEditor.module.css'
 import type { ExtJSONDocument, FindQuery } from '../../types'
-import { exportURL } from '../../api/http'
+import { startExportDownload } from '../../api/http'
 import { api } from '../../api/client'
 import { computeJsonFix } from '../../api/jsonFix'
 import { readLocal, writeLocal } from '../../api/localCache'
@@ -264,6 +264,7 @@ export function QueryEditor({
   const [explaining, setExplaining] = useState(false)
   const [aggregating, setAggregating] = useState(false)
   const [updating, setUpdating] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [updateResult, setUpdateResult] = useState<{ matched: number; modified: number } | null>(null)
   const [presetIndex, setPresetIndex] = useState('')
 
@@ -420,6 +421,28 @@ export function QueryEditor({
       setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
     } finally {
       setUpdating(false)
+    }
+  }
+
+  // Exports the query that actually produced the results on screen — the
+  // `query` prop — not the draft in the editor. The draft may be
+  // half-typed or not yet run, and exporting it would silently hand back a
+  // different set of documents than the one being looked at. skip/limit
+  // are deliberately absent: the server exports every matching document
+  // and zeroes both anyway.
+  async function runExport(format: 'json' | 'csv') {
+    setError(null)
+    setExporting(true)
+    try {
+      await startExportDownload(db, coll, format, {
+        filter: query.filter || undefined,
+        sort: query.sort || undefined,
+        projection: query.projection || undefined,
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -646,12 +669,22 @@ export function QueryEditor({
         <div className={styles.spacer} />
         {mode === 'find' && (
           <>
-            <a className={styles.exportLink} href={exportURL(db, coll, 'json', { filter: filterText })} download>
+            <button
+              className={styles.exportLink}
+              onClick={() => void runExport('json')}
+              disabled={exporting}
+              title={t('queryEditor.exportHint')}
+            >
               {t('queryEditor.exportJson')}
-            </a>
-            <a className={styles.exportLink} href={exportURL(db, coll, 'csv', { filter: filterText })} download>
+            </button>
+            <button
+              className={styles.exportLink}
+              onClick={() => void runExport('csv')}
+              disabled={exporting}
+              title={t('queryEditor.exportHint')}
+            >
               {t('queryEditor.exportCsv')}
-            </a>
+            </button>
           </>
         )}
       </div>

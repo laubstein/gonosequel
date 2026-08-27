@@ -54,23 +54,31 @@ func (d *deps) handleListDocuments(c fiber.Ctx) error {
 }
 
 func parseFindOptions(c fiber.Ctx, codec driver.DocCodec) (driver.FindOptions, error) {
+	return parseFindOptionsFrom(c.Query, codec)
+}
+
+// parseFindOptionsFrom is parseFindOptions over any query lookup with
+// fiber.Ctx.Query's signature. The export download path reads its query
+// text out of a one-shot ticket rather than the URL (see
+// export_tickets.go), and must interpret it exactly the same way.
+func parseFindOptionsFrom(query func(string, ...string) string, codec driver.DocCodec) (driver.FindOptions, error) {
 	var opts driver.FindOptions
 
-	if raw := c.Query("filter"); raw != "" {
+	if raw := query("filter"); raw != "" {
 		filter, err := codec.UnmarshalDoc([]byte(raw))
 		if err != nil {
 			return opts, fiber.NewError(fiber.StatusBadRequest, "invalid filter: "+err.Error())
 		}
 		opts.Filter = filter
 	}
-	if raw := c.Query("projection"); raw != "" {
+	if raw := query("projection"); raw != "" {
 		proj, err := codec.UnmarshalDoc([]byte(raw))
 		if err != nil {
 			return opts, fiber.NewError(fiber.StatusBadRequest, "invalid projection: "+err.Error())
 		}
 		opts.Projection = proj
 	}
-	if raw := c.Query("sort"); raw != "" {
+	if raw := query("sort"); raw != "" {
 		sortDoc, err := codec.UnmarshalDoc([]byte(raw))
 		if err != nil {
 			return opts, fiber.NewError(fiber.StatusBadRequest, "invalid sort: "+err.Error())
@@ -80,8 +88,8 @@ func parseFindOptions(c fiber.Ctx, codec driver.DocCodec) (driver.FindOptions, e
 		}
 	}
 
-	opts.Skip = queryInt64(c, "skip", 0)
-	opts.Limit = queryInt64(c, "limit", defaultPageLimit)
+	opts.Skip = parseInt64(query("skip"), 0)
+	opts.Limit = parseInt64(query("limit"), defaultPageLimit)
 	if opts.Limit > maxPageLimit {
 		opts.Limit = maxPageLimit
 	}
@@ -90,7 +98,13 @@ func parseFindOptions(c fiber.Ctx, codec driver.DocCodec) (driver.FindOptions, e
 }
 
 func queryInt64(c fiber.Ctx, key string, def int64) int64 {
-	raw := c.Query(key)
+	return parseInt64(c.Query(key), def)
+}
+
+// parseInt64 returns raw as an int64, falling back to def when it is empty
+// or unparseable — a malformed skip/limit is treated as absent rather than
+// failing the request.
+func parseInt64(raw string, def int64) int64 {
 	if raw == "" {
 		return def
 	}

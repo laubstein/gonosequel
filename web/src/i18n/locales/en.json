@@ -71,6 +71,7 @@
     "explaining": "Explaining…",
     "newDocument": "+ New document",
     "exportJson": "Export JSON",
+    "exportHint": "Exports every document matching the query currently shown in the results — not any unapplied edits above.",
     "exportCsv": "Export CSV",
     "invalidJson": "Invalid JSON",
     "fixJson": "Fix JSON",

@@ -77,6 +77,7 @@ type Config struct {
 type deps struct {
 	registry      *session.Registry
 	history       *history.Store
+	exportTickets *exportTicketStore
 	driver        string
 	connect       func(ctx context.Context, driverName, uri string) (driver.Driver, error)
 	sessions      bool
@@ -124,6 +125,7 @@ func New(cfg Config) *fiber.App {
 	d := &deps{
 		registry:      cfg.Registry,
 		history:       history.NewStore(),
+		exportTickets: newExportTicketStore(),
 		driver:        cfg.Driver,
 		connect:       cfg.Connect,
 		sessions:      cfg.Sessions,

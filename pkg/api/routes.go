@@ -13,6 +13,11 @@ func registerRoutes(app *fiber.App, d *deps) {
 	api.Post("/connect", d.handleConnect)
 	api.Post("/disconnect", d.handleDisconnect)
 
+	// Deliberately outside the session-scoped group: a browser download
+	// navigation cannot set X-Session-Id, so the one-shot ticket names the
+	// session instead. See handleExportDownload for why that is safe.
+	api.Get("/export/:ticket", d.handleExportDownload)
+
 	scoped := api.Group("", withSession(d))
 
 	scoped.Get("/connection", d.handleConnectionInfo)
@@ -52,4 +57,5 @@ func registerRoutes(app *fiber.App, d *deps) {
 	scoped.Patch("/databases/:db/collections/:coll/indexes/:name", d.handleUpdateIndexTTL)
 
 	scoped.Get("/databases/:db/collections/:coll/export", d.handleExport)
+	scoped.Get("/databases/:db/collections/:coll/export/ticket", d.handleExportTicket)
 }

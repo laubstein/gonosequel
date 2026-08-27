@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -899,5 +900,197 @@ func TestAPIRunCommandRejectedInReadonlyMode(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("status=%d, want 403", resp.StatusCode)
+	}
+}
+
+// exportTicketFor issues an export ticket through the normal scoped route
+// and returns the token. sessionID may be empty for single-connection mode.
+func exportTicketFor(t *testing.T, app *fiber.App, path, sessionID string) (int, string) {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	if sessionID != "" {
+		req.Header.Set("X-Session-Id", sessionID)
+	}
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("export ticket: %v", err)
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return resp.StatusCode, string(raw)
+	}
+	var decoded struct {
+		Ticket string `json:"ticket"`
+	}
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("decode ticket response %q: %v", raw, err)
+	}
+	return resp.StatusCode, decoded.Ticket
+}
+
+// TestAPIExportHonorsSortAndProjection covers the export path end to end.
+// The export used to receive only ?filter, so a projection that hid a
+// field on screen still exported it — the file silently disagreed with
+// what the user was looking at.
+func TestAPIExportHonorsSortAndProjection(t *testing.T) {
+	app := newTestApp(t, false)
+	const db, coll = "api_test_export", "items"
+
+	for _, doc := range []string{
+		`{"name":"b","secret":"hidden","n":2}`,
+		`{"name":"a","secret":"hidden","n":1}`,
+	} {
+		req := httptest.NewRequest(http.MethodPost,
+			"/api/databases/"+db+"/collections/"+coll+"/documents", bytes.NewReader([]byte(doc)))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("insert: %v", err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusCreated {
+			t.Fatalf("insert: status=%d", resp.StatusCode)
+		}
+	}
+	t.Cleanup(func() { doJSON(t, app, http.MethodDelete, "/api/databases/"+db, nil) })
+
+	base := "/api/databases/" + db + "/collections/" + coll + "/export"
+	query := "?format=json&sort=" + url.QueryEscape(`{"n":1}`) + "&projection=" + url.QueryEscape(`{"secret":0}`)
+
+	status, ticket := exportTicketFor(t, app, base+"/ticket"+query, "")
+	if status != http.StatusOK {
+		t.Fatalf("issue ticket: status=%d body=%s", status, ticket)
+	}
+
+	dlResp, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/export/"+ticket, nil))
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	defer dlResp.Body.Close()
+	body, _ := io.ReadAll(dlResp.Body)
+	if dlResp.StatusCode != http.StatusOK {
+		t.Fatalf("download: status=%d body=%s", dlResp.StatusCode, body)
+	}
+	if bytes.Contains(body, []byte("secret")) {
+		t.Errorf("projection was ignored, exported field is present: %s", body)
+	}
+	if a, b := bytes.Index(body, []byte(`"a"`)), bytes.Index(body, []byte(`"b"`)); a == -1 || b == -1 || a > b {
+		t.Errorf("sort was ignored, expected a before b: %s", body)
+	}
+
+	// The ticket is single-use, so replaying a captured URL is inert.
+	replay, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/export/"+ticket, nil))
+	if err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	defer replay.Body.Close()
+	if replay.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected a spent ticket to be rejected, got status=%d", replay.StatusCode)
+	}
+}
+
+func TestAPIExportTicketRejectsBadInput(t *testing.T) {
+	app := newTestApp(t, false)
+	base := "/api/databases/api_test_export_bad/collections/items/export"
+
+	// An invalid filter must fail at ticket time, so the UI can show it
+	// inline instead of the browser navigating to a JSON error body.
+	if status, body := exportTicketFor(t, app, base+"/ticket?format=json&filter=notjson", ""); status != http.StatusBadRequest {
+		t.Errorf("expected 400 for an invalid filter, got status=%d body=%s", status, body)
+	}
+	if status, body := exportTicketFor(t, app, base+"/ticket?format=xml", ""); status != http.StatusBadRequest {
+		t.Errorf("expected 400 for an unknown format, got status=%d body=%s", status, body)
+	}
+
+	unknown, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/export/does-not-exist", nil))
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	defer unknown.Body.Close()
+	if unknown.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for an unknown ticket, got status=%d", unknown.StatusCode)
+	}
+}
+
+// TestAPIExportWorksInSessionsMode is the regression test for the bug the
+// ticket flow exists to fix: a browser download navigation cannot send
+// X-Session-Id, and in --sessions mode there is no default session to fall
+// back to, so the direct export route 400s.
+func TestAPIExportWorksInSessionsMode(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	registry := session.NewRegistry()
+	app := New(Config{
+		Registry: registry,
+		Sessions: true,
+		Connect: func(ctx context.Context, driverName, uri string) (driver.Driver, error) {
+			return client.Connect(ctx, uri)
+		},
+	})
+
+	resp, body := doJSON(t, app, http.MethodPost, "/api/connect", map[string]string{
+		"url": testMongoURI, "driver": "mongodb", "name": "export-session",
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("connect: status=%d body=%v", resp.StatusCode, body)
+	}
+	sessionID, _ := body["sessionId"].(string)
+	t.Cleanup(func() {
+		if cl, err := registry.Get(sessionID); err == nil {
+			_ = cl.Close(context.Background())
+		}
+	})
+
+	base := "/api/databases/api_test_export_sessions/collections/items/export"
+
+	// Without a header — exactly what a browser download does — the direct
+	// route is unreachable in this mode.
+	direct, err := app.Test(httptest.NewRequest(http.MethodGet, base+"?format=json", nil))
+	if err != nil {
+		t.Fatalf("direct export: %v", err)
+	}
+	defer direct.Body.Close()
+	if direct.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected the headerless direct export to 400 in sessions mode, got %d", direct.StatusCode)
+	}
+
+	// The ticket is issued with the header and redeemed without one.
+	status, ticket := exportTicketFor(t, app, base+"/ticket?format=json", sessionID)
+	if status != http.StatusOK {
+		t.Fatalf("issue ticket: status=%d body=%s", status, ticket)
+	}
+	dl, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/export/"+ticket, nil))
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	defer dl.Body.Close()
+	if dl.StatusCode != http.StatusOK {
+		out, _ := io.ReadAll(dl.Body)
+		t.Errorf("ticketed export failed in sessions mode: status=%d body=%s", dl.StatusCode, out)
+	}
+}
+
+// TestAPIExportWorksInReadonlyMode proves the ticket route has to be a GET:
+// a POST would be rejected by rejectWrites, making export unusable in the
+// mode where reading is the only thing you can do.
+func TestAPIExportWorksInReadonlyMode(t *testing.T) {
+	app := newTestApp(t, true)
+	base := "/api/databases/api_test_export_ro/collections/items/export"
+
+	status, ticket := exportTicketFor(t, app, base+"/ticket?format=csv", "")
+	if status != http.StatusOK {
+		t.Fatalf("issue ticket under --readonly: status=%d body=%s", status, ticket)
+	}
+	dl, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/export/"+ticket, nil))
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	defer dl.Body.Close()
+	if dl.StatusCode != http.StatusOK {
+		t.Errorf("expected export to work under --readonly, got status=%d", dl.StatusCode)
 	}
 }

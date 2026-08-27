@@ -79,21 +79,31 @@ export async function apiSend<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', pa
   return handle<T>(res)
 }
 
-// exportURL builds the download URL for a collection export; the browser
-// navigates to it directly rather than going through fetch, since the
-// response is a file attachment.
-export function exportURL(
+// startExportDownload downloads a collection export in two steps: a normal
+// fetch for a one-shot ticket (which carries X-Session-Id like every other
+// request), then a real browser navigation to redeem it.
+//
+// The second step has to be a navigation, not fetch + Blob: the server
+// streams straight off the cursor (pkg/api/handlers_export.go), and
+// buffering that into a Blob would put an entire collection in tab memory
+// and lose the browser's own download progress and cancel. But a
+// navigation cannot set headers, which is why the ticket exists at all —
+// without it, every export 400s in --sessions mode.
+//
+// Rejects if the ticket request fails, so an invalid filter surfaces as a
+// message in the UI instead of replacing the page with a JSON error.
+export async function startExportDownload(
   db: string,
   coll: string,
   format: 'json' | 'csv',
   query?: Record<string, string | number | undefined>,
-): string {
-  const url = new URL(`/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/export`, window.location.origin)
-  url.searchParams.set('format', format)
-  if (query) {
-    for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined) url.searchParams.set(key, String(value))
-    }
-  }
-  return url.toString()
+): Promise<void> {
+  const { ticket } = await apiGet<{ ticket: string }>(
+    `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/export/ticket`,
+    { format, ...query },
+  )
+  const a = document.createElement('a')
+  a.href = `/api/export/${encodeURIComponent(ticket)}`
+  a.download = `${db}.${coll}.${format}`
+  a.click()
 }
