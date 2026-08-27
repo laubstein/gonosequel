@@ -82,6 +82,24 @@ function defaultDraft(query: FindQuery): DraftState {
 // render the removable chip list. Returns [] for anything that isn't a
 // plain flat object of 0/false values, including an inclusion-style
 // projection ({field: 1}), which has no "hidden fields" to list this way.
+// normalizeJsonField parses text as strict JSON; if that fails but it
+// parses as a JS-object-literal (JSON5), returns the fixed strict-JSON
+// string instead of throwing — used to silently accept `{cpu: 1}`-style
+// input in Sort/Projection on Run, without requiring the manual "Fix
+// JSON" button used by filter/pipeline/update.
+function normalizeJsonField(text: string): string {
+  const trimmed = text.trim()
+  if (!trimmed) return ''
+  try {
+    JSON.parse(trimmed)
+    return trimmed
+  } catch {
+    const fixed = computeJsonFix(trimmed)
+    if (typeof fixed === 'string') return fixed
+    throw new SyntaxError(trimmed)
+  }
+}
+
 function parseProjectionFields(projectionText: string): string[] {
   if (!projectionText.trim()) return []
   try {
@@ -352,13 +370,15 @@ export function QueryEditor({
     const filter = textToRun(filterText)
     try {
       if (filter.trim()) JSON.parse(filter)
-      if (sortText.trim()) JSON.parse(sortText)
-      if (projectionText.trim()) JSON.parse(projectionText)
+      const sort = normalizeJsonField(sortText)
+      const projection = normalizeJsonField(projectionText)
+      if (sort !== sortText.trim()) setSortText(sort)
+      if (projection !== projectionText.trim()) setProjectionText(projection)
       setError(null)
       setExplainResult(null)
-    setExplainCollscan(false)
+      setExplainCollscan(false)
       onAggregateResult(null)
-      onRun(filter.trim() || '{}', sortText.trim(), projectionText.trim())
+      onRun(filter.trim() || '{}', sort, projection)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
     }
@@ -544,24 +564,30 @@ export function QueryEditor({
 
       {mode === 'find' && (
         <div className={styles.row}>
-          <input
-            className={styles.textarea}
-            style={{ minHeight: 'unset', flex: 1 }}
-            value={sortText}
-            onChange={(e) => setSortText(e.target.value)}
-            placeholder={t('queryEditor.sortPlaceholder')}
-          />
+          <div className={styles.field}>
+            <label className={styles.label}>{t('queryEditor.sortLabel')}</label>
+            <input
+              className={styles.textarea}
+              style={{ minHeight: 'unset' }}
+              value={sortText}
+              onChange={(e) => setSortText(e.target.value)}
+              placeholder={t('queryEditor.sortPlaceholder')}
+            />
+          </div>
         </div>
       )}
       {mode === 'find' && (
         <div className={styles.row}>
-          <input
-            className={styles.textarea}
-            style={{ minHeight: 'unset', flex: 1 }}
-            value={projectionText}
-            onChange={(e) => setProjectionText(e.target.value)}
-            placeholder={t('queryEditor.projectionPlaceholder')}
-          />
+          <div className={styles.field}>
+            <label className={styles.label}>{t('queryEditor.projectionLabel')}</label>
+            <input
+              className={styles.textarea}
+              style={{ minHeight: 'unset' }}
+              value={projectionText}
+              onChange={(e) => setProjectionText(e.target.value)}
+              placeholder={t('queryEditor.projectionPlaceholder')}
+            />
+          </div>
         </div>
       )}
       {mode === 'find' && hiddenFields.length > 0 && (
