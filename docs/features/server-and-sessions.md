@@ -7,7 +7,7 @@ reaches the browser).
 
 ## Server status
 
-Version, host, process name, uptime, connection pool usage (current/available), and cumulative
+Version, host, process name, uptime, connection pool usage (current and available), and cumulative
 operation counters (insert/query/update/delete/getmore/command) for the connected `mongod`.
 
 For a Redis/Valkey connection this reports the equivalent fields from Redis's own `INFO`
@@ -48,3 +48,23 @@ returned, signed or not.
 
 Leaving `--session-secret` unset keeps today's behavior (a plain, unsigned ID) — nothing about
 existing deployments changes unless this flag is set.
+
+## When the server becomes unreachable
+
+If the browser stops being able to reach gonosequel, the app is replaced by a "connection lost"
+placeholder rather than leaving stale data on screen looking current. It retries on its own
+every few seconds and recovers by itself when the server comes back; **Try again** forces an
+immediate attempt, and **Disconnect** clears the stored session and returns to the connect
+screen — useful when the server was restarted and the old session no longer exists.
+
+This is about reaching the gonosequel process itself, not the database behind it: a database
+that goes away surfaces as an error on the query instead.
+
+## Interface preferences
+
+The header's theme button cycles light → dark → follow the system, and the choice is remembered
+in the browser. "Follow the system" tracks the OS setting live.
+
+The interface is available in English and Brazilian Portuguese, chosen automatically from the
+browser's own language setting. There is no in-app switcher: change the browser's preferred
+language to change it.

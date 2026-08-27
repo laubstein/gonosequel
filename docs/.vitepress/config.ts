@@ -49,6 +49,7 @@ export default defineConfig({
           { text: 'Query editor', link: '/features/query-editor' },
           { text: 'Schema & indexes', link: '/features/schema-and-indexes' },
           { text: 'Tools', link: '/features/tools' },
+          { text: 'Query history', link: '/features/history' },
           { text: 'Server & sessions', link: '/features/server-and-sessions' },
           { text: 'Redis & Valkey', link: '/features/redis-valkey' },
         ],

@@ -13,6 +13,12 @@ Autocomplete inside the filter editor is schema-aware: typing `"` inside a JSON 
 suggests the collection's actual field names, sourced from the same inferred schema shown on
 the **Schema** tab.
 
+Regular expressions work as they do in the shell, in either form MongoDB accepts:
+
+```json
+{ "nome": { "$regex": "^srv", "$options": "i" } }
+```
+
 Press <kbd>Ctrl+Enter</kbd> (or <kbd>Cmd+Enter</kbd> on macOS) to run without leaving the
 keyboard.
 
@@ -51,6 +57,37 @@ Right-click a value in the results table (not the JSON view) for three actions:
   excluding that field from the query itself, not just from the display. Like the other two,
   this only stages the change — Run applies it.
 
+## Update mode — editing many documents at once
+
+The third mode turns the editor into a bulk write: the top box is a filter, the second is a
+MongoDB update document, and Run applies that update to **every** matching document via
+`updateMany`.
+
+```json
+{ "$set": { "status": "archived" } }
+```
+
+Because this writes to an unbounded number of documents from the same Run button that
+harmlessly runs a find one mode-toggle away, it asks first — and the confirmation tells you how
+many documents currently match, so the blast radius is visible before you commit. There is no
+undo.
+
+The result line afterwards reports how many documents matched and how many were actually
+modified; those differ when a document already held the values being set.
+
+Update mode is MongoDB-only, and rejected entirely under `--readonly`.
+
+## Fix JSON
+
+MongoDB's shell accepts JavaScript object syntax, so `{status: 'active'}` is what most people
+type from memory — but it isn't valid JSON, which is what the filter box expects. When the
+editor sees input that parses as a JS object literal but not as JSON (unquoted keys, single
+quotes, trailing commas), it offers **Fix JSON** to rewrite it properly rather than making you
+hunt for the missing quotes.
+
+The Sort and Projection fields don't need the button: they repair the same input automatically
+when you press Run, including dotted paths like `{SO.nome: 1}` that even JSON5 rejects.
+
 ## Aggregate mode
 
 Switches the editor to hold a full aggregation pipeline (a JSON array) instead of a filter:
@@ -82,10 +119,34 @@ gets `where X is true`, a number gets `sort by X descending`, a date field gets 
 preset. Selecting one fills the editor and, if needed, switches mode — it doesn't run
 automatically, so you can review or tweak it first.
 
+## Nested fields
+
+MongoDB addresses a field inside an embedded document by its dotted path, and every box here
+takes that path directly — filter, sort and projection alike:
+
+```json
+{ "SO.nome": "Ubuntu" }
+```
+
+```json
+{ "SO.nome": 1, "SO.versao": 1 }
+```
+
+The results table shows nested fields as their own `SO.nome` / `SO.versao` columns rather than
+collapsing the parent into "{2 fields}", so a projection like the one above shows exactly the
+fields it selected. Right-clicking one of those cells stages the dotted path too, so "Filter by
+value" and "Hide field" work on a nested field the same way they do on a top-level one. The
+Schema tab and autocomplete list the dotted paths as well.
+
+Deeply nested structures are spread only a few levels into columns, and the column count is
+capped — the JSON view is the way to read a large document in full.
+
 ## Explain
 
-Runs the current filter through MongoDB's query planner at `executionStats` verbosity — the
+Runs the current query through MongoDB's query planner at `executionStats` verbosity — the
 query does execute, gathering real execution statistics alongside the chosen plan, rather than
-just reporting what plan *would* be used. If the winning plan is a full collection scan
+just reporting what plan *would* be used. Sort and projection are part of what's explained, not
+just the filter: a sort can select a different index, or add a blocking in-memory sort stage
+that explaining the filter alone would never show. If the winning plan is a full collection scan
 (`COLLSCAN`) anywhere in it — even nested behind a sort or projection stage — a warning banner
 appears above the explain output.

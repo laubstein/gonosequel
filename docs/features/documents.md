@@ -8,11 +8,13 @@ key browser plus a per-type value editor and command console instead — see
 
 ## Table and JSON views
 
-Results toggle between a flattened table (one column per top-level field, values summarized
-for readability) and a raw JSON view with syntax highlighting. Nested documents don't fit a
-table cleanly, so the JSON view is where you'd inspect those.
+Results toggle between a flattened table and a raw JSON view with syntax highlighting. The
+table gives each field its own column, descending a few levels into embedded documents so a
+nested field appears as `SO.nome` rather than collapsing its parent into "{2 fields}". Arrays
+are summarized rather than spread, and the column count is capped — the JSON view is where to
+read a large or deeply nested document in full.
 
-Clicking a row (in either view) opens the document editor.
+Clicking a row (in either view) opens the document editor; both are reachable from the keyboard.
 
 ## Extended JSON, and why it matters
 
@@ -76,6 +78,33 @@ pagination entirely, since skip/limit don't mean anything for a pipeline — see
 
 ## Export
 
-**Export JSON** / **Export CSV** links next to the query editor download the *current filter's*
-full result set (not just the current page) as a stream — CSV flattens nested paths into
-dotted column names (e.g. `address.city`).
+**Export JSON** / **Export CSV** next to the query editor download the full result set of the
+query currently shown — filter, sort and projection included, not just the current page — as a
+stream. CSV flattens nested paths into dotted column names (e.g. `address.city`).
+
+The export reflects the query that produced the results on screen, not unapplied edits sitting
+in the editor above: press Run first if you want those included.
+
+## Deleting, and what asks first
+
+Actions that destroy data confirm first, scaled to how much they can destroy:
+
+| Action | What it asks |
+|---|---|
+| Delete a database, delete a collection, Redis `FLUSHALL`/`FLUSHDB` | type the name to confirm |
+| Delete a document, delete a Redis key, delete an index | a plain confirmation |
+| `updateMany` (Update mode) | a confirmation showing how many documents match |
+| Disconnect | nothing — it destroys nothing, and drafts are kept |
+
+A failed action keeps its dialog open and shows why, rather than closing as though it had
+worked.
+
+## Editor drafts
+
+Whatever is typed in the query editor (or the Redis command runner) is kept per collection, in
+the browser, and comes back when you return to that collection — including after a page reload
+or a reconnect. It is deliberately not tied to the session, so reconnecting to the same
+database doesn't lose the query you were in the middle of writing.
+
+Drafts are what you typed, not what you ran; the [History](/features/history) tab is the record
+of queries actually executed.
