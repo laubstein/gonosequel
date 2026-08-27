@@ -7,7 +7,9 @@ import styles from './DocumentEditor.module.css'
 import { api } from '../../api/client'
 import { computeJsonFix } from '../../api/jsonFix'
 import { unwrapNumberWrappers, findRiskyNumberFields, getAtPath, pathToLabel } from '../../api/extjson'
+import { sortFieldsDeep } from '../../api/sortFields'
 import { useIsDarkMode } from '../../hooks/useIsDarkMode'
+import { useFieldSort } from '../../hooks/useFieldSort'
 import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
 import { Modal } from '../Dialogs/Modal'
 
@@ -27,12 +29,15 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
   const queryClient = useQueryClient()
   const isDark = useIsDarkMode()
   const [text, setText] = useState('{}')
+  // Whether the text has diverged from what was loaded.
+  const [edited, setEdited] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingRiskyFields, setPendingRiskyFields] = useState<string[] | null>(null)
   // Deleting used to fire straight from the footer button, with no
   // guard at all — while *saving* a Long went through a warning dialog.
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const titleId = useId()
+  const { sortFields, toggleFieldSort } = useFieldSort()
 
   const fixedJson = useMemo(() => computeJsonFix(text), [text])
 
@@ -65,14 +70,19 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
     [target, existing.data],
   )
 
+  // Rebuilding on a sortFields change discards edits made since the
+  // document loaded, so the toggle is disabled once the text has been
+  // touched (see `edited`) rather than silently throwing work away.
   useEffect(() => {
     if (target.mode === 'edit' && existing.data) {
-      setText(JSON.stringify(unwrapNumberWrappers(existing.data), null, 2))
+      const doc = unwrapNumberWrappers(existing.data)
+      setText(JSON.stringify(sortFields ? sortFieldsDeep(doc) : doc, null, 2))
+      setEdited(false)
     }
     if (target.mode === 'new') {
       setText('{\n  \n}')
     }
-  }, [target, existing.data])
+  }, [target, existing.data, sortFields])
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
@@ -168,6 +178,19 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
           <div className={styles.header} id={titleId}>
             {target.mode === 'new' ? t('documentEditor.newTitle') : t('documentEditor.editTitle')}
             <div className={styles.headerSpacer} />
+            {canSave && (
+              <button
+                className={styles.headerToggle}
+                onClick={toggleFieldSort}
+                // Re-sorting rebuilds the text from the loaded document,
+                // which would discard anything typed since.
+                disabled={edited}
+                title={edited ? t('documentEditor.sortFieldsLocked') : t('documentEditor.sortFieldsHint')}
+                aria-pressed={sortFields}
+              >
+                {sortFields ? '⇅ A–Z' : '⇅'}
+              </button>
+            )}
             <button className={styles.closeButton} onClick={onClose} aria-label={t('documentEditor.close')}>
               ✕
             </button>
@@ -187,7 +210,10 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
                 minHeight="320px"
                 extensions={jsonExtensions}
                 theme={isDark ? 'dark' : 'light'}
-                onChange={setText}
+                onChange={(next) => {
+                  setText(next)
+                  setEdited(true)
+                }}
                 basicSetup={{ lineNumbers: true, foldGutter: false, closeBrackets: false }}
               />
             )}

@@ -127,7 +127,9 @@
     "excludeValue": "Excluir valor",
     "hideField": "Ocultar campo",
     "openDocument": "Abrir este documento para edição",
-    "noSingleValue": "Esta célula não tem um valor único pra filtrar (é um array ou um subdocumento com vários campos)."
+    "noSingleValue": "Esta célula não tem um valor único pra filtrar (é um array ou um subdocumento com vários campos).",
+    "sortFields": "A–Z",
+    "sortFieldsHint": "Ordenar os nomes dos campos alfabeticamente, inclusive os aninhados"
   },
   "pagination": {
     "page": "página {{page}} de {{total}}",
@@ -155,7 +157,9 @@
     "riskyNumberConfirm": "Salvar mesmo assim",
     "confirmDeleteTitle": "Excluir documento",
     "confirmDelete": "Excluir este documento?",
-    "noDocumentToDelete": "Nenhum documento para excluir."
+    "noDocumentToDelete": "Nenhum documento para excluir.",
+    "sortFieldsHint": "Ordenar os nomes dos campos alfabeticamente, inclusive os aninhados",
+    "sortFieldsLocked": "Não dá pra reordenar depois de editar — reabra o documento para ordená-lo"
   },
   "redisEditor": {
     "key": "Chave",

@@ -17,6 +17,28 @@
   flex: 1;
 }
 
+/* Alphabetical-order toggle, sitting just before the close button. */
+.headerToggle {
+  padding: 2px 8px;
+  margin-right: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.headerToggle[aria-pressed='true'] {
+  background: var(--color-bg-inset);
+  color: var(--color-text);
+}
+
+.headerToggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .closeButton {
   border: none;
   background: transparent;

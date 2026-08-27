@@ -16,6 +16,17 @@ read a large or deeply nested document in full.
 
 Clicking a row (in either view) opens the document editor; both are reachable from the keyboard.
 
+**A–Z** sorts field names alphabetically, nested fields included — useful for a wide or
+inconsistently-ordered collection, where the same field can otherwise sit in a different place in
+every document. It applies to all three views at once (table columns, JSON view and the document
+editor) and is remembered in the browser. Array element order is never touched: an array's order
+is part of its value, not a presentation detail.
+
+In the editor the toggle rebuilds the text from the loaded document, so it turns itself off once
+you have typed something rather than discarding the edit — reopen the document to sort it. Note
+that saving a sorted document stores the fields in that order, since a save replaces the whole
+document.
+
 ## Extended JSON, and why it matters
 
 BSON doesn't map onto JSON without loss — an `ObjectId`, a `Date`, a `Decimal128`, and a 64-bit

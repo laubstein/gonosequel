@@ -127,7 +127,9 @@
     "excludeValue": "Exclude value",
     "hideField": "Hide field",
     "openDocument": "Open this document for editing",
-    "noSingleValue": "This cell has no single value to filter by (an array or a multi-field subdocument)."
+    "noSingleValue": "This cell has no single value to filter by (an array or a multi-field subdocument).",
+    "sortFields": "A–Z",
+    "sortFieldsHint": "Sort field names alphabetically, including nested fields"
   },
   "pagination": {
     "page": "page {{page}} of {{total}}",
@@ -155,7 +157,9 @@
     "riskyNumberConfirm": "Save anyway",
     "confirmDeleteTitle": "Delete document",
     "confirmDelete": "Delete this document?",
-    "noDocumentToDelete": "No document to delete."
+    "noDocumentToDelete": "No document to delete.",
+    "sortFieldsHint": "Sort field names alphabetically, including nested fields",
+    "sortFieldsLocked": "Can't re-sort after editing — reopen the document to sort it"
   },
   "redisEditor": {
     "key": "Key",

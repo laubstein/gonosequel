@@ -6,6 +6,8 @@ import { useDocuments } from '../../hooks/useDocuments'
 import { summarizeValue, docId, rawFilterValue } from '../../api/extjson'
 import { formatBytes } from '../../api/format'
 import { safeLimitSuggestion } from '../../api/sizeGuard'
+import { sortFieldsDeep, sortPaths } from '../../api/sortFields'
+import { useFieldSort } from '../../hooks/useFieldSort'
 import { JsonView } from '../JsonView/JsonView'
 import type { ExtJSONDocument, FindQuery } from '../../types'
 
@@ -159,6 +161,7 @@ export function Results({
   const { t } = useTranslation()
   const [mode, setMode] = useState<ViewMode>('table')
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const { sortFields, toggleFieldSort } = useFieldSort()
   const fetched = useDocuments(db, coll, query, enabled)
 
   const editable = overrideDocuments == null
@@ -166,7 +169,11 @@ export function Results({
   const total = overrideDocuments ? overrideDocuments.length : (fetched.data?.total ?? 0)
   const totalIsEstimate = overrideDocuments ? false : (fetched.data?.totalIsEstimate ?? false)
 
-  const columns = useMemo(() => collectColumns(documents), [documents])
+  const columns = useMemo(() => {
+    const found = collectColumns(documents)
+    return sortFields ? sortPaths(found) : found
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documents, sortFields])
 
   // useDocuments keeps the previous page's data as placeholder data while
   // the next one loads, so isLoading is false on every fetch after the
@@ -215,7 +222,15 @@ export function Results({
   if (documents.length === 0) {
     return (
       <div className={styles.container}>
-        <Toolbar mode={mode} setMode={setMode} total={total} estimate={totalIsEstimate} fetching={refetching} />
+        <Toolbar
+          mode={mode}
+          setMode={setMode}
+          total={total}
+          estimate={totalIsEstimate}
+          fetching={refetching}
+          sortFields={sortFields}
+          onToggleFieldSort={toggleFieldSort}
+        />
         <div className={styles.empty}>{t('results.noDocuments')}</div>
       </div>
     )
@@ -223,7 +238,15 @@ export function Results({
 
   return (
     <div className={styles.container}>
-      <Toolbar mode={mode} setMode={setMode} total={total} estimate={totalIsEstimate} fetching={refetching} />
+      <Toolbar
+        mode={mode}
+        setMode={setMode}
+        total={total}
+        estimate={totalIsEstimate}
+        fetching={refetching}
+        sortFields={sortFields}
+        onToggleFieldSort={toggleFieldSort}
+      />
 
       {mode === 'table' ? (
         <div className={styles.tableWrap}>
@@ -311,7 +334,7 @@ export function Results({
           {documents.map((doc, i) => (
             <div key={editable ? docId(doc) : i} className={editable ? styles.jsonDoc : styles.jsonDocReadonly}>
               <JsonView
-                value={doc}
+                value={sortFields ? sortFieldsDeep(doc) : doc}
                 onClick={editable ? () => onOpenDocument(doc) : undefined}
                 label={t('results.openDocument')}
               />
@@ -329,12 +352,16 @@ function Toolbar({
   total,
   estimate,
   fetching,
+  sortFields,
+  onToggleFieldSort,
 }: {
   mode: ViewMode
   setMode: (m: ViewMode) => void
   total: number
   estimate: boolean
   fetching: boolean
+  sortFields: boolean
+  onToggleFieldSort: () => void
 }) {
   const { t } = useTranslation()
   return (
@@ -344,6 +371,14 @@ function Toolbar({
       </button>
       <button className={mode === 'json' ? styles.toggleButtonActive : styles.toggleButton} onClick={() => setMode('json')}>
         {t('results.json')}
+      </button>
+      <button
+        className={sortFields ? styles.toggleButtonActive : styles.toggleButton}
+        onClick={onToggleFieldSort}
+        title={t('results.sortFieldsHint')}
+        aria-pressed={sortFields}
+      >
+        {t('results.sortFields')}
       </button>
       <span className={styles.status}>
         {estimate ? '~' : ''}
