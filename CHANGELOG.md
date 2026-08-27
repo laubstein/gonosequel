@@ -3,6 +3,51 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.12] - 2026-08-27
+
+Nested fields, keyboard access, and the documentation gaps.
+
+### Fixed
+
+- **Nested fields were unusable, at three layers that weren't the query.** MongoDB accepted
+  dotted paths like `SO.nome` in filters and projections all along, but nothing in the UI helped
+  you find, type, or see them:
+  - Schema inference never descended into embedded documents, so `SO.nome` was invisible to
+    autocomplete and the Schema tab — which also displayed the raw Go type name `bson.D` as the
+    "observed type" of any subdocument.
+  - The results table collapsed an embedded document into "{2 fields}", so projecting
+    `{"SO.nome": 1, "SO.versao": 1}` worked and looked like it hadn't. Nested fields now get
+    their own dotted columns, and the context menu stages the dotted path.
+  - Typing `{SO.nome: 1}` — the natural form — was rejected outright, because a dotted key isn't
+    a valid identifier and so fails even the relaxed JSON5 parse behind the auto-fix. It is now
+    accepted.
+- An unfixable Sort/Projection reported the text you typed back at you as the error message,
+  instead of saying what was wrong with it.
+- Pressing Escape on a confirmation opened over the document editor closed **both**, discarding
+  unsaved edits. Only the topmost dialog responds now.
+
+### Changed
+
+- **The app is usable from the keyboard.** Six clickable things weren't focusable — worst, the
+  results JSON view, where clicking is the only way to open a document, leaving that mode with no
+  keyboard path at all. Result rows, history rows, sidebar collections, sortable headers and
+  saved connections are now proper controls, sortable headers report `aria-sort`, the tab bar has
+  tab roles, and the app has a visible focus indicator, which it previously had nowhere.
+- The document editor, Redis key editor and connect dialog now use the shared modal shell, so
+  they gain dialog roles, a focus trap and focus restoration; the connect dialog gains Escape.
+- The results context menu stays inside the viewport instead of running off the edge, and its
+  disabled entries explain why they're disabled.
+
+### Documentation
+
+- **Update mode (`updateMany`) is documented** — a destructive bulk write that previously
+  appeared nowhere.
+- New pages/sections for the History tab, Fix JSON, nested and dotted field paths, regex
+  filters, theming and language, the connection-lost overlay, editor drafts, and the
+  confirmation policy.
+- Corrected statements that no longer matched the app, including the maximum page size and the
+  results table's and export's own descriptions.
+
 ## [0.0.11] - 2026-08-27
 
 Second batch from the interface audit: destructive actions and silent failures.
