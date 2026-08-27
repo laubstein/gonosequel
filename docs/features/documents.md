@@ -56,6 +56,11 @@ a smaller page size would fit comfortably, **Show N per page instead**, which sw
 size and loads immediately (now safely under the threshold). A collection with normal-sized
 documents never sees this — pages load exactly as before.
 
+When documents are large enough that even the smallest normal page size (10 per page) would
+still risk a large transfer, the per-page dropdown itself grows to also offer 1 through 9 —
+letting you go as low as one document per page instead of being stuck at 10. Normal collections
+keep the usual 10/25/50/100/250 options only.
+
 This only applies to the Documents tab's own paginated list; opening a single document in the
 editor (an explicit, one-at-a-time action) and the Aggregate pipeline's output (which hides
 pagination entirely, since skip/limit don't mean anything for a pipeline — see
