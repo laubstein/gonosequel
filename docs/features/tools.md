@@ -7,7 +7,8 @@ three read-only panels for spotting problem hotspots without hand-writing querie
 ## Collections overview
 
 Every collection in the selected database, with document count, data size, storage size,
-index size, average document size, and index count — sorted alphabetically by collection name.
+index size, average document size, and index count. Sorted by collection name by default —
+click any column header to sort by it instead; click the same header again to reverse direction.
 A collection that can't report stats (a view, for instance, or one dropped mid-scan) is skipped
 rather than hiding every other collection's numbers behind it.
 

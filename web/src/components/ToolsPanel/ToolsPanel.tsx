@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './ToolsPanel.module.css'
 import { useCollectionsOverview } from '../../hooks/useCollectionsOverview'
@@ -8,6 +9,8 @@ import { formatBytes } from '../../api/format'
 interface Props {
   db: string
 }
+
+type OverviewSortKey = 'name' | 'count' | 'sizeBytes' | 'storageBytes' | 'indexBytes' | 'avgObjSize' | 'indexCount'
 
 export function ToolsPanel({ db }: Props) {
   const { t } = useTranslation()
@@ -20,7 +23,28 @@ export function ToolsPanel({ db }: Props) {
   const { data: usage, isLoading: usageLoading, isError: usageIsError, error: usageError } = useIndexUsage(db)
   const { data: ops, isLoading: opsLoading, isError: opsIsError, error: opsError } = useCurrentOps()
 
-  const sortedOverview = overview ? [...overview].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')) : []
+  // Collection is the default sort — clicking any other column header
+  // switches to it (always starting ascending); clicking the active
+  // column again flips direction. Same single rule for all seven columns,
+  // no special-casing.
+  const [overviewSort, setOverviewSort] = useState<{ key: OverviewSortKey; dir: 1 | -1 }>({ key: 'name', dir: 1 })
+
+  function toggleOverviewSort(key: OverviewSortKey) {
+    setOverviewSort((prev) => (prev.key === key ? { key, dir: (prev.dir * -1) as 1 | -1 } : { key, dir: 1 }))
+  }
+
+  function overviewSortArrow(key: OverviewSortKey): string {
+    if (overviewSort.key !== key) return ''
+    return overviewSort.dir === 1 ? ' ▲' : ' ▼'
+  }
+
+  const sortedOverview = overview
+    ? [...overview].sort((a, b) => {
+        const { key, dir } = overviewSort
+        if (key === 'name') return dir * (a.name ?? '').localeCompare(b.name ?? '')
+        return dir * (a[key] - b[key])
+      })
+    : []
   const sortedUsage = usage
     ? [...usage].sort((a, b) => a.collection.localeCompare(b.collection) || a.index.localeCompare(b.index))
     : []
@@ -41,13 +65,34 @@ export function ToolsPanel({ db }: Props) {
           <table>
             <thead>
               <tr>
-                <th>{t('toolsPanel.collection')}</th>
-                <th>{t('toolsPanel.documents')}</th>
-                <th>{t('toolsPanel.dataSize')}</th>
-                <th>{t('toolsPanel.storageSize')}</th>
-                <th>{t('toolsPanel.indexSize')}</th>
-                <th>{t('toolsPanel.avgObjSize')}</th>
-                <th>{t('toolsPanel.indexCount')}</th>
+                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('name')}>
+                  {t('toolsPanel.collection')}
+                  {overviewSortArrow('name')}
+                </th>
+                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('count')}>
+                  {t('toolsPanel.documents')}
+                  {overviewSortArrow('count')}
+                </th>
+                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('sizeBytes')}>
+                  {t('toolsPanel.dataSize')}
+                  {overviewSortArrow('sizeBytes')}
+                </th>
+                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('storageBytes')}>
+                  {t('toolsPanel.storageSize')}
+                  {overviewSortArrow('storageBytes')}
+                </th>
+                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('indexBytes')}>
+                  {t('toolsPanel.indexSize')}
+                  {overviewSortArrow('indexBytes')}
+                </th>
+                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('avgObjSize')}>
+                  {t('toolsPanel.avgObjSize')}
+                  {overviewSortArrow('avgObjSize')}
+                </th>
+                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('indexCount')}>
+                  {t('toolsPanel.indexCount')}
+                  {overviewSortArrow('indexCount')}
+                </th>
               </tr>
             </thead>
             <tbody>

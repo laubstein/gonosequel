@@ -39,6 +39,15 @@ th {
   background: var(--color-bg-alt);
 }
 
+.sortableHeader {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortableHeader:hover {
+  color: var(--color-accent);
+}
+
 .zeroOps {
   color: var(--color-danger);
   font-weight: 600;
