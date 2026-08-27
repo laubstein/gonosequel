@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import styles from './IndexPanel.module.css'
@@ -74,6 +74,19 @@ export function IndexPanel({ db, coll }: Props) {
     setEditingName(null)
     setError(null)
   }
+
+  // IndexPanel isn't remounted on collection switch (App.tsx doesn't key
+  // it by db/coll), so without this the create/edit form — including an
+  // in-progress "Edit" targeting a specific index name — would keep
+  // showing after navigating to a different collection, where that index
+  // doesn't even exist. Unlike QueryEditor's drafts, none of this form
+  // state is meant to survive a collection switch.
+  useEffect(() => {
+    resetForm()
+    setExpanded(null)
+    setTtlEditValue('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, coll])
 
   function parseOptions(): CreateIndexOptions | null {
     const opts: CreateIndexOptions = { unique, sparse }
