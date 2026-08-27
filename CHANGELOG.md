@@ -3,6 +3,41 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.11] - 2026-08-27
+
+Second batch from the interface audit: destructive actions and silent failures.
+
+### Changed
+
+- **Destructive actions now scale with blast radius.** They previously followed three different
+  standards, and the most destructive one was the easiest to fire — dropping a collection made you
+  type its name, while dropping an entire database was a single click, and deleting an index,
+  deleting a document, deleting a Redis key, running `updateMany` and running `FLUSHALL` had no
+  confirmation at all.
+  - Type-the-name: drop database (new), drop collection, `FLUSHALL`/`FLUSHDB` (new).
+  - Plain confirm: delete document, delete Redis key, drop index.
+  - `updateMany` confirms **and first counts how many documents match**, so the number is visible
+    before committing.
+  - Disconnect stays unguarded: it destroys nothing, and editor drafts already persist.
+- Dialogs no longer fail silently. A failed create/rename/drop used to leave the dialog sitting
+  there having done nothing visible; it now stays open showing the server's reason, with what you
+  typed intact. Buttons are disabled while a request is in flight, so a double click can't submit
+  twice.
+- Dialogs gained `role="dialog"`, `aria-modal`, a focus trap and focus restoration — none of which
+  any modal in the app had. They no longer close on a click on the backdrop, which used to discard
+  a carefully typed confirmation or a half-written name.
+
+### Fixed
+
+- **A failed fetch no longer looks like an empty result.** A failed schema fetch said "No data to
+  infer schema", a failed index list rendered as "no indexes", a failed history fetch said "No
+  queries yet", a failed collection list said "No collections", and a failed bookmarks fetch hid
+  the saved connections section entirely.
+- The sidebar's collection filter survived a database switch, silently showing a filtered subset
+  of the new database.
+- Clicking a saved connection and then Connect fired two competing connections; Connect on the URL
+  tab was also enabled with an empty field.
+
 ## [0.0.10] - 2026-08-27
 
 First batch from a full interface audit: the things that were simply wrong.
