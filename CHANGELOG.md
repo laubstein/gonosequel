@@ -3,6 +3,40 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.13] - 2026-08-27
+
+Styling foundations, and backend capabilities the UI never reached.
+
+### Fixed
+
+- **The table styles were leaking globally.** CSS Modules only scopes class selectors, so the
+  bare `table {}` / `th, td {}` blocks in five panels were emitted unscoped and all applied to
+  every table in the app, with CSS source order picking the winner. Each panel's appearance
+  depended on Vite's chunk emission order rather than on its own stylesheet — every table
+  inherited the index list's margin, the results grid's sticky headers and 320px truncation, and
+  the history list's row hover, whether or not that made sense. They now share one scoped table
+  style with opt-in modifiers, so row hover appears where rows actually do something (the index
+  list had it only by accident) and truncation only where values can be long.
+- Native scrollbars, `<select>` popups and the editor's own scrollbar rendered light in dark
+  mode, because `color-scheme` was never set.
+- The modal scrim and drop shadows were the only colours in the app blind to the theme: over a
+  dark background the scrim barely separated the dialog from the page, and the shadow was
+  invisible. Both are theme-aware now.
+
+### Changed
+
+- Each colour is declared once instead of twice. The light and dark palettes were byte-identical
+  copies under two selectors, so changing a token meant changing it in both — and dark mode could
+  disagree with itself depending on how it had been activated.
+- The command console follows the backend's declared `command` capability instead of a hardcoded
+  driver-name check, which would have left a third key-value backend without a console.
+- The index usage table is sortable. Finding unused indexes is the point of it, and the zero-ops
+  highlight already existed to mark them, but with a fixed order you had to hunt for the red rows.
+- The connect form takes an optional **name**, shown in the connection list. Without it every
+  session was labelled by its own redacted URI — least useful when several are open.
+- The tab bar wraps instead of overflowing and the sidebar collapses below 900px, so a
+  half-screen desktop window stays usable. This is deliberately not a mobile layout.
+
 ## [0.0.12] - 2026-08-27
 
 Nested fields, keyboard access, and the documentation gaps.
