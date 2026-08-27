@@ -52,18 +52,90 @@ interface MenuState {
   value: unknown
 }
 
+// Columns are capped so a document with a large nested structure can't
+// produce a table hundreds of columns wide; the JSON view is the way to
+// read those.
+const MAX_NESTED_DEPTH = 3
+const MAX_COLUMNS = 60
+
+// collectColumns lists the table's columns, descending into embedded
+// documents so a nested field gets its own dotted column ("SO.nome") —
+// the same path MongoDB accepts in a filter or projection.
+//
+// Without this, projecting {"SO.nome": 1, "SO.versao": 1} produced a
+// single "SO" column reading "{2 fields}": the projection worked, but its
+// whole point was invisible. Arrays and Extended JSON wrappers ($oid,
+// $date, ...) stay whole — an array has no fixed shape to spread across
+// columns, and a wrapper is a scalar value, not a subdocument.
 function collectColumns(docs: ExtJSONDocument[]): string[] {
   const seen = new Set<string>()
   const ordered: string[] = []
+
+  function add(path: string) {
+    if (seen.has(path) || ordered.length >= MAX_COLUMNS) return
+    seen.add(path)
+    ordered.push(path)
+  }
+
+  function walk(value: unknown, prefix: string, depth: number) {
+    if (!isPlainSubdocument(value) || depth > MAX_NESTED_DEPTH) {
+      add(prefix)
+      return
+    }
+    const entries = Object.entries(value as Record<string, unknown>)
+    // An empty subdocument still deserves a column of its own, else the
+    // field vanishes from the table entirely.
+    if (entries.length === 0) {
+      add(prefix)
+      return
+    }
+    for (const [key, child] of entries) {
+      walk(child, `${prefix}.${key}`, depth + 1)
+    }
+  }
+
   for (const doc of docs) {
-    for (const key of Object.keys(doc)) {
-      if (!seen.has(key)) {
-        seen.add(key)
-        ordered.push(key)
-      }
+    for (const [key, value] of Object.entries(doc)) {
+      walk(value, key, 1)
     }
   }
   return ordered
+}
+
+// isPlainSubdocument distinguishes a real embedded document from an
+// Extended JSON scalar wrapper ({"$oid": ...}), which must not be spread
+// into columns.
+function isPlainSubdocument(value: unknown): boolean {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+  const keys = Object.keys(value as Record<string, unknown>)
+  return !(keys.length === 1 && keys[0].startsWith('$'))
+}
+
+// valueAtPath reads a dotted column path out of a document. Returns
+// undefined when any segment is missing, which renders as an empty cell —
+// documents in one collection need not share a shape.
+function valueAtPath(doc: ExtJSONDocument, path: string): unknown {
+  let cur: unknown = doc
+  for (const segment of path.split('.')) {
+    if (cur === null || typeof cur !== 'object' || Array.isArray(cur)) return undefined
+    cur = (cur as Record<string, unknown>)[segment]
+    if (cur === undefined) return undefined
+  }
+  return cur
+}
+
+// hasPath reports whether the document actually carries the column, so a
+// missing field renders blank rather than as the string "null".
+function hasPath(doc: ExtJSONDocument, path: string): boolean {
+  let cur: unknown = doc
+  const segments = path.split('.')
+  for (let i = 0; i < segments.length; i++) {
+    if (cur === null || typeof cur !== 'object' || Array.isArray(cur)) return false
+    const obj = cur as Record<string, unknown>
+    if (!(segments[i] in obj)) return false
+    cur = obj[segments[i]]
+  }
+  return true
 }
 
 export function Results({
@@ -169,12 +241,15 @@ export function Results({
                           ? (e) => {
                               e.preventDefault()
                               e.stopPropagation()
-                              setMenu({ x: e.clientX, y: e.clientY, field: c, value: c in doc ? doc[c] : undefined })
+                              // field is the dotted path, which is exactly what a
+                              // MongoDB filter or projection takes — so "Filter by
+                              // value" and "Hide field" work on a nested field too.
+                              setMenu({ x: e.clientX, y: e.clientY, field: c, value: valueAtPath(doc, c) })
                             }
                           : undefined
                       }
                     >
-                      {c in doc ? summarizeValue(doc[c]) : ''}
+                      {hasPath(doc, c) ? summarizeValue(valueAtPath(doc, c)) : ''}
                     </td>
                   ))}
                 </tr>

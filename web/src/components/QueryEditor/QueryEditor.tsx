@@ -89,10 +89,13 @@ function normalizeJsonField(text: string): string {
   try {
     JSON.parse(trimmed)
     return trimmed
-  } catch {
+  } catch (e) {
     const fixed = computeJsonFix(trimmed)
     if (typeof fixed === 'string') return fixed
-    throw new SyntaxError(trimmed)
+    // Rethrow the parser's own message. This used to throw the input text
+    // as the message, so an unfixable Sort/Projection reported itself back
+    // to the user verbatim instead of saying what was wrong with it.
+    throw e
   }
 }
 

@@ -58,6 +58,11 @@ func (c *Client) InferSchema(ctx context.Context, dbName, collName string, sampl
 	return fields, nil
 }
 
+// maxSchemaDepth bounds how far into nested documents inference goes. Deep
+// or recursive structures would otherwise produce an unbounded field list
+// that is no longer useful as autocomplete or as a Schema tab.
+const maxSchemaDepth = 6
+
 // walkFields recursively visits every field path in doc, calling visit
 // with the dotted path and BSON type name for each leaf and nested
 // document.
@@ -68,9 +73,44 @@ func walkFields(doc bson.M, prefix string, visit func(path, bsonType string)) {
 			path = prefix + "." + key
 		}
 		visit(path, bsonTypeName(value))
+		walkNested(value, path, 1, visit)
+	}
+}
 
-		if nested, ok := value.(bson.M); ok {
-			walkFields(nested, path, visit)
+// walkNested descends into an embedded document or an array of documents,
+// so a nested field is reachable by its dotted path — the same path
+// MongoDB itself accepts in a filter or projection ("SO.nome").
+//
+// Both bson.D and bson.M have to be handled: decoding into a bson.M
+// yields bson.D for embedded documents, so matching only bson.M (as this
+// used to) meant nested fields were never discovered at all, and their
+// type was reported as the raw Go type name.
+func walkNested(value any, path string, depth int, visit func(path, bsonType string)) {
+	if depth > maxSchemaDepth {
+		return
+	}
+	switch nested := value.(type) {
+	case bson.M:
+		for key, v := range nested {
+			child := path + "." + key
+			visit(child, bsonTypeName(v))
+			walkNested(v, child, depth+1, visit)
+		}
+	case bson.D:
+		for _, e := range nested {
+			child := path + "." + e.Key
+			visit(child, bsonTypeName(e.Value))
+			walkNested(e.Value, child, depth+1, visit)
+		}
+	case bson.A:
+		// An array of documents: report the element fields under the
+		// array's own path, which is how MongoDB addresses them
+		// ("tags.name" matches any element's name).
+		for _, item := range nested {
+			switch item.(type) {
+			case bson.M, bson.D:
+				walkNested(item, path, depth+1, visit)
+			}
 		}
 	}
 }
@@ -101,7 +141,10 @@ func bsonTypeName(v any) string {
 		return "binary"
 	case bson.A:
 		return "array"
-	case bson.M:
+	case bson.M, bson.D:
+		// bson.D matters: decoding into a bson.M still yields bson.D for
+		// embedded documents, so without this the Schema tab displayed the
+		// literal Go type name "bson.D" to the user.
 		return "object"
 	default:
 		return fmt.Sprintf("%T", v)
