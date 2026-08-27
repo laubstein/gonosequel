@@ -245,6 +245,11 @@ export default function App() {
     setExternalDraftNonce((n) => n + 1)
   }
 
+  function excludeByValue(field: string, value: unknown) {
+    setExternalDraftPatch({ filterText: JSON.stringify({ [field]: { $ne: value } }, null, 2) })
+    setExternalDraftNonce((n) => n + 1)
+  }
+
   function paginate(skip: number, limit: number) {
     setQuery((q) => ({ ...q, skip, limit }))
   }
@@ -397,6 +402,7 @@ export default function App() {
                 onPaginate={paginate}
                 onFilterByValue={filterByValue}
                 onHideField={hideField}
+                onExcludeValue={excludeByValue}
                 sizeGuard={
                   aggregateResult
                     ? undefined

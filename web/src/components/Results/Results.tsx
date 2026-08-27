@@ -42,6 +42,7 @@ interface Props {
   sizeGuard?: SizeGuard
   onFilterByValue: (field: string, value: unknown) => void
   onHideField: (field: string) => void
+  onExcludeValue: (field: string, value: unknown) => void
 }
 
 interface MenuState {
@@ -76,6 +77,7 @@ export function Results({
   sizeGuard,
   onFilterByValue,
   onHideField,
+  onExcludeValue,
 }: Props) {
   const { t } = useTranslation()
   const [mode, setMode] = useState<ViewMode>('table')
@@ -185,6 +187,10 @@ export function Results({
                 onHideField(field)
                 setMenu(null)
               }}
+              onExcludeValue={(field, value) => {
+                onExcludeValue(field, value)
+                setMenu(null)
+              }}
             />
           )}
         </div>
@@ -234,11 +240,13 @@ function CellContextMenu({
   onClose,
   onFilterByValue,
   onHideField,
+  onExcludeValue,
 }: {
   menu: MenuState
   onClose: () => void
   onFilterByValue: (field: string, value: unknown) => void
   onHideField: (field: string) => void
+  onExcludeValue: (field: string, value: unknown) => void
 }) {
   const { t } = useTranslation()
 
@@ -269,6 +277,13 @@ function CellContextMenu({
         onClick={() => onFilterByValue(menu.field, raw)}
       >
         🔍 {t('results.filterByValue')}
+      </button>
+      <button
+        className={styles.contextMenuItem}
+        disabled={raw === undefined}
+        onClick={() => onExcludeValue(menu.field, raw)}
+      >
+        🚫 {t('results.excludeValue')}
       </button>
       <button className={styles.contextMenuItem} onClick={() => onHideField(menu.field)}>
         ✕ {t('results.hideField')}
