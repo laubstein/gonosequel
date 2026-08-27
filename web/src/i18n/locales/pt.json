@@ -11,6 +11,11 @@
     "selectCollectionHint": "Selecione uma coleção na barra lateral.",
     "themeToggle": "Alternar tema",
     "themeTitle": "Tema: {{theme}}",
+    "themeNames": {
+      "light": "claro",
+      "dark": "escuro",
+      "system": "do sistema"
+    },
     "helpTitle": "Documentação",
     "disconnect": "Desconectar",
     "driverTitle": "Banco de dados conectado",
@@ -114,6 +119,8 @@
   },
   "pagination": {
     "page": "página {{page}} de {{total}}",
+    "previous": "Página anterior",
+    "next": "Próxima página",
     "perPage": "{{count}} por página"
   },
   "documentEditor": {

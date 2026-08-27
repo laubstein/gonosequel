@@ -91,6 +91,12 @@ export function Results({
 
   const columns = useMemo(() => collectColumns(documents), [documents])
 
+  // useDocuments keeps the previous page's data as placeholder data while
+  // the next one loads, so isLoading is false on every fetch after the
+  // first. Without consulting isFetching, changing page or filter silently
+  // shows the old rows as if they were the new ones.
+  const refetching = !overrideDocuments && fetched.isFetching && !fetched.isLoading
+
   if (sizeGuard && !sizeGuard.settled) {
     return <div className={styles.empty}>{t('results.loading')}</div>
   }
@@ -132,7 +138,7 @@ export function Results({
   if (documents.length === 0) {
     return (
       <div className={styles.container}>
-        <Toolbar mode={mode} setMode={setMode} total={0} estimate={false} />
+        <Toolbar mode={mode} setMode={setMode} total={total} estimate={totalIsEstimate} fetching={refetching} />
         <div className={styles.empty}>{t('results.noDocuments')}</div>
       </div>
     )
@@ -140,7 +146,7 @@ export function Results({
 
   return (
     <div className={styles.container}>
-      <Toolbar mode={mode} setMode={setMode} total={total} estimate={totalIsEstimate} />
+      <Toolbar mode={mode} setMode={setMode} total={total} estimate={totalIsEstimate} fetching={refetching} />
 
       {mode === 'table' ? (
         <div className={styles.tableWrap}>
@@ -212,11 +218,13 @@ function Toolbar({
   setMode,
   total,
   estimate,
+  fetching,
 }: {
   mode: ViewMode
   setMode: (m: ViewMode) => void
   total: number
   estimate: boolean
+  fetching: boolean
 }) {
   const { t } = useTranslation()
   return (
@@ -231,6 +239,7 @@ function Toolbar({
         {estimate ? '~' : ''}
         {t('results.documentCount', { count: total, formattedCount: total.toLocaleString() })}
       </span>
+      {fetching && <span className={styles.fetching}>{t('results.loading')}</span>}
     </div>
   )
 }

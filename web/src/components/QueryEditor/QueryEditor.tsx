@@ -337,6 +337,10 @@ export function QueryEditor({
     setExplainResult(null)
     setExplainCollscan(false)
     setUpdateResult(null)
+    // A preset describes the contents of one specific mode's editor;
+    // leaving it selected after a mode switch labels text it no longer
+    // has anything to do with.
+    setPresetIndex('')
     if (next === 'find') onAggregateResult(null)
   }
 
@@ -424,6 +428,33 @@ export function QueryEditor({
     }
   }
 
+  // Drops one field from the projection. The text may be JS-object-literal
+  // shorthand rather than strict JSON (Run normalizes it, but the chips are
+  // rendered before that happens), so fall back to computeJsonFix before
+  // giving up — and if it still won't parse, leave the text alone. Clearing
+  // it, as this used to, threw away every other exclusion the user had
+  // typed just because one of them was quoted loosely.
+  function removeHiddenField(field: string) {
+    const source = (() => {
+      try {
+        JSON.parse(projectionText)
+        return projectionText
+      } catch {
+        const fixed = computeJsonFix(projectionText)
+        return typeof fixed === 'string' ? fixed : null
+      }
+    })()
+    if (source === null) return
+
+    try {
+      const obj = JSON.parse(source) as Record<string, unknown>
+      delete obj[field]
+      setProjectionText(Object.keys(obj).length > 0 ? JSON.stringify(obj, null, 2) : '')
+    } catch {
+      // Parsed a moment ago; unreachable in practice.
+    }
+  }
+
   // Exports the query that actually produced the results on screen — the
   // `query` prop — not the draft in the editor. The draft may be
   // half-typed or not yet run, and exporting it would silently hand back a
@@ -497,7 +528,7 @@ export function QueryEditor({
     mode === 'find' &&
     ((filterText.trim() || '{}') !== (query.filter?.trim() || '{}') ||
       sortText.trim() !== (query.sort ?? '').trim() ||
-      projectionText.trim() !== (query.projection ?? ''))
+      projectionText.trim() !== (query.projection ?? '').trim())
 
   const hiddenFields = useMemo(() => parseProjectionFields(projectionText), [projectionText])
 
@@ -621,16 +652,7 @@ export function QueryEditor({
               {f}
               <button
                 className={styles.hiddenFieldRemove}
-                onClick={() => {
-                  try {
-                    const obj = JSON.parse(projectionText) as Record<string, unknown>
-                    delete obj[f]
-                    const remaining = Object.keys(obj)
-                    setProjectionText(remaining.length > 0 ? JSON.stringify(obj, null, 2) : '')
-                  } catch {
-                    setProjectionText('')
-                  }
-                }}
+                onClick={() => removeHiddenField(f)}
                 aria-label={t('queryEditor.removeHiddenField', { name: f })}
               >
                 ✕

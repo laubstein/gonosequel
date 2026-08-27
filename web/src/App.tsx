@@ -329,7 +329,7 @@ export default function App() {
         <button
           className={styles.tab}
           onClick={cycle}
-          title={t('app.themeTitle', { theme })}
+          title={t('app.themeTitle', { theme: t(`app.themeNames.${theme}`) })}
           aria-label={t('app.themeToggle')}
         >
           {THEME_ICON[theme]}

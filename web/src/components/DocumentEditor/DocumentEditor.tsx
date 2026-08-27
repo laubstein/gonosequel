@@ -86,9 +86,33 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${coll}.json`
+    // Named after the document, not just the collection — downloading
+    // three documents from one collection used to produce three files
+    // with the same name. Falls back to the collection name when the _id
+    // isn't a string (or is missing, for an unsaved new document).
+    a.download = `${coll}${documentIdSuffix()}.json`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  // A filesystem-safe fragment of the document's _id, or '' if there
+  // isn't one to use.
+  function documentIdSuffix(): string {
+    let id: unknown
+    try {
+      id = (JSON.parse(text) as Record<string, unknown>)._id
+    } catch {
+      return ''
+    }
+    if (id !== null && typeof id === 'object') {
+      const keys = Object.keys(id as Record<string, unknown>)
+      if (keys.length === 1 && keys[0].startsWith('$')) {
+        id = (id as Record<string, unknown>)[keys[0]]
+      }
+    }
+    if (typeof id !== 'string' && typeof id !== 'number') return ''
+    const safe = String(id).replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 64)
+    return safe ? `.${safe}` : ''
   }
 
   const save = useMutation({

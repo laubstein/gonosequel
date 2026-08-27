@@ -11,6 +11,11 @@
     "selectCollectionHint": "Select a collection in the sidebar.",
     "themeToggle": "Toggle theme",
     "themeTitle": "Theme: {{theme}}",
+    "themeNames": {
+      "light": "light",
+      "dark": "dark",
+      "system": "system"
+    },
     "helpTitle": "Documentation",
     "disconnect": "Disconnect",
     "driverTitle": "Connected database backend",
@@ -114,6 +119,8 @@
   },
   "pagination": {
     "page": "page {{page}} of {{total}}",
+    "previous": "Previous page",
+    "next": "Next page",
     "perPage": "{{count}} per page"
   },
   "documentEditor": {

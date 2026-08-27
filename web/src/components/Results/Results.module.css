@@ -36,6 +36,15 @@
   margin-left: auto;
 }
 
+/* Shown while a new page/filter is in flight. The table keeps the previous
+   rows on screen (placeholderData), so this is the only signal that what's
+   displayed isn't the answer to the current query yet. */
+.fetching {
+  color: var(--color-accent);
+  font-size: 12px;
+  margin-left: 8px;
+}
+
 .tableWrap {
   flex: 1;
   overflow: auto;

@@ -15,7 +15,7 @@ interface Props {
   avgObjSize?: number
 }
 
-export function Pagination({ query, total, onChange, avgObjSize }: Props) {
+export function Pagination({ query, total, totalIsEstimate, onChange, avgObjSize }: Props) {
   const { t } = useTranslation()
   const skip = query.skip ?? 0
   const limit = query.limit ?? 50
@@ -23,16 +23,36 @@ export function Pagination({ query, total, onChange, avgObjSize }: Props) {
   const lastPage = Math.max(1, Math.ceil(total / limit))
   const options = limitOptions(avgObjSize ?? 0)
 
+  // An estimated total (EstimatedDocumentCount, used when there's no
+  // filter — see AGENTS.md on why counting every document per page is not
+  // an option) must not be presented as an exact page count. Results
+  // already prefixes its document count with "~"; without the same marker
+  // here, "page 3 of 412" reads as a fact derived from a guess.
+  const pageLabel = t('pagination.page', { page, total: lastPage })
+
   return (
     <div className={styles.bar}>
-      <button className={styles.button} disabled={skip === 0} onClick={() => onChange(Math.max(0, skip - limit), limit)}>
-        ◀
-      </button>
-      <span className={styles.pageLabel}>{t('pagination.page', { page, total: lastPage })}</span>
       <button
         className={styles.button}
-        disabled={skip + limit >= total}
+        disabled={skip === 0}
+        onClick={() => onChange(Math.max(0, skip - limit), limit)}
+        aria-label={t('pagination.previous')}
+        title={t('pagination.previous')}
+      >
+        ◀
+      </button>
+      <span className={styles.pageLabel}>
+        {totalIsEstimate ? `~${pageLabel}` : pageLabel}
+      </span>
+      <button
+        className={styles.button}
+        // With an estimated total this bound is itself approximate, so it
+        // can hide a real next page. Trust it only for an exact count;
+        // otherwise let the user page on and hit an empty page instead.
+        disabled={totalIsEstimate ? total > 0 && skip + limit >= total + limit : skip + limit >= total}
         onClick={() => onChange(skip + limit, limit)}
+        aria-label={t('pagination.next')}
+        title={t('pagination.next')}
       >
         ▶
       </button>
