@@ -27,24 +27,33 @@ interface Props {
   selection: { db: string; coll: string } | null
   onSelect: (db: string, coll: string) => void
   onCollectionRenamed?: (oldName: string, newName: string) => void
-  // The connected backend, e.g. "mongodb" or "redis" — collections are a
-  // real, independently-creatable object in MongoDB but only a derived
-  // grouping by key prefix in Redis/Valkey, so "+ New collection" means
-  // something different (or nothing) there; see onNewKey.
-  driver?: string
+  // Whether the backend is key-value (it declares the 'command'
+  // capability). A collection is a real, independently-creatable object in
+  // MongoDB but only a derived grouping by key prefix in Redis/Valkey, so
+  // "+ New collection" means something different (or nothing) there; see
+  // onNewKey.
+  keyValueBackend?: boolean
   // Opens the key editor directly (no collection selected yet) — the
   // Redis/Valkey equivalent of "+ New collection", since a collection
   // there only exists once a key with that prefix does.
   onNewKey?: () => void
 }
 
-export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollectionRenamed, driver, onNewKey }: Props) {
+export function Sidebar({
+  selectedDb,
+  onSelectDb,
+  selection,
+  onSelect,
+  onCollectionRenamed,
+  keyValueBackend,
+  onNewKey,
+}: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: databases, isLoading: dbsLoading } = useDatabases()
   const [filter, setFilter] = useState('')
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' })
-  const isKeyValueDriver = driver === 'redis' || driver === 'valkey'
+  const isKeyValueDriver = keyValueBackend ?? false
 
   const { data: collections, isLoading: collsLoading, isError: collsError, error: collsErr } = useCollections(selectedDb)
   const { data: stats } = useCollectionStats(selectedDb, selection?.coll ?? null)

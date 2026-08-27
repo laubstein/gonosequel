@@ -68,7 +68,11 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
 
   const connect = useMutation({
     mutationFn: (args: { url: string; driver?: string; readonly: boolean }) =>
-      api.connect(args.url, args.driver, undefined, args.readonly),
+      // The name is what labels the session in the Server tab's list. The
+      // UI never sent one, so the backend always fell back to the redacted
+      // URI and every session was labelled by its own address — unhelpful
+      // precisely when several are open.
+      api.connect(args.url, args.driver, name.trim() || undefined, args.readonly),
     onSuccess: (res) => {
       setSessionId(res.sessionId)
       onConnected()
@@ -109,6 +113,7 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
 
   const titleDriverLabel = tab === 'standard' ? DRIVER_LABEL[driver] : inferDriverLabel(url)
   const titleId = useId()
+  const [name, setName] = useState('')
 
   return (
     <Modal
@@ -155,6 +160,17 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
             {t('connectionModal.readonlyLabel')}
           </label>
           {serverForcesReadonly && <span className={styles.hint}>{t('connectionModal.readonlyForcedHint')}</span>}
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>{t('connectionModal.nameLabel')}</label>
+          <input
+            className={styles.input}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t('connectionModal.namePlaceholder')}
+            autoComplete="off"
+          />
         </div>
 
         {tab === 'standard' ? (

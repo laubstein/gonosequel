@@ -255,7 +255,9 @@
     "connecting": "Connecting…",
     "savedConnections": "Saved connections",
     "cancel": "Cancel",
-    "bookmarksFailed": "Couldn't load saved connections."
+    "bookmarksFailed": "Couldn't load saved connections.",
+    "nameLabel": "Name (optional)",
+    "namePlaceholder": "shown in the connection list"
   },
   "serverPanel": {
     "connection": "Connection",

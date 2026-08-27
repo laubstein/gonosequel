@@ -13,6 +13,8 @@ interface Props {
 
 type OverviewSortKey = 'name' | 'count' | 'sizeBytes' | 'storageBytes' | 'indexBytes' | 'avgObjSize' | 'indexCount'
 
+type UsageSortKey = 'collection' | 'index' | 'ops' | 'since'
+
 export function ToolsPanel({ db }: Props) {
   const { t } = useTranslation()
   const {
@@ -46,6 +48,25 @@ export function ToolsPanel({ db }: Props) {
     return overviewSort.dir === 1 ? 'ascending' : 'descending'
   }
 
+  const [usageSort, setUsageSort] = useState<{ key: UsageSortKey; dir: 1 | -1 }>({
+    key: 'collection',
+    dir: 1,
+  })
+
+  function toggleUsageSort(key: UsageSortKey) {
+    setUsageSort((prev) => (prev.key === key ? { key, dir: (prev.dir * -1) as 1 | -1 } : { key, dir: 1 }))
+  }
+
+  function usageSortArrow(key: UsageSortKey): string {
+    if (usageSort.key !== key) return ''
+    return usageSort.dir === 1 ? ' ▲' : ' ▼'
+  }
+
+  function usageAriaSort(key: UsageSortKey): 'ascending' | 'descending' | 'none' {
+    if (usageSort.key !== key) return 'none'
+    return usageSort.dir === 1 ? 'ascending' : 'descending'
+  }
+
   const sortedOverview = overview
     ? [...overview].sort((a, b) => {
         const { key, dir } = overviewSort
@@ -53,8 +74,17 @@ export function ToolsPanel({ db }: Props) {
         return dir * (a[key] - b[key])
       })
     : []
+  // Sortable, because the point of this table is finding the indexes
+  // nobody uses — which means ordering by ops. The zero-ops highlight
+  // already existed for that, but with a fixed collection+name order you
+  // had to hunt for the highlighted rows.
   const sortedUsage = usage
-    ? [...usage].sort((a, b) => a.collection.localeCompare(b.collection) || a.index.localeCompare(b.index))
+    ? [...usage].sort((a, b) => {
+        const { key, dir } = usageSort
+        if (key === 'ops') return dir * (a.ops - b.ops)
+        if (key === 'since') return dir * (Date.parse(a.since) - Date.parse(b.since))
+        return dir * a[key].localeCompare(b[key])
+      })
     : []
 
   return (
@@ -176,10 +206,30 @@ export function ToolsPanel({ db }: Props) {
           <table className={`${ui.table} ${ui.tableNowrap}`}>
             <thead>
               <tr>
-                <th>{t('toolsPanel.collection')}</th>
-                <th>{t('toolsPanel.index')}</th>
-                <th>{t('toolsPanel.ops')}</th>
-                <th>{t('toolsPanel.since')}</th>
+                <th aria-sort={usageAriaSort('collection')}>
+                  <button type="button" className={styles.sortableHeader} onClick={() => toggleUsageSort('collection')}>
+                    {t('toolsPanel.collection')}
+                    {usageSortArrow('collection')}
+                  </button>
+                </th>
+                <th aria-sort={usageAriaSort('index')}>
+                  <button type="button" className={styles.sortableHeader} onClick={() => toggleUsageSort('index')}>
+                    {t('toolsPanel.index')}
+                    {usageSortArrow('index')}
+                  </button>
+                </th>
+                <th aria-sort={usageAriaSort('ops')}>
+                  <button type="button" className={styles.sortableHeader} onClick={() => toggleUsageSort('ops')}>
+                    {t('toolsPanel.ops')}
+                    {usageSortArrow('ops')}
+                  </button>
+                </th>
+                <th aria-sort={usageAriaSort('since')}>
+                  <button type="button" className={styles.sortableHeader} onClick={() => toggleUsageSort('since')}>
+                    {t('toolsPanel.since')}
+                    {usageSortArrow('since')}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>

@@ -13,12 +13,17 @@
   color: var(--color-accent-fg);
 }
 
+/* Wraps rather than overflowing: six tabs plus four header controls in a
+   non-wrapping row ran off the edge well before phone width — which shows
+   up on a half-screen desktop window, not just a phone. */
 .tabbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  padding: 0 12px;
-  height: 44px;
+  padding: 4px 12px;
+  min-height: 44px;
+  row-gap: 2px;
   background: var(--color-bg-alt);
   border-bottom: 1px solid var(--color-border);
 }
@@ -64,9 +69,23 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: minmax(200px, 260px) 1fr;
   flex: 1;
   min-height: 0;
+}
+
+/* Deliberately not a mobile layout. This is a database explorer with code
+   editors, wide result tables and a right-click menu; the intended use is a
+   desktop browser. These few rules only stop a narrow or half-screen
+   *desktop* window from breaking, where the fixed sidebar otherwise ate
+   most of the width. Building a real phone layout would mean rethinking
+   the table view, the context menu and the three-panel shell, and is not
+   planned. */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
 }
 
 .main {

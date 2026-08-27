@@ -56,7 +56,14 @@ export default function App() {
   const infoQuery = useInfo()
   const { data: info } = infoQuery
   const { data: connection } = useConnectionInfo()
-  const isKeyValueDriver = connection?.driver === 'redis' || connection?.driver === 'valkey'
+  // Which editor the Documents tab shows: the raw command console for a
+  // key-value backend, or the Mongo-shaped query editor. Driven by the
+  // declared 'command' capability, not by matching driver names — a
+  // backend that reports the capability gets the console, and one that
+  // doesn't never gets a console that can only error. The driver-name
+  // check that used to gate this meant a third key-value backend would
+  // have been silently left without one.
+  const isKeyValueDriver = connection?.capabilities.includes('command') ?? false
 
   // Set when the user clicks "Disconnect" on the connection-lost
   // placeholder below: the server is unreachable, so there's no request
@@ -363,7 +370,7 @@ export default function App() {
           selection={selection}
           onSelect={selectCollection}
           onCollectionRenamed={collectionRenamed}
-          driver={connection?.driver}
+          keyValueBackend={isKeyValueDriver}
           onNewKey={() => setNewKeyDb(selectedDb)}
         />
 
