@@ -43,3 +43,24 @@ export function summarizeValue(value: unknown): string {
   }
   return String(value)
 }
+
+// rawFilterValue returns the value a "Filter by value" context-menu action
+// should use — the actual Extended JSON value (not summarizeValue's lossy
+// display string), or undefined when the cell has no single sensible value
+// to filter by (an array, or a multi-field subdocument).
+export function rawFilterValue(value: unknown): unknown {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+  if (Array.isArray(value)) return undefined
+  if (typeof value === 'object') {
+    const keys = Object.keys(value as Record<string, unknown>)
+    // A single-key "$"-prefixed wrapper (ObjectId, Date, Decimal128, Long,
+    // ...) — keep the whole wrapper, not summarizeValue's unwrapped inner
+    // string, so the resulting filter is still valid Extended JSON the
+    // backend understands (e.g. {"createdAt": {"$date": "..."}}).
+    if (keys.length === 1 && keys[0].startsWith('$')) return value
+    return undefined
+  }
+  return undefined
+}

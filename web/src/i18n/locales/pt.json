@@ -60,7 +60,11 @@
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"ativo\" }",
     "sortPlaceholder": "sort: { \"campo\": 1 }",
+    "projectionPlaceholder": "projection: { \"campo\": 0 }",
     "run": "Executar",
+    "pendingChangesHint": "O filtro/sort/projection preparados aqui não batem com o que está sendo exibido — clique em Executar pra aplicar.",
+    "hiddenFieldsLabel": "Campos ocultos:",
+    "removeHiddenField": "Parar de ocultar {{name}}",
     "explain": "Explain",
     "explaining": "Explicando…",
     "newDocument": "+ Novo documento",
@@ -100,7 +104,9 @@
     "documentCount_other": "{{formattedCount}} documentos",
     "sizeGuardWarning": "Os documentos dessa coleção têm em média {{avgSize}} cada — carregar {{count}} deles pode transferir cerca de {{estimatedSize}}.",
     "sizeGuardLoadAnyway": "Carregar mesmo assim",
-    "sizeGuardReduceTo": "Mostrar {{count}} por página"
+    "sizeGuardReduceTo": "Mostrar {{count}} por página",
+    "filterByValue": "Filtrar por valor",
+    "hideField": "Ocultar campo"
   },
   "pagination": {
     "page": "página {{page}} de {{total}}",

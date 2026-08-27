@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './Results.module.css'
 import { useDocuments } from '../../hooks/useDocuments'
-import { summarizeValue, docId } from '../../api/extjson'
+import { summarizeValue, docId, rawFilterValue } from '../../api/extjson'
 import { formatBytes } from '../../api/format'
 import { safeLimitSuggestion } from '../../api/sizeGuard'
 import { JsonView } from '../JsonView/JsonView'
@@ -40,6 +40,15 @@ interface Props {
   enabled: boolean
   onPaginate: (skip: number, limit: number) => void
   sizeGuard?: SizeGuard
+  onFilterByValue: (field: string, value: unknown) => void
+  onHideField: (field: string) => void
+}
+
+interface MenuState {
+  x: number
+  y: number
+  field: string
+  value: unknown
 }
 
 function collectColumns(docs: ExtJSONDocument[]): string[] {
@@ -56,9 +65,21 @@ function collectColumns(docs: ExtJSONDocument[]): string[] {
   return ordered
 }
 
-export function Results({ db, coll, query, onOpenDocument, overrideDocuments, enabled, onPaginate, sizeGuard }: Props) {
+export function Results({
+  db,
+  coll,
+  query,
+  onOpenDocument,
+  overrideDocuments,
+  enabled,
+  onPaginate,
+  sizeGuard,
+  onFilterByValue,
+  onHideField,
+}: Props) {
   const { t } = useTranslation()
   const [mode, setMode] = useState<ViewMode>('table')
+  const [menu, setMenu] = useState<MenuState | null>(null)
   const fetched = useDocuments(db, coll, query, enabled)
 
   const editable = overrideDocuments == null
@@ -133,12 +154,39 @@ export function Results({ db, coll, query, onOpenDocument, overrideDocuments, en
               {documents.map((doc, i) => (
                 <tr key={editable ? docId(doc) : i} onClick={editable ? () => onOpenDocument(doc) : undefined}>
                   {columns.map((c) => (
-                    <td key={c}>{c in doc ? summarizeValue(doc[c]) : ''}</td>
+                    <td
+                      key={c}
+                      onContextMenu={
+                        editable
+                          ? (e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setMenu({ x: e.clientX, y: e.clientY, field: c, value: c in doc ? doc[c] : undefined })
+                            }
+                          : undefined
+                      }
+                    >
+                      {c in doc ? summarizeValue(doc[c]) : ''}
+                    </td>
                   ))}
                 </tr>
               ))}
             </tbody>
           </table>
+          {menu && (
+            <CellContextMenu
+              menu={menu}
+              onClose={() => setMenu(null)}
+              onFilterByValue={(field, value) => {
+                onFilterByValue(field, value)
+                setMenu(null)
+              }}
+              onHideField={(field) => {
+                onHideField(field)
+                setMenu(null)
+              }}
+            />
+          )}
         </div>
       ) : (
         <div className={styles.jsonView}>
@@ -177,6 +225,54 @@ function Toolbar({
         {estimate ? '~' : ''}
         {t('results.documentCount', { count: total, formattedCount: total.toLocaleString() })}
       </span>
+    </div>
+  )
+}
+
+function CellContextMenu({
+  menu,
+  onClose,
+  onFilterByValue,
+  onHideField,
+}: {
+  menu: MenuState
+  onClose: () => void
+  onFilterByValue: (field: string, value: unknown) => void
+  onHideField: (field: string) => void
+}) {
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    document.addEventListener('click', onClose)
+    document.addEventListener('contextmenu', onClose)
+    document.addEventListener('scroll', onClose, true)
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('click', onClose)
+      document.removeEventListener('contextmenu', onClose)
+      document.removeEventListener('scroll', onClose, true)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const raw = rawFilterValue(menu.value)
+
+  return (
+    <div className={styles.contextMenu} style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
+      <button
+        className={styles.contextMenuItem}
+        disabled={raw === undefined}
+        onClick={() => onFilterByValue(menu.field, raw)}
+      >
+        🔍 {t('results.filterByValue')}
+      </button>
+      <button className={styles.contextMenuItem} onClick={() => onHideField(menu.field)}>
+        ✕ {t('results.hideField')}
+      </button>
     </div>
   )
 }

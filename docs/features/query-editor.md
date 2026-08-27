@@ -16,6 +16,34 @@ the **Schema** tab.
 Press <kbd>Ctrl+Enter</kbd> (or <kbd>Cmd+Enter</kbd> on macOS) to run without leaving the
 keyboard.
 
+## Projection — choosing which fields come back
+
+A **Projection** field sits below Sort, taking the same raw MongoDB shape as `find()`'s own
+projection argument — exclude fields with `{ "field": 0 }`, or switch to include-only with
+`{ "field": 1, "otherField": 1 }` (MongoDB's own rule applies: don't mix `1`s and `0`s in the
+same projection, except `_id` can always be excluded alongside inclusions). Typing here is the
+most direct way to keep a large or irrelevant field from ever being fetched in the first place —
+unlike the context-menu route below, it doesn't require the field to have already come back once.
+
+Every exclusion currently in the Projection field also shows as a removable chip above the Run
+button; removing one (✕) edits the Projection text to drop it. This box, and the chip row,
+share the same state — editing one updates the other.
+
+## Filtering and hiding fields from the results table
+
+Right-click a value in the results table (not the JSON view) for two actions:
+
+- **Filter by value** — replaces the filter editor's text with `{ "field": <that value> }`. It
+  only edits the filter, it does **not** run the query — Run gets a highlighted outline (and a
+  tooltip explaining why) whenever the prepared filter, sort, or projection no longer match
+  what's actually shown, so it's always clear when the results on screen are stale relative to
+  what's staged. Only available for a cell holding a single plain value (a string, number,
+  boolean, `null`, or an ObjectId/Date/Decimal128/Long) — a nested subdocument with several
+  fields, or an array, has no single value to filter by, so the option is disabled there.
+- **Hide field** — adds `"field": 0` to the Projection field above (creating it if empty),
+  excluding that field from the query itself, not just from the display. Like "Filter by value",
+  this only stages the change — Run applies it.
+
 ## Aggregate mode
 
 Switches the editor to hold a full aggregation pipeline (a JSON array) instead of a filter:

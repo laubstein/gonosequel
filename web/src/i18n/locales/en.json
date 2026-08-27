@@ -60,7 +60,11 @@
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"active\" }",
     "sortPlaceholder": "sort: { \"field\": 1 }",
+    "projectionPlaceholder": "projection: { \"field\": 0 }",
     "run": "Run",
+    "pendingChangesHint": "The filter/sort/projection prepared here don't match what's currently shown — click Run to apply them.",
+    "hiddenFieldsLabel": "Hidden fields:",
+    "removeHiddenField": "Stop hiding {{name}}",
     "explain": "Explain",
     "explaining": "Explaining…",
     "newDocument": "+ New document",
@@ -100,7 +104,9 @@
     "documentCount_other": "{{formattedCount}} documents",
     "sizeGuardWarning": "Documents in this collection average {{avgSize}} each — loading {{count}} of them could transfer roughly {{estimatedSize}}.",
     "sizeGuardLoadAnyway": "Load anyway",
-    "sizeGuardReduceTo": "Show {{count}} per page instead"
+    "sizeGuardReduceTo": "Show {{count}} per page instead",
+    "filterByValue": "Filter by value",
+    "hideField": "Hide field"
   },
   "pagination": {
     "page": "page {{page}} of {{total}}",

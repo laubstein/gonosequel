@@ -221,8 +221,28 @@ export default function App() {
     setSelection((s) => (s && s.coll === oldName ? { ...s, coll: newName } : s))
   }
 
-  function runQuery(filter: string, sort: string) {
-    setQuery((q) => ({ ...q, filter, sort, skip: 0 }))
+  function runQuery(filter: string, sort: string, projection?: string) {
+    setQuery((q) => ({ ...q, filter, sort, projection: projection || undefined, skip: 0 }))
+  }
+
+  // Bridges Results' right-click context menu (where a value/field is
+  // picked) to QueryEditor's own draft state (where the filter/hidden
+  // fields actually live) — the two are siblings, so App.tsx is the only
+  // place that can connect them. Mirrors replayNonce's same "external
+  // source overwrites the draft" pattern used for history replay.
+  const [externalDraftPatch, setExternalDraftPatch] = useState<{ filterText?: string; hideField?: string } | null>(
+    null,
+  )
+  const [externalDraftNonce, setExternalDraftNonce] = useState(0)
+
+  function filterByValue(field: string, value: unknown) {
+    setExternalDraftPatch({ filterText: JSON.stringify({ [field]: value }, null, 2) })
+    setExternalDraftNonce((n) => n + 1)
+  }
+
+  function hideField(field: string) {
+    setExternalDraftPatch({ hideField: field })
+    setExternalDraftNonce((n) => n + 1)
   }
 
   function paginate(skip: number, limit: number) {
@@ -363,6 +383,8 @@ export default function App() {
                   onRun={runQuery}
                   onNewDocument={() => setEditorTarget({ mode: 'new' })}
                   onAggregateResult={setAggregateResult}
+                  externalDraftPatch={externalDraftPatch}
+                  externalDraftNonce={externalDraftNonce}
                 />
               )}
               <Results
@@ -373,6 +395,8 @@ export default function App() {
                 overrideDocuments={aggregateResult}
                 enabled={documentsEnabled}
                 onPaginate={paginate}
+                onFilterByValue={filterByValue}
+                onHideField={hideField}
                 sizeGuard={
                   aggregateResult
                     ? undefined
@@ -391,6 +415,7 @@ export default function App() {
                   total={data?.total ?? 0}
                   totalIsEstimate={data?.totalIsEstimate ?? false}
                   onChange={paginate}
+                  avgObjSize={avgObjSize}
                 />
               )}
             </>

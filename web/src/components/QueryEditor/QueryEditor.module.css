@@ -44,6 +44,48 @@
   background: var(--color-danger);
 }
 
+/* Signals that the filter/sort/hidden fields prepared here no longer
+   match what's actually shown in Results — same shape as .button, just a
+   visibly different outline so it doesn't look identical to "ready to
+   run and already in sync". */
+.buttonPending {
+  composes: button;
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+.hiddenFieldsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.hiddenFieldChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.hiddenFieldRemove {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.hiddenFieldRemove:hover {
+  color: var(--color-danger);
+}
+
 .buttonDanger:disabled {
   opacity: 0.5;
   cursor: default;

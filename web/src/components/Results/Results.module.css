@@ -118,3 +118,40 @@ tbody tr:hover {
 .sizeGuardButton:hover {
   border-color: var(--color-accent);
 }
+
+.contextMenu {
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.contextMenuItem:hover:not(:disabled) {
+  background: var(--color-bg-inset);
+}
+
+.contextMenuItem:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}

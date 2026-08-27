@@ -40,9 +40,16 @@ interface Props {
   coll: string
   query: FindQuery
   replayNonce: number
-  onRun: (filter: string, sort: string) => void
+  onRun: (filter: string, sort: string, projection?: string) => void
   onNewDocument: () => void
   onAggregateResult: (documents: ExtJSONDocument[] | null) => void
+  // Set by App.tsx when the Results table's right-click context menu picks
+  // a value to filter by, or a field to hide — the only way to reach this
+  // component's own draft state from a sibling (Results), since App.tsx is
+  // their common parent. Mirrors replayNonce's "bump a counter to signal a
+  // new external value, even if the payload could look unchanged" pattern.
+  externalDraftPatch: { filterText?: string; hideField?: string } | null
+  externalDraftNonce: number
 }
 
 interface DraftState {
@@ -51,6 +58,12 @@ interface DraftState {
   sortText: string
   pipelineText: string
   updateText: string
+  // Raw MongoDB projection, typed directly in the form or built up by the
+  // Results table's "Hide field" context-menu action (which parses this
+  // same text and adds "field": 0 to it — see the externalDraftPatch
+  // effect below). Sent as-is when running (see run()). Only meaningful
+  // in 'find' mode.
+  projectionText: string
 }
 
 function defaultDraft(query: FindQuery): DraftState {
@@ -60,6 +73,25 @@ function defaultDraft(query: FindQuery): DraftState {
     sortText: query.sort ?? '',
     pipelineText: '[]',
     updateText: '{\n  "$set": {}\n}',
+    projectionText: '',
+  }
+}
+
+// parseProjectionFields returns the field names an exclusion projection
+// (produced by "Hide field", or hand-typed the same way) hides — used to
+// render the removable chip list. Returns [] for anything that isn't a
+// plain flat object of 0/false values, including an inclusion-style
+// projection ({field: 1}), which has no "hidden fields" to list this way.
+function parseProjectionFields(projectionText: string): string[] {
+  if (!projectionText.trim()) return []
+  try {
+    const obj = JSON.parse(projectionText) as Record<string, unknown>
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return []
+    return Object.entries(obj)
+      .filter(([, v]) => v === 0 || v === false)
+      .map(([k]) => k)
+  } catch {
+    return []
   }
 }
 
@@ -95,12 +127,22 @@ function saveDraft(key: string, next: DraftState) {
   writeLocal(draftStorageKey(key), next)
 }
 
-export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument, onAggregateResult }: Props) {
+export function QueryEditor({
+  db,
+  coll,
+  query,
+  replayNonce,
+  onRun,
+  onNewDocument,
+  onAggregateResult,
+  externalDraftPatch,
+  externalDraftNonce,
+}: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const key = draftKey(db, coll)
   const [draft, setDraft] = useState<DraftState>(() => loadDraft(key, () => defaultDraft(query)))
-  const { mode, filterText, sortText, pipelineText, updateText } = draft
+  const { mode, filterText, sortText, pipelineText, updateText, projectionText } = draft
 
   function patchDraft(patch: Partial<DraftState>) {
     setDraft((prev) => {
@@ -118,6 +160,9 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
   }
   function setSortText(next: string) {
     patchDraft({ sortText: next })
+  }
+  function setProjectionText(next: string) {
+    patchDraft({ projectionText: next })
   }
   function setPipelineText(next: string) {
     patchDraft({ pipelineText: next })
@@ -148,6 +193,7 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
         sortText: query.sort ?? '',
         pipelineText: existing.pipelineText,
         updateText: existing.updateText,
+        projectionText: '',
       }
       saveDraft(key, next)
       setDraft(next)
@@ -160,6 +206,39 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
     setUpdateResult(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, replayNonce])
+
+  // Applies a "Filter by value" or "Hide field" pick made in the Results
+  // table's context menu (see the Props doc comment for externalDraftPatch).
+  useEffect(() => {
+    if (externalDraftNonce === 0 || !externalDraftPatch) return
+    if (externalDraftPatch.filterText !== undefined) {
+      patchDraft({ mode: 'find', filterText: externalDraftPatch.filterText })
+    }
+    if (externalDraftPatch.hideField !== undefined) {
+      const field = externalDraftPatch.hideField
+      setDraft((prev) => {
+        // Parse-and-patch rather than tracking a separate field list, so
+        // the context menu and the form's own Projection input stay one
+        // single source of truth. An unparseable or non-object existing
+        // value (or an inclusion-style {field: 1}) is replaced outright —
+        // "Hide field" always wins over whatever was there, rather than
+        // silently failing to add the exclusion.
+        let obj: Record<string, unknown> = {}
+        try {
+          const parsed: unknown = prev.projectionText.trim() ? JSON.parse(prev.projectionText) : {}
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) obj = parsed as Record<string, unknown>
+        } catch {
+          // fall through with obj = {}
+        }
+        if (obj[field] === 0 || obj[field] === false) return prev
+        const nextProjection = JSON.stringify({ ...obj, [field]: 0 }, null, 2)
+        const next = { ...prev, projectionText: nextProjection }
+        saveDraft(key, next)
+        return next
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalDraftNonce])
 
   const [error, setError] = useState<string | null>(null)
   const [explainResult, setExplainResult] = useState<string | null>(null)
@@ -274,11 +353,12 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
     try {
       if (filter.trim()) JSON.parse(filter)
       if (sortText.trim()) JSON.parse(sortText)
+      if (projectionText.trim()) JSON.parse(projectionText)
       setError(null)
       setExplainResult(null)
     setExplainCollscan(false)
       onAggregateResult(null)
-      onRun(filter.trim() || '{}', sortText.trim())
+      onRun(filter.trim() || '{}', sortText.trim(), projectionText.trim())
     } catch (e) {
       setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
     }
@@ -364,6 +444,19 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
   }, [])
 
   const running = mode === 'aggregate' ? aggregating : mode === 'update' ? updating : false
+
+  // Whether the find-mode filter/sort/projection prepared here differ from
+  // what actually produced the results currently shown (query, the last
+  // value onRun was called with) — a plain trimmed-text comparison, not
+  // semantic JSON equality, so a whitespace-only difference could show a
+  // false positive; harmless, since this only drives a visual hint.
+  const isDirty =
+    mode === 'find' &&
+    ((filterText.trim() || '{}') !== (query.filter?.trim() || '{}') ||
+      sortText.trim() !== (query.sort ?? '').trim() ||
+      projectionText.trim() !== (query.projection ?? ''))
+
+  const hiddenFields = useMemo(() => parseProjectionFields(projectionText), [projectionText])
 
   return (
     <div className={styles.editor} ref={wrapperRef}>
@@ -460,6 +553,43 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
           />
         </div>
       )}
+      {mode === 'find' && (
+        <div className={styles.row}>
+          <input
+            className={styles.textarea}
+            style={{ minHeight: 'unset', flex: 1 }}
+            value={projectionText}
+            onChange={(e) => setProjectionText(e.target.value)}
+            placeholder={t('queryEditor.projectionPlaceholder')}
+          />
+        </div>
+      )}
+      {mode === 'find' && hiddenFields.length > 0 && (
+        <div className={styles.hiddenFieldsRow}>
+          {t('queryEditor.hiddenFieldsLabel')}
+          {hiddenFields.map((f) => (
+            <span key={f} className={styles.hiddenFieldChip}>
+              {f}
+              <button
+                className={styles.hiddenFieldRemove}
+                onClick={() => {
+                  try {
+                    const obj = JSON.parse(projectionText) as Record<string, unknown>
+                    delete obj[f]
+                    const remaining = Object.keys(obj)
+                    setProjectionText(remaining.length > 0 ? JSON.stringify(obj, null, 2) : '')
+                  } catch {
+                    setProjectionText('')
+                  }
+                }}
+                aria-label={t('queryEditor.removeHiddenField', { name: f })}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       {canFix && <div className={styles.hint}>{t('queryEditor.fixJsonHint')}</div>}
 
       <div className={styles.row}>
@@ -468,7 +598,12 @@ export function QueryEditor({ db, coll, query, replayNonce, onRun, onNewDocument
             {t('queryEditor.fixJson')}
           </button>
         )}
-        <button className={styles.button} onClick={run} disabled={running}>
+        <button
+          className={isDirty ? styles.buttonPending : styles.button}
+          onClick={run}
+          disabled={running}
+          title={isDirty ? t('queryEditor.pendingChangesHint') : undefined}
+        >
           {running ? (mode === 'update' ? t('queryEditor.updating') : t('queryEditor.aggregating')) : t('queryEditor.run')}
         </button>
         {mode === 'find' && canExplain && (
