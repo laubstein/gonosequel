@@ -34,7 +34,10 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
   const queryClient = useQueryClient()
 
   const [key, setKey] = useState('')
-  const [ttl, setTtl] = useState<number>(-1)
+  // Seconds until expiry, as text so the field can be cleared while
+  // typing. Empty or <= 0 means "no expiry" (Redis PERSIST), matching the
+  // -1 readKeyDoc reports for a key without one.
+  const [ttl, setTtl] = useState('')
   const [type, setType] = useState<ValueType>('string')
   const [stringValue, setStringValue] = useState('')
   const [hashRows, setHashRows] = useState<HashRow[]>([{ field: '', value: '' }])
@@ -59,7 +62,7 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
     if (target.mode !== 'edit' || !existing.data) return
     const doc = existing.data
     setKey(typeof doc._id === 'string' ? doc._id : '')
-    setTtl(typeof doc.ttl === 'number' ? doc.ttl : -1)
+    setTtl(typeof doc.ttl === 'number' && doc.ttl > 0 ? String(doc.ttl) : '')
     const docType = (typeof doc.type === 'string' ? doc.type : 'string') as ValueType
     setType(docType)
     const value = doc.value
@@ -124,7 +127,15 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
 
   const save = useMutation({
     mutationFn: async () => {
-      const doc: Record<string, unknown> = { type, value: buildValue() }
+      // ttl is always sent, including as 0 to mean "no expiry": every
+      // write path here recreates the key, which drops whatever expiry it
+      // had, so omitting the field would silently make an expiring key
+      // permanent on every save.
+      const doc: Record<string, unknown> = {
+        type,
+        value: buildValue(),
+        ttl: Number(ttl) > 0 ? Number(ttl) : 0,
+      }
       if (target.mode === 'new') {
         if (key) doc._id = key
         // coll can be "" when creating the first key of a not-yet-existing
@@ -322,7 +333,17 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
                 </div>
               )}
 
-              {target.mode === 'edit' && <div className={styles.ttl}>{t('redisEditor.ttl', { ttl })}</div>}
+              <div className={styles.row}>
+                <label className={styles.label}>{t('redisEditor.ttlLabel')}</label>
+                <input
+                  className={styles.input}
+                  type="number"
+                  min={0}
+                  value={ttl}
+                  onChange={(e) => setTtl(e.target.value)}
+                  placeholder={t('redisEditor.ttlPlaceholder')}
+                />
+              </div>
             </>
           )}
           {error && <div className={docStyles.error}>{error}</div>}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path"
 	"sort"
+	"time"
 
 	goredis "github.com/redis/go-redis/v9"
 
@@ -237,8 +238,43 @@ func (c *Client) DeleteOne(ctx context.Context, dbName, collName string, id any)
 }
 
 // writeKeyDoc dispatches to the right Redis write command based on
-// doc["type"], as produced by readKeyDoc / the frontend's per-type editor.
+// doc["type"], as produced by readKeyDoc / the frontend's per-type editor,
+// then applies doc["ttl"] if present.
 func writeKeyDoc(ctx context.Context, rc *goredis.Client, key string, doc driver.Doc) error {
+	if err := writeKeyValue(ctx, rc, key, doc); err != nil {
+		return err
+	}
+	return applyKeyTTL(ctx, rc, key, doc)
+}
+
+// applyKeyTTL sets or clears the key's expiry from doc["ttl"], matching
+// the field readKeyDoc reports: a positive number of seconds sets one,
+// anything <= 0 (readKeyDoc's -1 for "no expiry") clears it. An absent
+// ttl leaves the key alone — but note every write path here recreates the
+// key, which drops its old expiry anyway, so an editor that never sends
+// ttl silently makes keys permanent.
+func applyKeyTTL(ctx context.Context, rc *goredis.Client, key string, doc driver.Doc) error {
+	raw, ok := doc["ttl"]
+	if !ok {
+		return nil
+	}
+	secs, ok := toFloat(raw)
+	if !ok {
+		return fmt.Errorf("ttl must be a number of seconds, got %T", raw)
+	}
+	if secs <= 0 {
+		if err := rc.Persist(ctx, key).Err(); err != nil {
+			return fmt.Errorf("clear ttl on %q: %w", key, err)
+		}
+		return nil
+	}
+	if err := rc.Expire(ctx, key, time.Duration(secs)*time.Second).Err(); err != nil {
+		return fmt.Errorf("set ttl on %q: %w", key, err)
+	}
+	return nil
+}
+
+func writeKeyValue(ctx context.Context, rc *goredis.Client, key string, doc driver.Doc) error {
 	t, _ := doc["type"].(string)
 	value := doc["value"]
 
@@ -287,6 +323,26 @@ func writeKeyDoc(ctx context.Context, rc *goredis.Client, key string, doc driver
 		return rc.ZAdd(ctx, key, members...).Err()
 	default:
 		return fmt.Errorf("unknown redis value type %q: %w", t, driver.ErrUnsupported)
+	}
+}
+
+// toFloat accepts the several numeric shapes an Extended JSON round trip
+// can produce for a plain number (int32/int64 wrappers decode to Go ints,
+// a bare JSON number to float64).
+func toFloat(v any) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case float32:
+		return float64(n), true
+	case int:
+		return float64(n), true
+	case int32:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	default:
+		return 0, false
 	}
 }
 

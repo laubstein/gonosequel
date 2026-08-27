@@ -156,6 +156,8 @@
     "addField": "+ Adicionar campo",
     "addItem": "+ Adicionar item",
     "addMember": "+ Adicionar membro",
+    "ttlLabel": "TTL (segundos)",
+    "ttlPlaceholder": "vazio = nunca expira",
     "ttl": "TTL: {{ttl}}s (-1 = sem expiração)",
     "loadFailed": "Não foi possível carregar esta chave."
   },

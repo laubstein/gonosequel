@@ -156,6 +156,8 @@
     "addField": "+ Add field",
     "addItem": "+ Add item",
     "addMember": "+ Add member",
+    "ttlLabel": "TTL (seconds)",
+    "ttlPlaceholder": "empty = never expires",
     "ttl": "TTL: {{ttl}}s (-1 = no expiry)",
     "loadFailed": "Couldn't load this key."
   },
