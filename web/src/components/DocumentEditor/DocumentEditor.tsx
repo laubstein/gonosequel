@@ -43,6 +43,13 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
     enabled: target.mode === 'edit',
   })
 
+  // A failed fetch must not let Save through: `text` would still hold the
+  // initial '{}', and saving that replaces the real document with an empty
+  // one. Loading is equally unsafe for the same reason, so the gate is
+  // "we actually have the document" rather than "no error".
+  const loadFailed = target.mode === 'edit' && existing.isError
+  const canSave = target.mode === 'new' || existing.data !== undefined
+
   // Fields where existing.data (the original canonical fetch) has a Long
   // or Decimal128 that unwrapNumberWrappers displayed as a bare number
   // whose save can't round-trip exactly — see findRiskyNumberFields. Only
@@ -145,7 +152,11 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
           </div>
 
           <div className={styles.body}>
-            {target.mode === 'edit' && existing.isLoading ? (
+            {loadFailed ? (
+              <div className={styles.error}>
+                {existing.error instanceof Error ? existing.error.message : t('documentEditor.loadFailed')}
+              </div>
+            ) : target.mode === 'edit' && existing.isLoading ? (
               <div>{t('documentEditor.loading')}</div>
             ) : (
               <CodeMirror
@@ -165,10 +176,10 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
           <div className={styles.footer}>
             {target.mode === 'edit' && (
               <button className={styles.buttonDanger} onClick={() => remove.mutate()} disabled={remove.isPending}>
-                {t('documentEditor.delete')}
+                {remove.isPending ? t('documentEditor.deleting') : t('documentEditor.delete')}
               </button>
             )}
-            {!(target.mode === 'edit' && existing.isLoading) && (
+            {canSave && (
               <button className={styles.button} onClick={downloadDocument}>
                 {t('documentEditor.download')}
               </button>
@@ -182,8 +193,8 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
             <button className={styles.button} onClick={onClose}>
               {t('documentEditor.cancel')}
             </button>
-            <button className={styles.buttonPrimary} onClick={handleSave} disabled={save.isPending}>
-              {t('documentEditor.save')}
+            <button className={styles.buttonPrimary} onClick={handleSave} disabled={save.isPending || !canSave}>
+              {save.isPending ? t('documentEditor.saving') : t('documentEditor.save')}
             </button>
           </div>
         </div>

@@ -121,9 +121,12 @@
     "close": "Fechar",
     "loading": "Carregando…",
     "delete": "Excluir",
+    "deleting": "Excluindo…",
     "download": "Baixar",
     "cancel": "Cancelar",
     "save": "Salvar",
+    "saving": "Salvando…",
+    "loadFailed": "Não foi possível carregar este documento.",
     "invalidJson": "JSON inválido",
     "fixJson": "Corrigir JSON",
     "fixJsonHint": "Isso parece um objeto JS, não um JSON válido (ex: chaves sem aspas ou aspas simples) — Corrigir JSON vai convertê-lo.",
@@ -143,7 +146,8 @@
     "addField": "+ Adicionar campo",
     "addItem": "+ Adicionar item",
     "addMember": "+ Adicionar membro",
-    "ttl": "TTL: {{ttl}}s (-1 = sem expiração)"
+    "ttl": "TTL: {{ttl}}s (-1 = sem expiração)",
+    "loadFailed": "Não foi possível carregar esta chave."
   },
   "indexPanel": {
     "loading": "Carregando…",

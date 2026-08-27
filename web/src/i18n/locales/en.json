@@ -121,9 +121,12 @@
     "close": "Close",
     "loading": "Loading…",
     "delete": "Delete",
+    "deleting": "Deleting…",
     "download": "Download",
     "cancel": "Cancel",
     "save": "Save",
+    "saving": "Saving…",
+    "loadFailed": "Couldn't load this document.",
     "invalidJson": "Invalid JSON",
     "fixJson": "Fix JSON",
     "fixJsonHint": "This looks like a JS object literal, not valid JSON (e.g. unquoted keys or single quotes) — Fix JSON will convert it.",
@@ -143,7 +146,8 @@
     "addField": "+ Add field",
     "addItem": "+ Add item",
     "addMember": "+ Add member",
-    "ttl": "TTL: {{ttl}}s (-1 = no expiry)"
+    "ttl": "TTL: {{ttl}}s (-1 = no expiry)",
+    "loadFailed": "Couldn't load this key."
   },
   "indexPanel": {
     "loading": "Loading…",

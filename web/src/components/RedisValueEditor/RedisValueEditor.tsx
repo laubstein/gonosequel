@@ -49,6 +49,12 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
     enabled: target.mode === 'edit',
   })
 
+  // A failed fetch must not let Save through: the form would still hold its
+  // defaults (an empty `string`-typed value), and saving that overwrites
+  // the real key with an empty string.
+  const loadFailed = target.mode === 'edit' && existing.isError
+  const canSave = target.mode === 'new' || existing.data !== undefined
+
   useEffect(() => {
     if (target.mode !== 'edit' || !existing.data) return
     const doc = existing.data
@@ -176,7 +182,11 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
         </div>
 
         <div className={docStyles.body}>
-          {target.mode === 'edit' && existing.isLoading ? (
+          {loadFailed ? (
+            <div className={docStyles.error}>
+              {existing.error instanceof Error ? existing.error.message : t('redisEditor.loadFailed')}
+            </div>
+          ) : target.mode === 'edit' && existing.isLoading ? (
             <div>{t('documentEditor.loading')}</div>
           ) : (
             <>
@@ -321,15 +331,15 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
         <div className={docStyles.footer}>
           {target.mode === 'edit' && (
             <button className={docStyles.buttonDanger} onClick={() => remove.mutate()} disabled={remove.isPending}>
-              {t('documentEditor.delete')}
+              {remove.isPending ? t('documentEditor.deleting') : t('documentEditor.delete')}
             </button>
           )}
           <div className={docStyles.footerSpacer} />
           <button className={docStyles.button} onClick={onClose}>
             {t('documentEditor.cancel')}
           </button>
-          <button className={docStyles.buttonPrimary} onClick={handleSave} disabled={save.isPending}>
-            {t('documentEditor.save')}
+          <button className={docStyles.buttonPrimary} onClick={handleSave} disabled={save.isPending || !canSave}>
+            {save.isPending ? t('documentEditor.saving') : t('documentEditor.save')}
           </button>
         </div>
       </div>
