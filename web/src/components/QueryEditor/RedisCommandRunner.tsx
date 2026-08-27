@@ -7,6 +7,7 @@ import { keymap, type EditorView } from '@codemirror/view'
 import { Prec } from '@codemirror/state'
 import styles from './QueryEditor.module.css'
 import { api } from '../../api/client'
+import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
 import { readLocal, writeLocal } from '../../api/localCache'
 import { useIsDarkMode } from '../../hooks/useIsDarkMode'
 import { redisCommandCompletionSource } from './redisCommandCompletion'
@@ -60,6 +61,18 @@ const PRESETS: { labelKey: string; command: (coll: string) => string }[] = [
   { labelKey: 'redisRunner.presetDel', command: () => 'DEL key' },
 ]
 
+// wipesEverything returns the destructive command name if the script
+// contains a FLUSHALL or FLUSHDB, else null. Matched per line and only at
+// the start of a command, so a key or value merely containing the word
+// doesn't trip it.
+function wipesEverything(script: string): string | null {
+  for (const line of script.split('\n')) {
+    const m = /^\s*(FLUSHALL|FLUSHDB)\b/i.exec(line)
+    if (m) return m[1].toUpperCase()
+  }
+  return null
+}
+
 // RedisCommandRunner replaces QueryEditor+Results for Redis/Valkey
 // connections: a multi-line textarea where each line is a raw backend
 // command, run in sequence (redis-cli's own pipe/batch behavior — see
@@ -73,6 +86,7 @@ export function RedisCommandRunner({ db, coll }: Props) {
   const key = scriptKey(db, coll)
   const [script, setScriptState] = useState(() => loadScript(key))
   const [presetIndex, setPresetIndex] = useState('')
+  const [pendingWipe, setPendingWipe] = useState<{ text: string; command: string } | null>(null)
   const [results, setResults] = useState<CommandResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const viewRef = useRef<EditorView | null>(null)
@@ -140,6 +154,14 @@ export function RedisCommandRunner({ db, coll }: Props) {
     if (pendingRef.current) return
     const text = textToRun(view)
     if (!text.trim()) return
+    // FLUSHALL/FLUSHDB wipe a whole database (or the entire server) from a
+    // single click or Mod-Enter. Everything else here is either scoped to
+    // the keys it names or read-only, so only these two are gated.
+    const wipe = wipesEverything(text)
+    if (wipe) {
+      setPendingWipe({ text, command: wipe })
+      return
+    }
     run.mutate(text)
   }
 
@@ -218,6 +240,28 @@ export function RedisCommandRunner({ db, coll }: Props) {
             </div>
           ))}
         </div>
+      )}
+
+      {pendingWipe && (
+        <ConfirmDialog
+          title={t('redisRunner.confirmWipeTitle', { command: pendingWipe.command })}
+          message={t('redisRunner.confirmWipe', { command: pendingWipe.command })}
+          confirmLabel={t('redisRunner.confirmWipeAction', { command: pendingWipe.command })}
+          cancelLabel={t('dialog.cancel')}
+          danger
+          requireText={pendingWipe.command}
+          pending={run.isPending}
+          error={run.error instanceof Error ? run.error.message : null}
+          onConfirm={() => {
+            const { text } = pendingWipe
+            setPendingWipe(null)
+            run.mutate(text)
+          }}
+          onCancel={() => {
+            run.reset()
+            setPendingWipe(null)
+          }}
+        />
       )}
     </>
   )

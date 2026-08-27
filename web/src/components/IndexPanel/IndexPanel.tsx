@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import styles from './IndexPanel.module.css'
 import { api } from '../../api/client'
+import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
 import type { CreateIndexOptions, IndexInfo } from '../../types'
 
 interface Props {
@@ -77,6 +78,10 @@ export function IndexPanel({ db, coll }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [ttlEditValue, setTtlEditValue] = useState('')
+  // Index being dropped, pending confirmation. Dropping used to fire
+  // straight from the row button with no guard at all — the least
+  // protected destructive action in the app.
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['indexes', db, coll] })
@@ -173,10 +178,14 @@ export function IndexPanel({ db, coll }: Props) {
     },
   })
 
+  // The failure surfaces inside the confirm dialog (which stays open), so
+  // this deliberately has no onError writing to the panel-level error.
   const drop = useMutation({
     mutationFn: (name: string) => api.dropIndex(db, coll, name),
-    onSuccess: invalidate,
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+    onSuccess: () => {
+      invalidate()
+      setDropTarget(null)
+    },
   })
 
   const updateTtl = useMutation({
@@ -245,7 +254,7 @@ export function IndexPanel({ db, coll }: Props) {
                         <button className={styles.editButton} onClick={() => startEdit(idx)}>
                           {t('indexPanel.edit')}
                         </button>
-                        <button className={styles.dropButton} onClick={() => drop.mutate(idx.name)}>
+                        <button className={styles.dropButton} onClick={() => setDropTarget(idx.name)}>
                           {t('indexPanel.drop')}
                         </button>
                       </>
@@ -368,6 +377,23 @@ export function IndexPanel({ db, coll }: Props) {
         </button>
       </div>
       {error && <div className={styles.error}>{error}</div>}
+
+      {dropTarget && (
+        <ConfirmDialog
+          title={t('indexPanel.dropTitle')}
+          message={t('indexPanel.confirmDrop', { name: dropTarget })}
+          confirmLabel={t('dialog.delete')}
+          cancelLabel={t('dialog.cancel')}
+          danger
+          pending={drop.isPending}
+          error={drop.error instanceof Error ? drop.error.message : null}
+          onConfirm={() => drop.mutate(dropTarget)}
+          onCancel={() => {
+            drop.reset()
+            setDropTarget(null)
+          }}
+        />
+      )}
     </div>
   )
 }

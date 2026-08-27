@@ -28,6 +28,9 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
   const [text, setText] = useState('{}')
   const [error, setError] = useState<string | null>(null)
   const [pendingRiskyFields, setPendingRiskyFields] = useState<string[] | null>(null)
+  // Deleting used to fire straight from the footer button, with no
+  // guard at all — while *saving* a Long went through a warning dialog.
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const fixedJson = useMemo(() => computeJsonFix(text), [text])
 
@@ -130,16 +133,17 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
 
+  // The failure shows inside the confirm dialog, which stays open — so no
+  // onError writing to the editor-level error behind it.
   const remove = useMutation({
     mutationFn: async () => {
-      if (target.mode !== 'edit') throw new Error('no document to delete')
+      if (target.mode !== 'edit') throw new Error(t('documentEditor.noDocumentToDelete'))
       return api.deleteDocument(db, coll, target.encodedId)
     },
     onSuccess: () => {
       invalidate()
       onClose()
     },
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
 
   function handleSave() {
@@ -199,7 +203,11 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
 
           <div className={styles.footer}>
             {target.mode === 'edit' && (
-              <button className={styles.buttonDanger} onClick={() => remove.mutate()} disabled={remove.isPending}>
+              <button
+                className={styles.buttonDanger}
+                onClick={() => setConfirmingDelete(true)}
+                disabled={remove.isPending}
+              >
                 {remove.isPending ? t('documentEditor.deleting') : t('documentEditor.delete')}
               </button>
             )}
@@ -223,6 +231,23 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
           </div>
         </div>
       </div>
+
+      {confirmingDelete && (
+        <ConfirmDialog
+          title={t('documentEditor.confirmDeleteTitle')}
+          message={t('documentEditor.confirmDelete')}
+          confirmLabel={t('dialog.delete')}
+          cancelLabel={t('dialog.cancel')}
+          danger
+          pending={remove.isPending}
+          error={remove.error instanceof Error ? remove.error.message : null}
+          onConfirm={() => remove.mutate()}
+          onCancel={() => {
+            remove.reset()
+            setConfirmingDelete(false)
+          }}
+        />
+      )}
 
       {pendingRiskyFields && (
         <ConfirmDialog

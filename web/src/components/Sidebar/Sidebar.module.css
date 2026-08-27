@@ -89,6 +89,15 @@
   font-size: 13px;
 }
 
+/* Distinct from .empty on purpose: "the server failed" must not look like
+   "this database has no collections". */
+.error {
+  padding: 10px;
+  color: var(--color-danger);
+  font-size: 13px;
+  word-break: break-word;
+}
+
 .newCollectionRow {
   padding: 0 10px 8px;
 }

@@ -53,16 +53,17 @@
     "dropDatabaseTitle": "Apagar banco",
     "newCollectionTitle": "Nova coleção",
     "dropCollectionTitle": "Apagar coleção",
-    "renameCollectionTitle": "Renomear coleção"
+    "renameCollectionTitle": "Renomear coleção",
+    "collectionsFailed": "Não foi possível carregar as coleções."
   },
   "dialog": {
     "cancel": "Cancelar",
-    "confirm": "Confirmar",
     "create": "Criar",
     "rename": "Renomear",
     "delete": "Apagar",
     "typeToConfirm": "Digite \"{{name}}\" para confirmar.",
-    "irreversibleWarning": "Essa ação é irreversível."
+    "irreversibleWarning": "Essa ação é irreversível.",
+    "working": "Processando…"
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"ativo\" }",
@@ -92,7 +93,11 @@
     "updating": "Atualizando…",
     "updateResult": "{{matched}} encontrados, {{modified}} modificados",
     "presetPlaceholder": "Queries úteis…",
-    "collscanWarning": "Varredura completa da coleção — nenhum índice foi usado nesta consulta."
+    "collscanWarning": "Varredura completa da coleção — nenhum índice foi usado nesta consulta.",
+    "confirmUpdateTitle": "Aplicar atualização em massa",
+    "confirmUpdate": "Isso vai modificar {{formattedCount}} documentos que casam com o filtro. Não dá pra desfazer.",
+    "confirmUpdateNone": "Nenhum documento casa com esse filtro, então nada será alterado.",
+    "confirmUpdateAction": "Atualizar"
   },
   "redisRunner": {
     "placeholder": "GET chave",
@@ -102,7 +107,10 @@
     "presetType": "Ver o tipo de uma chave",
     "presetTtl": "Ver o TTL de uma chave",
     "presetGet": "Obter o valor de uma chave",
-    "presetDel": "Apagar uma chave"
+    "presetDel": "Apagar uma chave",
+    "confirmWipeTitle": "Executar {{command}}",
+    "confirmWipe": "{{command}} apaga de uma vez todas as chaves que abrange. Não dá pra desfazer.",
+    "confirmWipeAction": "Executar {{command}}"
   },
   "results": {
     "loading": "Carregando…",
@@ -142,7 +150,10 @@
     "fixJsonHint": "Isso parece um objeto JS, não um JSON válido (ex: chaves sem aspas ou aspas simples) — Corrigir JSON vai convertê-lo.",
     "riskyNumberTitle": "A precisão pode mudar",
     "riskyNumberWarning": "veio de um Long ou Decimal128 do MongoDB grande/preciso demais pra ser exibido aqui como número simples sem perda — salvar como está vai mudar seu valor exato ou seu tipo (ex: Decimal128 vira Double). Pra manter o valor exato, edite o campo de volta pra sua forma com wrapper, ex: {\"$numberLong\": \"...\"} ou {\"$numberDecimal\": \"...\"}, antes de salvar. Salvar mesmo assim?",
-    "riskyNumberConfirm": "Salvar mesmo assim"
+    "riskyNumberConfirm": "Salvar mesmo assim",
+    "confirmDeleteTitle": "Excluir documento",
+    "confirmDelete": "Excluir este documento?",
+    "noDocumentToDelete": "Nenhum documento para excluir."
   },
   "redisEditor": {
     "key": "Chave",
@@ -159,7 +170,10 @@
     "ttlLabel": "TTL (segundos)",
     "ttlPlaceholder": "vazio = nunca expira",
     "ttl": "TTL: {{ttl}}s (-1 = sem expiração)",
-    "loadFailed": "Não foi possível carregar esta chave."
+    "loadFailed": "Não foi possível carregar esta chave.",
+    "confirmDeleteTitle": "Excluir chave",
+    "confirmDelete": "Excluir a chave \"{{name}}\" e seu valor?",
+    "noKeyToDelete": "Nenhuma chave para excluir."
   },
   "indexPanel": {
     "loading": "Carregando…",
@@ -190,7 +204,9 @@
     "editingNotice": "Editando \"{{name}}\" — o MongoDB não altera um índice no lugar, então salvar apaga este e cria um novo com essas configurações. Se a criação do novo falhar, o original é restaurado.",
     "cancelEdit": "Cancelar",
     "recreateFailedRestored": "Não foi possível criar o novo índice, então o original foi restaurado sem alteração: {{message}}",
-    "recreateFailedAndLost": "Não foi possível criar o novo índice, e restaurar \"{{name}}\" também falhou — a coleção está sem esse índice agora. Erro original: {{message}}"
+    "recreateFailedAndLost": "Não foi possível criar o novo índice, e restaurar \"{{name}}\" também falhou — a coleção está sem esse índice agora. Erro original: {{message}}",
+    "dropTitle": "Apagar índice",
+    "confirmDrop": "Apagar o índice \"{{name}}\"? Consultas que dependem dele vão passar a varrer a coleção inteira."
   },
   "schemaPanel": {
     "loading": "Carregando…",

@@ -53,16 +53,17 @@
     "dropDatabaseTitle": "Delete database",
     "newCollectionTitle": "New collection",
     "dropCollectionTitle": "Delete collection",
-    "renameCollectionTitle": "Rename collection"
+    "renameCollectionTitle": "Rename collection",
+    "collectionsFailed": "Couldn't load collections."
   },
   "dialog": {
     "cancel": "Cancel",
-    "confirm": "Confirm",
     "create": "Create",
     "rename": "Rename",
     "delete": "Delete",
     "typeToConfirm": "Type \"{{name}}\" to confirm.",
-    "irreversibleWarning": "This action is irreversible."
+    "irreversibleWarning": "This action is irreversible.",
+    "working": "Working…"
   },
   "queryEditor": {
     "filterPlaceholder": "{ \"status\": \"active\" }",
@@ -92,7 +93,11 @@
     "updating": "Updating…",
     "updateResult": "{{matched}} matched, {{modified}} modified",
     "presetPlaceholder": "Useful queries…",
-    "collscanWarning": "Full collection scan — no index was used for this query."
+    "collscanWarning": "Full collection scan — no index was used for this query.",
+    "confirmUpdateTitle": "Apply bulk update",
+    "confirmUpdate": "This will modify {{formattedCount}} documents matching the filter. This cannot be undone.",
+    "confirmUpdateNone": "No documents match this filter, so nothing will change.",
+    "confirmUpdateAction": "Update"
   },
   "redisRunner": {
     "placeholder": "GET key",
@@ -102,7 +107,10 @@
     "presetType": "Check a key's type",
     "presetTtl": "Check a key's TTL",
     "presetGet": "Get a key's value",
-    "presetDel": "Delete a key"
+    "presetDel": "Delete a key",
+    "confirmWipeTitle": "Run {{command}}",
+    "confirmWipe": "{{command}} deletes every key it covers at once. This cannot be undone.",
+    "confirmWipeAction": "Run {{command}}"
   },
   "results": {
     "loading": "Loading…",
@@ -142,7 +150,10 @@
     "fixJsonHint": "This looks like a JS object literal, not valid JSON (e.g. unquoted keys or single quotes) — Fix JSON will convert it.",
     "riskyNumberTitle": "Precision may change",
     "riskyNumberWarning": "came from a MongoDB Long or Decimal128 value too large or precise to show exactly as a plain number here — saving as shown will change its exact value or type (e.g. Decimal128 becomes Double). To keep it exact instead, edit the field back to its wrapped form, e.g. {\"$numberLong\": \"...\"} or {\"$numberDecimal\": \"...\"}, before saving. Save anyway?",
-    "riskyNumberConfirm": "Save anyway"
+    "riskyNumberConfirm": "Save anyway",
+    "confirmDeleteTitle": "Delete document",
+    "confirmDelete": "Delete this document?",
+    "noDocumentToDelete": "No document to delete."
   },
   "redisEditor": {
     "key": "Key",
@@ -159,7 +170,10 @@
     "ttlLabel": "TTL (seconds)",
     "ttlPlaceholder": "empty = never expires",
     "ttl": "TTL: {{ttl}}s (-1 = no expiry)",
-    "loadFailed": "Couldn't load this key."
+    "loadFailed": "Couldn't load this key.",
+    "confirmDeleteTitle": "Delete key",
+    "confirmDelete": "Delete the key \"{{name}}\" and its value?",
+    "noKeyToDelete": "No key to delete."
   },
   "indexPanel": {
     "loading": "Loading…",
@@ -190,7 +204,9 @@
     "editingNotice": "Editing \"{{name}}\" — MongoDB can't alter an index in place, so saving drops this one and creates a new index with these settings. If creating the new one fails, the original is restored.",
     "cancelEdit": "Cancel",
     "recreateFailedRestored": "Couldn't create the new index, so the original was restored unchanged: {{message}}",
-    "recreateFailedAndLost": "Couldn't create the new index, and restoring \"{{name}}\" failed too — the collection is now missing that index. Original error: {{message}}"
+    "recreateFailedAndLost": "Couldn't create the new index, and restoring \"{{name}}\" failed too — the collection is now missing that index. Original error: {{message}}",
+    "dropTitle": "Delete index",
+    "confirmDrop": "Delete the index \"{{name}}\"? Queries relying on it will fall back to a collection scan."
   },
   "schemaPanel": {
     "loading": "Loading…",

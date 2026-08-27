@@ -10,6 +10,7 @@ import type { ExtJSONDocument, FindQuery } from '../../types'
 import { startExportDownload } from '../../api/http'
 import { api } from '../../api/client'
 import { computeJsonFix } from '../../api/jsonFix'
+import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
 import { readLocal, writeLocal } from '../../api/localCache'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
 import { useConnectionInfo } from '../../hooks/useConnectionInfo'
@@ -77,11 +78,6 @@ function defaultDraft(query: FindQuery): DraftState {
   }
 }
 
-// parseProjectionFields returns the field names an exclusion projection
-// (produced by "Hide field", or hand-typed the same way) hides — used to
-// render the removable chip list. Returns [] for anything that isn't a
-// plain flat object of 0/false values, including an inclusion-style
-// projection ({field: 1}), which has no "hidden fields" to list this way.
 // normalizeJsonField parses text as strict JSON; if that fails but it
 // parses as a JS-object-literal (JSON5), returns the fixed strict-JSON
 // string instead of throwing — used to silently accept `{cpu: 1}`-style
@@ -100,6 +96,11 @@ function normalizeJsonField(text: string): string {
   }
 }
 
+// parseProjectionFields returns the field names an exclusion projection
+// (produced by "Hide field", or hand-typed the same way) hides — used to
+// render the removable chip list. Returns [] for anything that isn't a
+// plain flat object of 0/false values, including an inclusion-style
+// projection ({field: 1}), which has no "hidden fields" to list this way.
 function parseProjectionFields(projectionText: string): string[] {
   if (!projectionText.trim()) return []
   try {
@@ -265,6 +266,11 @@ export function QueryEditor({
   const [aggregating, setAggregating] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [countingMatches, setCountingMatches] = useState(false)
+  // The staged bulk update, awaiting confirmation.
+  const [pendingUpdate, setPendingUpdate] = useState<
+    { filter: string; update: string; matched: number; estimated: boolean } | null
+  >(null)
   const [updateResult, setUpdateResult] = useState<{ matched: number; modified: number } | null>(null)
   const [presetIndex, setPresetIndex] = useState('')
 
@@ -369,7 +375,7 @@ export function QueryEditor({
       return
     }
     if (mode === 'update') {
-      void runUpdateMany()
+      void prepareUpdateMany()
       return
     }
     const filter = textToRun(filterText)
@@ -404,16 +410,39 @@ export function QueryEditor({
     }
   }
 
-  async function runUpdateMany() {
-    const filter = textToRun(filterText)
+  // Update mode writes to every matching document at once, from the same
+  // Run button that harmlessly runs a find one mode-toggle away. Validate
+  // and count first, then let the user see how many documents are about to
+  // change before committing.
+  async function prepareUpdateMany() {
+    const filter = textToRun(filterText).trim() || '{}'
     const update = textFromView(updateViewRef.current, updateText)
     try {
-      JSON.parse(filter.trim() || '{}')
+      JSON.parse(filter)
       JSON.parse(update)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
+      return
+    }
+    setError(null)
+    setUpdateResult(null)
+    setCountingMatches(true)
+    try {
+      // limit 1: only `total` is wanted, not the documents themselves.
+      const preview = await api.findDocuments(db, coll, { filter, limit: 1, skip: 0 })
+      setPendingUpdate({ filter, update, matched: preview.total, estimated: preview.totalIsEstimate })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setCountingMatches(false)
+    }
+  }
+
+  async function runUpdateMany(filter: string, update: string) {
+    try {
       setError(null)
-      setUpdateResult(null)
       setUpdating(true)
-      const result = await api.updateMany(db, coll, filter.trim() || '{}', update)
+      const result = await api.updateMany(db, coll, filter, update)
       setUpdateResult(result)
       // The document table (Results/Pagination) fetches through
       // useDocuments's ['documents', db, coll, query] key — a bulk write
@@ -421,8 +450,10 @@ export function QueryEditor({
       // invalidation, same as DocumentEditor/RedisValueEditor do after a
       // single-document save.
       void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
+      setPendingUpdate(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('queryEditor.invalidJson'))
+      setError(e instanceof Error ? e.message : String(e))
+      setPendingUpdate(null)
     } finally {
       setUpdating(false)
     }
@@ -521,7 +552,8 @@ export function QueryEditor({
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])
 
-  const running = mode === 'aggregate' ? aggregating : mode === 'update' ? updating : false
+  const running =
+    mode === 'aggregate' ? aggregating : mode === 'update' ? updating || countingMatches : false
 
   // Whether the find-mode filter/sort/projection prepared here differ from
   // what actually produced the results currently shown (query, the last
@@ -724,6 +756,26 @@ export function QueryEditor({
         <div className={styles.explainOutput}>
           {t('queryEditor.updateResult', { matched: updateResult.matched, modified: updateResult.modified })}
         </div>
+      )}
+
+      {pendingUpdate && (
+        <ConfirmDialog
+          title={t('queryEditor.confirmUpdateTitle')}
+          message={
+            pendingUpdate.matched === 0
+              ? t('queryEditor.confirmUpdateNone')
+              : t('queryEditor.confirmUpdate', {
+                  count: pendingUpdate.matched,
+                  formattedCount: `${pendingUpdate.estimated ? '~' : ''}${pendingUpdate.matched.toLocaleString()}`,
+                })
+          }
+          confirmLabel={t('queryEditor.confirmUpdateAction')}
+          cancelLabel={t('dialog.cancel')}
+          danger
+          pending={updating}
+          onConfirm={() => void runUpdateMany(pendingUpdate.filter, pendingUpdate.update)}
+          onCancel={() => setPendingUpdate(null)}
+        />
       )}
     </div>
   )

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import docStyles from '../DocumentEditor/DocumentEditor.module.css'
 import styles from './RedisValueEditor.module.css'
 import { api } from '../../api/client'
+import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
 import type { EditorTarget } from '../DocumentEditor/DocumentEditor'
 
 type ValueType = 'string' | 'hash' | 'list' | 'set' | 'zset'
@@ -45,6 +46,8 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
   const [setItems, setSetItems] = useState<string[]>([''])
   const [zsetRows, setZsetRows] = useState<ZRow[]>([{ member: '', score: '0' }])
   const [error, setError] = useState<string | null>(null)
+  // Deleting a whole key used to fire straight from the footer button.
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const existing = useQuery({
     queryKey: ['document', db, coll, target.mode === 'edit' ? target.encodedId : null],
@@ -169,16 +172,17 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
     save.mutate()
   }
 
+  // The failure shows inside the confirm dialog, which stays open — so no
+  // onError writing to the editor-level error behind it.
   const remove = useMutation({
     mutationFn: async () => {
-      if (target.mode !== 'edit') throw new Error('no key to delete')
+      if (target.mode !== 'edit') throw new Error(t('redisEditor.noKeyToDelete'))
       return api.deleteDocument(db, coll, target.encodedId)
     },
     onSuccess: () => {
       invalidate()
       onClose()
     },
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
 
   return (
@@ -351,7 +355,11 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
 
         <div className={docStyles.footer}>
           {target.mode === 'edit' && (
-            <button className={docStyles.buttonDanger} onClick={() => remove.mutate()} disabled={remove.isPending}>
+            <button
+              className={docStyles.buttonDanger}
+              onClick={() => setConfirmingDelete(true)}
+              disabled={remove.isPending}
+            >
               {remove.isPending ? t('documentEditor.deleting') : t('documentEditor.delete')}
             </button>
           )}
@@ -364,6 +372,23 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {confirmingDelete && (
+        <ConfirmDialog
+          title={t('redisEditor.confirmDeleteTitle')}
+          message={t('redisEditor.confirmDelete', { name: key })}
+          confirmLabel={t('dialog.delete')}
+          cancelLabel={t('dialog.cancel')}
+          danger
+          pending={remove.isPending}
+          error={remove.error instanceof Error ? remove.error.message : null}
+          onConfirm={() => remove.mutate()}
+          onCancel={() => {
+            remove.reset()
+            setConfirmingDelete(false)
+          }}
+        />
+      )}
     </div>
   )
 }

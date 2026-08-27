@@ -1,5 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import styles from './Dialogs.module.css'
+import { Modal } from './Modal'
 
 interface Props {
   title: string
@@ -13,6 +15,10 @@ interface Props {
   secondLabel?: string
   secondDefaultValue?: string
   secondHint?: string
+  // See ConfirmDialog: pending gates double-submission, error keeps the
+  // dialog open with the reason instead of failing silently.
+  pending?: boolean
+  error?: string | null
   onConfirm: (value: string, second: string) => void
   onCancel: () => void
 }
@@ -29,67 +35,70 @@ export function PromptDialog({
   secondLabel,
   secondDefaultValue,
   secondHint,
+  pending,
+  error,
   onConfirm,
   onCancel,
 }: Props) {
+  const { t } = useTranslation()
+  const titleId = useId()
   const [value, setValue] = useState(defaultValue ?? '')
   const [second, setSecond] = useState(secondDefaultValue ?? '')
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCancel()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onCancel])
 
   const canConfirm = value.trim() !== '' && (secondLabel === undefined || second.trim() !== '')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (canConfirm) onConfirm(value.trim(), second.trim())
+    if (canConfirm && !pending) onConfirm(value.trim(), second.trim())
   }
 
   return (
-    <div className={styles.overlay} onClick={onCancel}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.title}>{title}</div>
-        <form onSubmit={handleSubmit}>
+    <Modal labelledBy={titleId} onEscape={pending ? undefined : onCancel}>
+      <div className={styles.title} id={titleId}>
+        {title}
+      </div>
+      <form onSubmit={handleSubmit}>
+        <div className={styles.field}>
+          <label className={styles.label}>{label}</label>
+          <input
+            className={styles.input}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            disabled={pending}
+            autoFocus
+            autoComplete="off"
+            spellCheck={false}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+        </div>
+        {secondLabel !== undefined && (
           <div className={styles.field}>
-            <label className={styles.label}>{label}</label>
+            <label className={styles.label}>{secondLabel}</label>
             <input
               className={styles.input}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              autoFocus
+              value={second}
+              onChange={(e) => setSecond(e.target.value)}
+              disabled={pending}
               autoComplete="off"
               spellCheck={false}
-              onFocus={(e) => e.currentTarget.select()}
             />
+            {secondHint && <div className={styles.hint}>{secondHint}</div>}
           </div>
-          {secondLabel !== undefined && (
-            <div className={styles.field}>
-              <label className={styles.label}>{secondLabel}</label>
-              <input
-                className={styles.input}
-                value={second}
-                onChange={(e) => setSecond(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-              {secondHint && <div className={styles.hint}>{secondHint}</div>}
-            </div>
-          )}
-          <div className={styles.footer}>
-            <button type="button" className={styles.button} onClick={onCancel}>
-              {cancelLabel}
-            </button>
-            <button type="submit" className={styles.buttonPrimary} disabled={!canConfirm}>
-              {confirmLabel}
-            </button>
+        )}
+        {error && (
+          <div className={styles.error} role="alert">
+            {error}
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+        <div className={styles.footer}>
+          <button type="button" className={styles.button} onClick={onCancel} disabled={pending}>
+            {cancelLabel}
+          </button>
+          <button type="submit" className={styles.buttonPrimary} disabled={!canConfirm || pending}>
+            {pending ? t('dialog.working') : confirmLabel}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

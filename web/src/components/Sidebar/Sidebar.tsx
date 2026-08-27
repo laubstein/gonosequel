@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './Sidebar.module.css'
 import { useDatabases } from '../../hooks/useDatabases'
@@ -46,8 +46,17 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' })
   const isKeyValueDriver = driver === 'redis' || driver === 'valkey'
 
-  const { data: collections, isLoading: collsLoading } = useCollections(selectedDb)
+  const { data: collections, isLoading: collsLoading, isError: collsError, error: collsErr } = useCollections(selectedDb)
   const { data: stats } = useCollectionStats(selectedDb, selection?.coll ?? null)
+
+  // The filter is about one database's collection list, so it must not
+  // survive a switch — the same cross-switch state leak already fixed in
+  // IndexPanel. Left alone, changing database silently showed a filtered
+  // subset of the new one (or "no collections"), with the reason sitting
+  // in a box the user had stopped looking at.
+  useEffect(() => {
+    setFilter('')
+  }, [selectedDb])
 
   const filtered = useMemo(() => {
     if (!collections) return []
@@ -63,6 +72,27 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
 
   function closeDialog() {
     setDialog({ kind: 'none' })
+  }
+
+  // The mutation objects live at component level and so outlive any one
+  // dialog. Without clearing them on open, a failure from last time is
+  // still showing the next time the dialog appears. Reset on open rather
+  // than in closeDialog, so it can't race with a mutation's own onSuccess.
+  function openDialog(next: DialogState) {
+    createDatabase.reset()
+    dropDatabase.reset()
+    createCollection.reset()
+    dropCollection.reset()
+    renameCollection.reset()
+    setDialog(next)
+  }
+
+  // Every dialog reports its own mutation's failure in place and stays
+  // open. http.ts's handle() always throws an Error carrying the server's
+  // {"error": ...} text, so .message is the useful part.
+  function errorOf(e: unknown): string | null {
+    if (!e) return null
+    return e instanceof Error ? e.message : String(e)
   }
 
   // MongoDB has no "create database" command — a database exists once it
@@ -134,7 +164,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
         </select>
         <button
           className={styles.iconButton}
-          onClick={() => setDialog({ kind: 'newDatabase' })}
+          onClick={() => openDialog({ kind: 'newDatabase' })}
           title={t('sidebar.newDatabase')}
           aria-label={t('sidebar.newDatabase')}
         >
@@ -142,7 +172,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
         </button>
         <button
           className={styles.iconButton}
-          onClick={() => setDialog({ kind: 'dropDatabase' })}
+          onClick={() => openDialog({ kind: 'dropDatabase' })}
           title={t('sidebar.dropDatabase')}
           aria-label={t('sidebar.dropDatabase')}
           disabled={!selectedDb}
@@ -165,7 +195,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
         <div className={styles.newCollectionRow}>
           <button
             className={styles.newCollectionButton}
-            onClick={isKeyValueDriver ? onNewKey : () => setDialog({ kind: 'newCollection' })}
+            onClick={isKeyValueDriver ? onNewKey : () => openDialog({ kind: 'newCollection' })}
           >
             {isKeyValueDriver ? t('sidebar.newKey') : t('sidebar.newCollection')}
           </button>
@@ -174,7 +204,14 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
 
       <ul className={styles.collectionList}>
         {collsLoading && <li className={styles.empty}>{t('sidebar.loading')}</li>}
-        {!collsLoading && selectedDb && filtered.length === 0 && (
+        {/* A failed list used to fall through to "No collections", so a
+            server error was indistinguishable from an empty database. */}
+        {collsError && (
+          <li className={styles.error}>
+            {collsErr instanceof Error ? collsErr.message : t('sidebar.collectionsFailed')}
+          </li>
+        )}
+        {!collsLoading && !collsError && selectedDb && filtered.length === 0 && (
           <li className={styles.empty}>{t('sidebar.noCollections')}</li>
         )}
         {filtered.map((c) => (
@@ -191,7 +228,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
             </span>
             <button
               className={styles.dropButton}
-              onClick={() => setDialog({ kind: 'renameCollection', name: c.name })}
+              onClick={() => openDialog({ kind: 'renameCollection', name: c.name })}
               title={t('sidebar.renameCollection', { name: c.name })}
               aria-label={t('sidebar.renameCollection', { name: c.name })}
             >
@@ -199,7 +236,7 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
             </button>
             <button
               className={styles.dropButton}
-              onClick={() => setDialog({ kind: 'dropCollection', name: c.name })}
+              onClick={() => openDialog({ kind: 'dropCollection', name: c.name })}
               title={t('sidebar.dropCollection', { name: c.name })}
               aria-label={t('sidebar.dropCollection', { name: c.name })}
             >
@@ -229,6 +266,8 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
           secondLabel={t('sidebar.promptInitialCollectionName')}
           secondDefaultValue="data"
           secondHint={t('sidebar.initialCollectionHint')}
+          pending={createDatabase.isPending}
+          error={errorOf(createDatabase.error)}
           onConfirm={(name, initialCollection) => createDatabase.mutate({ name, initialCollection })}
           onCancel={closeDialog}
         />
@@ -241,6 +280,13 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
           confirmLabel={t('dialog.delete')}
           cancelLabel={t('dialog.cancel')}
           danger
+          // Dropping a database destroys every collection in it, so it
+          // gets at least the guard dropping a single collection already
+          // had — previously the more destructive action was the easier
+          // one to fire.
+          requireText={selectedDb}
+          pending={dropDatabase.isPending}
+          error={errorOf(dropDatabase.error)}
           onConfirm={() => dropDatabase.mutate(selectedDb)}
           onCancel={closeDialog}
         />
@@ -252,6 +298,8 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
           label={t('sidebar.promptNewCollectionName')}
           confirmLabel={t('dialog.create')}
           cancelLabel={t('dialog.cancel')}
+          pending={createCollection.isPending}
+          error={errorOf(createCollection.error)}
           onConfirm={(name) => createCollection.mutate(name)}
           onCancel={closeDialog}
         />
@@ -265,6 +313,8 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
           cancelLabel={t('dialog.cancel')}
           danger
           requireText={dialog.name}
+          pending={dropCollection.isPending}
+          error={errorOf(dropCollection.error)}
           onConfirm={() => dropCollection.mutate(dialog.name)}
           onCancel={closeDialog}
         />
@@ -277,6 +327,8 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
           defaultValue={dialog.name}
           confirmLabel={t('dialog.rename')}
           cancelLabel={t('dialog.cancel')}
+          pending={renameCollection.isPending}
+          error={errorOf(renameCollection.error)}
           onConfirm={(newName) => {
             if (newName !== dialog.name) renameCollection.mutate({ oldName: dialog.name, newName })
             else closeDialog()

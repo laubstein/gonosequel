@@ -65,6 +65,17 @@
   color: var(--color-text-muted);
 }
 
+/* Why the action failed, shown in place rather than closing the dialog —
+   the caller keeps it open by only closing on success. */
+.error {
+  margin: 10px 16px 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
 .input {
   padding: 6px 8px;
   border: 1px solid var(--color-border);
