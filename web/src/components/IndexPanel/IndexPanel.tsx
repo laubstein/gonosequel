@@ -64,7 +64,12 @@ function optionsOf(idx: IndexInfo): CreateIndexOptions {
 export function IndexPanel({ db, coll }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const { data: indexes, isLoading } = useQuery({
+  const {
+    data: indexes,
+    isLoading,
+    isError: indexesFailed,
+    error: indexesError,
+  } = useQuery({
     queryKey: ['indexes', db, coll],
     queryFn: () => api.listIndexes(db, coll),
   })
@@ -223,6 +228,12 @@ export function IndexPanel({ db, coll }: Props) {
     <div className={styles.panel}>
       {isLoading ? (
         <div>{t('indexPanel.loading')}</div>
+      ) : indexesFailed ? (
+        // Without this the failure fell through to an empty table body,
+        // which reads as "this collection has no indexes".
+        <div className={styles.error} role="alert">
+          {indexesError instanceof Error ? indexesError.message : t('indexPanel.loadFailed')}
+        </div>
       ) : (
         <table>
           <thead>

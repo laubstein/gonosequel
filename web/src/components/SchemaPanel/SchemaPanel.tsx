@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import styles from './SchemaPanel.module.css'
 import { useCollectionSchema } from '../../hooks/useCollectionSchema'
+import { QueryState } from '../QueryState/QueryState'
 
 interface Props {
   db: string
@@ -9,35 +10,44 @@ interface Props {
 
 export function SchemaPanel({ db, coll }: Props) {
   const { t } = useTranslation()
-  const { data, isLoading } = useCollectionSchema(db, coll)
-
-  if (isLoading) return <div className={styles.empty}>{t('schemaPanel.loading')}</div>
-  if (!data || data.length === 0) return <div className={styles.empty}>{t('schemaPanel.noData')}</div>
+  const { data, isLoading, isError, error } = useCollectionSchema(db, coll)
 
   return (
-    <div className={styles.panel}>
-      <table>
-        <thead>
-          <tr>
-            <th>{t('schemaPanel.field')}</th>
-            <th>{t('schemaPanel.observedTypes')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((field) => (
-            <tr key={field.path}>
-              <td>{field.path}</td>
-              <td>
-                {field.types.map((t) => (
-                  <span key={t.type} className={styles.typeTag}>
-                    {t.type} ({t.count})
-                  </span>
-                ))}
-              </td>
+    <QueryState
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      isEmpty={!data || data.length === 0}
+      emptyLabel={t('schemaPanel.noData')}
+      loadingLabel={t('schemaPanel.loading')}
+    >
+      <div className={styles.panel}>
+        <table>
+          <thead>
+            <tr>
+              <th>{t('schemaPanel.field')}</th>
+              <th>{t('schemaPanel.observedTypes')}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {data?.map((field) => (
+              <tr key={field.path}>
+                <td>{field.path}</td>
+                <td>
+                  {/* Named `ft`, not `t`: shadowing the translation
+                      function inside this map is a footgun waiting for
+                      the first translated string added here. */}
+                  {field.types.map((ft) => (
+                    <span key={ft.type} className={styles.typeTag}>
+                      {ft.type} ({ft.count})
+                    </span>
+                  ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </QueryState>
   )
 }

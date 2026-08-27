@@ -206,7 +206,8 @@
     "recreateFailedRestored": "Couldn't create the new index, so the original was restored unchanged: {{message}}",
     "recreateFailedAndLost": "Couldn't create the new index, and restoring \"{{name}}\" failed too — the collection is now missing that index. Original error: {{message}}",
     "dropTitle": "Delete index",
-    "confirmDrop": "Delete the index \"{{name}}\"? Queries relying on it will fall back to a collection scan."
+    "confirmDrop": "Delete the index \"{{name}}\"? Queries relying on it will fall back to a collection scan.",
+    "loadFailed": "Couldn't load indexes."
   },
   "schemaPanel": {
     "loading": "Loading…",
@@ -250,7 +251,8 @@
     "connect": "Connect",
     "connecting": "Connecting…",
     "savedConnections": "Saved connections",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "bookmarksFailed": "Couldn't load saved connections."
   },
   "serverPanel": {
     "connection": "Connection",
@@ -312,5 +314,9 @@
     "operation": "Operation",
     "secsRunning": "Seconds running",
     "client": "Client"
+  },
+  "common": {
+    "loading": "Loading…",
+    "loadFailed": "Couldn't load this."
   }
 }

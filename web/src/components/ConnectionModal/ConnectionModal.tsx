@@ -59,7 +59,11 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
 
   const [error, setError] = useState<string | null>(null)
 
-  const { data: bookmarkList } = useQuery({ queryKey: ['bookmarks'], queryFn: api.bookmarks })
+  const {
+    data: bookmarkList,
+    isError: bookmarksFailed,
+  } = useQuery({ queryKey: ['bookmarks'], queryFn: api.bookmarks })
+
 
   const connect = useMutation({
     mutationFn: (args: { url: string; driver?: string; readonly: boolean }) =>
@@ -79,6 +83,10 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
     },
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
+
+  // Either connect path in flight blocks the other: clicking a saved
+  // connection and then Connect used to fire two competing connects.
+  const connecting = connect.isPending || connectBookmark.isPending
 
   function buildStandardURL(): string {
     const scheme = driver === 'mongodb' ? 'mongodb' : 'redis'
@@ -214,8 +222,8 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
               <span className={styles.hint}>{t('connectionModal.extraParamsHint')}</span>
             </div>
 
-            <button className={styles.button} onClick={handleStandardConnect} disabled={connect.isPending}>
-              {connect.isPending ? t('connectionModal.connecting') : t('connectionModal.connect')}
+            <button className={styles.button} onClick={handleStandardConnect} disabled={connecting}>
+              {connecting ? t('connectionModal.connecting') : t('connectionModal.connect')}
             </button>
           </>
         ) : (
@@ -229,13 +237,17 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
                 placeholder={t('connectionModal.urlPlaceholder')}
               />
             </div>
-            <button className={styles.button} onClick={handleUrlConnect} disabled={connect.isPending}>
-              {connect.isPending ? t('connectionModal.connecting') : t('connectionModal.connect')}
+            <button className={styles.button} onClick={handleUrlConnect} disabled={connecting || !url.trim()}>
+              {connecting ? t('connectionModal.connecting') : t('connectionModal.connect')}
             </button>
           </>
         )}
 
         {error && <div className={styles.error}>{error}</div>}
+
+        {/* A failed fetch used to hide the saved-connections section
+            entirely, so the feature just looked absent. */}
+        {bookmarksFailed && <div className={styles.hint}>{t('connectionModal.bookmarksFailed')}</div>}
 
         {bookmarkList && bookmarkList.length > 0 && (
           <div className={styles.bookmarks}>
@@ -244,7 +256,9 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
               <div
                 key={b.name}
                 className={styles.bookmarkItem}
-                onClick={() => connectBookmark.mutate({ name: b.name, readonly: effectiveReadonly })}
+                onClick={() => {
+                  if (!connecting) connectBookmark.mutate({ name: b.name, readonly: effectiveReadonly })
+                }}
               >
                 {b.name} — {b.uri}
               </div>

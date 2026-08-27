@@ -206,7 +206,8 @@
     "recreateFailedRestored": "Não foi possível criar o novo índice, então o original foi restaurado sem alteração: {{message}}",
     "recreateFailedAndLost": "Não foi possível criar o novo índice, e restaurar \"{{name}}\" também falhou — a coleção está sem esse índice agora. Erro original: {{message}}",
     "dropTitle": "Apagar índice",
-    "confirmDrop": "Apagar o índice \"{{name}}\"? Consultas que dependem dele vão passar a varrer a coleção inteira."
+    "confirmDrop": "Apagar o índice \"{{name}}\"? Consultas que dependem dele vão passar a varrer a coleção inteira.",
+    "loadFailed": "Não foi possível carregar os índices."
   },
   "schemaPanel": {
     "loading": "Carregando…",
@@ -250,7 +251,8 @@
     "connect": "Conectar",
     "connecting": "Conectando…",
     "savedConnections": "Conexões salvas",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "bookmarksFailed": "Não foi possível carregar as conexões salvas."
   },
   "serverPanel": {
     "connection": "Conexão",
@@ -312,5 +314,9 @@
     "operation": "Operação",
     "secsRunning": "Segundos rodando",
     "client": "Cliente"
+  },
+  "common": {
+    "loading": "Carregando…",
+    "loadFailed": "Não foi possível carregar."
   }
 }
