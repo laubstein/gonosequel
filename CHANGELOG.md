@@ -3,6 +3,21 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.14] - 2026-08-27
+
+### Added
+
+- **A–Z toggle** that sorts field names alphabetically, nested fields included. Documents in one
+  collection need not share a field order, so the same field can otherwise sit in a different
+  column position in every row. One preference covers all three views at once — the results
+  table's columns, the results JSON view and the document editor — and is remembered in the
+  browser.
+
+  Array element order is never touched (it is part of an array's value, not a presentation
+  detail), and Extended JSON wrappers like `{"$oid": ...}` are left intact. Table columns sort
+  segment by segment, so a parent sorts immediately before its own children. In the editor the
+  toggle disables itself once you have typed something, rather than discarding the edit.
+
 ## [0.0.13] - 2026-08-27
 
 Styling foundations, and backend capabilities the UI never reached.
