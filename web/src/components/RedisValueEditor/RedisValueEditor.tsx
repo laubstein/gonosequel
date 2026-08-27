@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import docStyles from '../DocumentEditor/DocumentEditor.module.css'
 import styles from './RedisValueEditor.module.css'
 import { api } from '../../api/client'
 import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
+import { Modal } from '../Dialogs/Modal'
 import type { EditorTarget } from '../DocumentEditor/DocumentEditor'
 
 type ValueType = 'string' | 'hash' | 'list' | 'set' | 'zset'
@@ -48,6 +49,7 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
   // Deleting a whole key used to fire straight from the footer button.
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const titleId = useId()
 
   const existing = useQuery({
     queryKey: ['document', db, coll, target.mode === 'edit' ? target.encodedId : null],
@@ -90,14 +92,6 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
       setZsetRows(rows.length ? rows : [{ member: '', score: '0' }])
     }
   }, [target, existing.data])
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
@@ -186,9 +180,9 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
   })
 
   return (
-    <div className={docStyles.overlay} onClick={onClose}>
-      <div className={docStyles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={docStyles.header}>
+    <>
+      <Modal labelledBy={titleId} onEscape={onClose} width="min(720px, 92vw)" className={docStyles.card}>
+        <div className={docStyles.header} id={titleId}>
           {target.mode === 'new' ? t('documentEditor.newTitle') : t('documentEditor.editTitle')}
           <div className={docStyles.headerSpacer} />
           <button className={docStyles.closeButton} onClick={onClose} aria-label={t('documentEditor.close')}>
@@ -371,7 +365,7 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
             {save.isPending ? t('documentEditor.saving') : t('documentEditor.save')}
           </button>
         </div>
-      </div>
+      </Modal>
 
       {confirmingDelete && (
         <ConfirmDialog
@@ -389,6 +383,6 @@ export function RedisValueEditor({ db, coll, target, onClose }: Props) {
           }}
         />
       )}
-    </div>
+    </>
   )
 }

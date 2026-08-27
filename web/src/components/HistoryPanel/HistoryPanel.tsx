@@ -32,7 +32,19 @@ export function HistoryPanel({ onReplay }: Props) {
           </thead>
           <tbody>
             {data?.map((entry, i) => (
-              <tr key={i} onClick={() => onReplay?.(entry)}>
+              <tr
+                key={i}
+                onClick={() => onReplay?.(entry)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onReplay?.(entry)
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                title={t('historyPanel.replayHint')}
+              >
                 <td>{entry.database}</td>
                 <td>{entry.collection}</td>
                 <td>{entry.filter}</td>

@@ -310,12 +310,14 @@ export default function App() {
         <div className={styles.readonlyBanner}>{t('app.readonlyBanner')}</div>
       )}
 
-      <div className={styles.tabbar}>
+      <div className={styles.tabbar} role="tablist">
         {visibleTabs.map((id) => (
           <button
             key={id}
             className={tab === id ? styles.tabActive : styles.tab}
             onClick={() => selectTab(id)}
+            role="tab"
+            aria-selected={tab === id}
           >
             {t(`app.tabs.${id}`)}
           </button>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import CodeMirror from '@uiw/react-codemirror'
@@ -9,6 +9,7 @@ import { computeJsonFix } from '../../api/jsonFix'
 import { unwrapNumberWrappers, findRiskyNumberFields, getAtPath, pathToLabel } from '../../api/extjson'
 import { useIsDarkMode } from '../../hooks/useIsDarkMode'
 import { ConfirmDialog } from '../Dialogs/ConfirmDialog'
+import { Modal } from '../Dialogs/Modal'
 
 export type EditorTarget = { mode: 'new' } | { mode: 'edit'; encodedId: string }
 
@@ -31,6 +32,7 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
   // Deleting used to fire straight from the footer button, with no
   // guard at all — while *saving* a Long went through a warning dialog.
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const titleId = useId()
 
   const fixedJson = useMemo(() => computeJsonFix(text), [text])
 
@@ -71,14 +73,6 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
       setText('{\n  \n}')
     }
   }, [target, existing.data])
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['documents', db, coll] })
@@ -169,9 +163,9 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
 
   return (
     <>
-      <div className={styles.overlay} onClick={onClose}>
-        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.header}>
+      <Modal labelledBy={titleId} onEscape={onClose} width="min(720px, 92vw)" className={styles.card}>
+        <>
+          <div className={styles.header} id={titleId}>
             {target.mode === 'new' ? t('documentEditor.newTitle') : t('documentEditor.editTitle')}
             <div className={styles.headerSpacer} />
             <button className={styles.closeButton} onClick={onClose} aria-label={t('documentEditor.close')}>
@@ -229,8 +223,8 @@ export function DocumentEditor({ db, coll, target, onClose }: Props) {
               {save.isPending ? t('documentEditor.saving') : t('documentEditor.save')}
             </button>
           </div>
-        </div>
-      </div>
+        </>
+      </Modal>
 
       {confirmingDelete && (
         <ConfirmDialog

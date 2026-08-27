@@ -1,24 +1,6 @@
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--color-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-/* Used instead of .overlay when the modal sits on top of the app (add a
-   connection) rather than replacing it (the blocking initial gate). */
-.overlayDialog {
-  composes: overlay;
-  background: rgba(0, 0, 0, 0.4);
-}
-
+/* The shared Modal shell provides the frame (width, border, radius,
+   shadow); this only adds what's specific to the connect form. */
 .card {
-  width: min(420px, 92vw);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
   padding: 24px;
   background: var(--color-bg-alt);
 }
@@ -135,13 +117,25 @@
   padding-top: 12px;
 }
 
+/* A real <button>, so a saved connection is keyboard reachable. */
 .bookmarkItem {
+  display: block;
+  width: 100%;
   padding: 6px 4px;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   border-radius: 6px;
   color: var(--color-text);
 }
 
-.bookmarkItem:hover {
+.bookmarkItem:hover:not(:disabled) {
   background: var(--color-bg-inset);
+}
+
+.bookmarkItem:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

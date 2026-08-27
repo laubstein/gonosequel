@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import styles from './ConnectionModal.module.css'
 import { api } from '../../api/client'
+import { Modal } from '../Dialogs/Modal'
 import { setSessionId } from '../../api/http'
 import { useInfo } from '../../hooks/useInfo'
 import { SUPPORTED_DRIVERS, DRIVER_LABEL, DEFAULT_PORT, type DriverName } from '../../drivers'
@@ -107,11 +108,20 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
   }
 
   const titleDriverLabel = tab === 'standard' ? DRIVER_LABEL[driver] : inferDriverLabel(url)
+  const titleId = useId()
 
   return (
-    <div className={onCancel ? styles.overlayDialog : styles.overlay}>
-      <div className={styles.card}>
-        <div className={styles.title}>
+    <Modal
+      labelledBy={titleId}
+      // The initial gate has nowhere to go back to, so it is deliberately
+      // not escapable; the "add a connection" variant is.
+      onEscape={onCancel}
+      backdrop={onCancel ? 'scrim' : 'opaque'}
+      width="min(420px, 92vw)"
+      className={styles.card}
+    >
+      <>
+        <div className={styles.title} id={titleId}>
           {titleDriverLabel
             ? t('connectionModal.titleFor', { driver: titleDriverLabel })
             : t('connectionModal.title')}
@@ -253,19 +263,19 @@ export function ConnectionModal({ onConnected, onCancel }: Props) {
           <div className={styles.bookmarks}>
             <div className={styles.label}>{t('connectionModal.savedConnections')}</div>
             {bookmarkList.map((b) => (
-              <div
+              <button
                 key={b.name}
+                type="button"
                 className={styles.bookmarkItem}
-                onClick={() => {
-                  if (!connecting) connectBookmark.mutate({ name: b.name, readonly: effectiveReadonly })
-                }}
+                disabled={connecting}
+                onClick={() => connectBookmark.mutate({ name: b.name, readonly: effectiveReadonly })}
               >
                 {b.name} — {b.uri}
-              </div>
+              </button>
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </>
+    </Modal>
   )
 }

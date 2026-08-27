@@ -47,16 +47,38 @@ function highlightJSON(json: string): ReactNode[] {
 interface Props {
   value: unknown
   onClick?: () => void
+  // Describes what activating this does, for screen readers — only used
+  // when onClick is set.
+  label?: string
 }
 
 // Renders a value as indented, syntax-highlighted JSON. `value` is
 // expected to already be a plain object/array (e.g. a parsed Extended
 // JSON document) — this only formats and highlights, it doesn't interpret
 // $oid/$numberLong/etc wrappers specially.
-export function JsonView({ value, onClick }: Props) {
+//
+// When onClick is set the block becomes a real activatable control: in the
+// results JSON view this is the *only* way to open a document for editing,
+// so a bare onClick on a <pre> left that mode with no keyboard path to it
+// at all.
+export function JsonView({ value, onClick, label }: Props) {
   const text = JSON.stringify(value, null, 2)
+  if (!onClick) return <pre className={styles.pre}>{highlightJSON(text)}</pre>
+
   return (
-    <pre className={styles.pre} onClick={onClick}>
+    <pre
+      className={styles.pre}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+    >
       {highlightJSON(text)}
     </pre>
   )

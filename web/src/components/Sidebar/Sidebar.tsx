@@ -216,16 +216,18 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
         )}
         {filtered.map((c) => (
           <li key={c.name} className={styles.collectionRow}>
-            <span
+            <button
+              type="button"
               className={
                 selection?.db === selectedDb && selection?.coll === c.name
                   ? styles.collectionItemActive
                   : styles.collectionItem
               }
               onClick={() => selectedDb && onSelect(selectedDb, c.name)}
+              aria-current={selection?.db === selectedDb && selection?.coll === c.name ? 'true' : undefined}
             >
               {c.name}
-            </span>
+            </button>
             <button
               className={styles.dropButton}
               onClick={() => openDialog({ kind: 'renameCollection', name: c.name })}

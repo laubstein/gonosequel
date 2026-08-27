@@ -58,6 +58,10 @@ interface MenuState {
 const MAX_NESTED_DEPTH = 3
 const MAX_COLUMNS = 60
 
+// Approximate context-menu box, used only to keep it inside the viewport.
+const MENU_WIDTH = 200
+const MENU_HEIGHT = 130
+
 // collectColumns lists the table's columns, descending into embedded
 // documents so a nested field gets its own dotted column ("SO.nome") —
 // the same path MongoDB accepts in a filter or projection.
@@ -232,7 +236,33 @@ export function Results({
             </thead>
             <tbody>
               {documents.map((doc, i) => (
-                <tr key={editable ? docId(doc) : i} onClick={editable ? () => onOpenDocument(doc) : undefined}>
+                <tr
+                  key={editable ? docId(doc) : i}
+                  // A row opens the document editor, so it has to be
+                  // reachable and activatable from the keyboard. Selecting
+                  // text inside a cell must not count as a click, hence the
+                  // collapsed-selection check.
+                  onClick={
+                    editable
+                      ? () => {
+                          if (window.getSelection()?.toString()) return
+                          onOpenDocument(doc)
+                        }
+                      : undefined
+                  }
+                  onKeyDown={
+                    editable
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            onOpenDocument(doc)
+                          }
+                        }
+                      : undefined
+                  }
+                  role={editable ? 'button' : undefined}
+                  tabIndex={editable ? 0 : undefined}
+                >
                   {columns.map((c) => (
                     <td
                       key={c}
@@ -279,7 +309,11 @@ export function Results({
         <div className={styles.jsonView}>
           {documents.map((doc, i) => (
             <div key={editable ? docId(doc) : i} className={editable ? styles.jsonDoc : styles.jsonDocReadonly}>
-              <JsonView value={doc} onClick={editable ? () => onOpenDocument(doc) : undefined} />
+              <JsonView
+                value={doc}
+                onClick={editable ? () => onOpenDocument(doc) : undefined}
+                label={t('results.openDocument')}
+              />
             </div>
           ))}
         </div>
@@ -354,22 +388,36 @@ function CellContextMenu({
   const raw = rawFilterValue(menu.value)
 
   return (
-    <div className={styles.contextMenu} style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
+    <div
+      className={styles.contextMenu}
+      // Clamped: positioning at the raw click point put the menu partly
+      // offscreen near the right or bottom edge of the window.
+      style={{
+        left: Math.min(menu.x, Math.max(0, window.innerWidth - MENU_WIDTH)),
+        top: Math.min(menu.y, Math.max(0, window.innerHeight - MENU_HEIGHT)),
+      }}
+      onClick={(e) => e.stopPropagation()}
+      role="menu"
+    >
       <button
         className={styles.contextMenuItem}
         disabled={raw === undefined}
+        title={raw === undefined ? t('results.noSingleValue') : undefined}
         onClick={() => onFilterByValue(menu.field, raw)}
+        role="menuitem"
       >
         🔍 {t('results.filterByValue')}
       </button>
       <button
         className={styles.contextMenuItem}
         disabled={raw === undefined}
+        title={raw === undefined ? t('results.noSingleValue') : undefined}
         onClick={() => onExcludeValue(menu.field, raw)}
+        role="menuitem"
       >
         🚫 {t('results.excludeValue')}
       </button>
-      <button className={styles.contextMenuItem} onClick={() => onHideField(menu.field)}>
+      <button className={styles.contextMenuItem} onClick={() => onHideField(menu.field)} role="menuitem">
         ✕ {t('results.hideField')}
       </button>
     </div>

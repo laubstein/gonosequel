@@ -125,7 +125,9 @@
     "sizeGuardReduceTo": "Show {{count}} per page instead",
     "filterByValue": "Filter by value",
     "excludeValue": "Exclude value",
-    "hideField": "Hide field"
+    "hideField": "Hide field",
+    "openDocument": "Open this document for editing",
+    "noSingleValue": "This cell has no single value to filter by (an array or a multi-field subdocument)."
   },
   "pagination": {
     "page": "page {{page}} of {{total}}",
@@ -220,7 +222,8 @@
     "empty": "No queries yet",
     "database": "Database",
     "collection": "Collection",
-    "filter": "Filter"
+    "filter": "Filter",
+    "replayHint": "Load this query into the editor"
   },
   "connectionLost": {
     "title": "Connection lost",

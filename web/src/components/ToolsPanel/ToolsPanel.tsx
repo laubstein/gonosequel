@@ -38,6 +38,13 @@ export function ToolsPanel({ db }: Props) {
     return overviewSort.dir === 1 ? ' ▲' : ' ▼'
   }
 
+  // Communicates the sort to assistive tech; the ▲/▼ glyph alone is
+  // invisible to a screen reader.
+  function overviewAriaSort(key: OverviewSortKey): 'ascending' | 'descending' | 'none' {
+    if (overviewSort.key !== key) return 'none'
+    return overviewSort.dir === 1 ? 'ascending' : 'descending'
+  }
+
   const sortedOverview = overview
     ? [...overview].sort((a, b) => {
         const { key, dir } = overviewSort
@@ -65,33 +72,75 @@ export function ToolsPanel({ db }: Props) {
           <table>
             <thead>
               <tr>
-                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('name')}>
-                  {t('toolsPanel.collection')}
-                  {overviewSortArrow('name')}
+                <th aria-sort={overviewAriaSort('name')}>
+                  <button
+                    type="button"
+                    className={styles.sortableHeader}
+                    onClick={() => toggleOverviewSort('name')}
+                  >
+                    {t('toolsPanel.collection')}
+                    {overviewSortArrow('name')}
+                  </button>
                 </th>
-                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('count')}>
-                  {t('toolsPanel.documents')}
-                  {overviewSortArrow('count')}
+                <th aria-sort={overviewAriaSort('count')}>
+                  <button
+                    type="button"
+                    className={styles.sortableHeader}
+                    onClick={() => toggleOverviewSort('count')}
+                  >
+                    {t('toolsPanel.documents')}
+                    {overviewSortArrow('count')}
+                  </button>
                 </th>
-                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('sizeBytes')}>
-                  {t('toolsPanel.dataSize')}
-                  {overviewSortArrow('sizeBytes')}
+                <th aria-sort={overviewAriaSort('sizeBytes')}>
+                  <button
+                    type="button"
+                    className={styles.sortableHeader}
+                    onClick={() => toggleOverviewSort('sizeBytes')}
+                  >
+                    {t('toolsPanel.dataSize')}
+                    {overviewSortArrow('sizeBytes')}
+                  </button>
                 </th>
-                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('storageBytes')}>
-                  {t('toolsPanel.storageSize')}
-                  {overviewSortArrow('storageBytes')}
+                <th aria-sort={overviewAriaSort('storageBytes')}>
+                  <button
+                    type="button"
+                    className={styles.sortableHeader}
+                    onClick={() => toggleOverviewSort('storageBytes')}
+                  >
+                    {t('toolsPanel.storageSize')}
+                    {overviewSortArrow('storageBytes')}
+                  </button>
                 </th>
-                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('indexBytes')}>
-                  {t('toolsPanel.indexSize')}
-                  {overviewSortArrow('indexBytes')}
+                <th aria-sort={overviewAriaSort('indexBytes')}>
+                  <button
+                    type="button"
+                    className={styles.sortableHeader}
+                    onClick={() => toggleOverviewSort('indexBytes')}
+                  >
+                    {t('toolsPanel.indexSize')}
+                    {overviewSortArrow('indexBytes')}
+                  </button>
                 </th>
-                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('avgObjSize')}>
-                  {t('toolsPanel.avgObjSize')}
-                  {overviewSortArrow('avgObjSize')}
+                <th aria-sort={overviewAriaSort('avgObjSize')}>
+                  <button
+                    type="button"
+                    className={styles.sortableHeader}
+                    onClick={() => toggleOverviewSort('avgObjSize')}
+                  >
+                    {t('toolsPanel.avgObjSize')}
+                    {overviewSortArrow('avgObjSize')}
+                  </button>
                 </th>
-                <th className={styles.sortableHeader} onClick={() => toggleOverviewSort('indexCount')}>
-                  {t('toolsPanel.indexCount')}
-                  {overviewSortArrow('indexCount')}
+                <th aria-sort={overviewAriaSort('indexCount')}>
+                  <button
+                    type="button"
+                    className={styles.sortableHeader}
+                    onClick={() => toggleOverviewSort('indexCount')}
+                  >
+                    {t('toolsPanel.indexCount')}
+                    {overviewSortArrow('indexCount')}
+                  </button>
                 </th>
               </tr>
             </thead>

@@ -1,22 +1,8 @@
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-
-.modal {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  width: min(720px, 92vw);
+/* Layout the shared Modal shell doesn't impose: this editor caps its own
+   height so a long document scrolls inside the body rather than growing
+   the card past the viewport. */
+.card {
   max-height: 86vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
 .header {
