@@ -43,6 +43,23 @@ function buildFormState(idx: IndexInfo): {
   }
 }
 
+// indexKeysToRequest converts an existing index's key spec into the
+// ordered {field, direction} array createIndex expects — the two sides use
+// different shapes for the same thing (see AGENTS.md on why key order is
+// carried as an array rather than an object).
+function indexKeysToRequest(idx: IndexInfo): { field: string; direction: number }[] {
+  return (idx.keys ?? []).map(({ key, value }) => ({ field: key, direction: value < 0 ? -1 : 1 }))
+}
+
+// optionsOf recovers the create-time options of an existing index, for
+// restoring it after a failed recreate.
+function optionsOf(idx: IndexInfo): CreateIndexOptions {
+  const opts: CreateIndexOptions = { unique: idx.unique, sparse: idx.sparse ?? false }
+  if (idx.expireAfterSeconds != null) opts.expireAfterSeconds = idx.expireAfterSeconds
+  if (idx.partialFilterExpression) opts.partialFilterExpression = idx.partialFilterExpression
+  return opts
+}
+
 export function IndexPanel({ db, coll }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -117,26 +134,55 @@ export function IndexPanel({ db, coll }: Props) {
       const opts = parseOptions()
       if (opts === null) throw new Error(t('indexPanel.invalidForm'))
 
-      if (editingName) {
-        await api.dropIndex(db, coll, editingName)
+      if (!editingName) {
+        return api.createIndex(db, coll, keys, opts)
       }
-      return api.createIndex(db, coll, keys, opts)
+
+      // Editing is drop-then-create: MongoDB can't alter an index in place
+      // (except a TTL's expireAfterSeconds, handled separately) and can't
+      // rename one, so there is no atomic path. If the create fails the
+      // original is already gone, so put it back rather than leaving the
+      // collection with no index at all — and if that restore also fails,
+      // say so explicitly instead of reporting only the first error.
+      const original = indexes?.find((i) => i.name === editingName)
+      await api.dropIndex(db, coll, editingName)
+      try {
+        return await api.createIndex(db, coll, keys, opts)
+      } catch (createErr) {
+        const message = createErr instanceof Error ? createErr.message : String(createErr)
+        if (!original) throw createErr
+        try {
+          await api.createIndex(db, coll, indexKeysToRequest(original), optionsOf(original))
+          throw new Error(t('indexPanel.recreateFailedRestored', { message }))
+        } catch (restoreErr) {
+          if (restoreErr instanceof Error && restoreErr.message.includes(message)) throw restoreErr
+          throw new Error(t('indexPanel.recreateFailedAndLost', { name: editingName, message }))
+        }
+      }
     },
     onSuccess: () => {
       invalidate()
       resetForm()
     },
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+    onError: (e) => {
+      setError(e instanceof Error ? e.message : String(e))
+      // The index list is whatever the failed sequence left behind —
+      // recreated, or genuinely dropped. Either way it is not what's on
+      // screen any more.
+      invalidate()
+    },
   })
 
   const drop = useMutation({
     mutationFn: (name: string) => api.dropIndex(db, coll, name),
     onSuccess: invalidate,
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
 
   const updateTtl = useMutation({
     mutationFn: ({ name, seconds }: { name: string; seconds: number }) => api.updateIndexTTL(db, coll, name, seconds),
     onSuccess: invalidate,
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   })
 
   function startEdit(idx: IndexInfo) {
@@ -228,8 +274,13 @@ export function IndexPanel({ db, coll }: Props) {
                               onClick={() => {
                                 const seconds = Number(ttlEditValue)
                                 if (Number.isFinite(seconds) && seconds >= 0) {
-                                  updateTtl.mutate({ name: idx.name, seconds })
-                                  setTtlEditValue('')
+                                  // Cleared on success only: clearing here
+                                  // discarded the typed value even when the
+                                  // request failed, with nothing reported.
+                                  updateTtl.mutate(
+                                    { name: idx.name, seconds },
+                                    { onSuccess: () => setTtlEditValue('') },
+                                  )
                                 }
                               }}
                             >

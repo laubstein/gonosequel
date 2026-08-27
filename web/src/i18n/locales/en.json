@@ -187,8 +187,10 @@
     "partialFilter": "Partial filter expression",
     "edit": "Edit",
     "saveEdit": "Save (drops and recreates the index)",
-    "editingNotice": "Editing \"{{name}}\" — saving drops it and creates a new index with these settings.",
-    "cancelEdit": "Cancel"
+    "editingNotice": "Editing \"{{name}}\" — MongoDB can't alter an index in place, so saving drops this one and creates a new index with these settings. If creating the new one fails, the original is restored.",
+    "cancelEdit": "Cancel",
+    "recreateFailedRestored": "Couldn't create the new index, so the original was restored unchanged: {{message}}",
+    "recreateFailedAndLost": "Couldn't create the new index, and restoring \"{{name}}\" failed too — the collection is now missing that index. Original error: {{message}}"
   },
   "schemaPanel": {
     "loading": "Loading…",

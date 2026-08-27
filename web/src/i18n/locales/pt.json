@@ -187,8 +187,10 @@
     "partialFilter": "Filtro parcial",
     "edit": "Editar",
     "saveEdit": "Salvar (apaga e recria o índice)",
-    "editingNotice": "Editando \"{{name}}\" — salvar apaga esse índice e cria um novo com essas configurações.",
-    "cancelEdit": "Cancelar"
+    "editingNotice": "Editando \"{{name}}\" — o MongoDB não altera um índice no lugar, então salvar apaga este e cria um novo com essas configurações. Se a criação do novo falhar, o original é restaurado.",
+    "cancelEdit": "Cancelar",
+    "recreateFailedRestored": "Não foi possível criar o novo índice, então o original foi restaurado sem alteração: {{message}}",
+    "recreateFailedAndLost": "Não foi possível criar o novo índice, e restaurar \"{{name}}\" também falhou — a coleção está sem esse índice agora. Erro original: {{message}}"
   },
   "schemaPanel": {
     "loading": "Carregando…",
