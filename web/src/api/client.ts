@@ -61,10 +61,13 @@ export const api = {
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/documents`,
       query as Record<string, string | number | undefined>,
     ),
-  explain: (db: string, coll: string, filter: string) =>
+  // sort and projection matter to the planner (a sort can select a
+  // different index or force a blocking in-memory sort), so Explain takes
+  // the same three parts as the find it describes.
+  explain: (db: string, coll: string, filter: string, sort?: string, projection?: string) =>
     apiGet<ExtJSONDocument>(
       `/api/databases/${encodeURIComponent(db)}/collections/${encodeURIComponent(coll)}/explain`,
-      { filter },
+      { filter, sort: sort || undefined, projection: projection || undefined },
     ),
   aggregate: (db: string, coll: string, pipeline: string) =>
     apiSend<{ documents: ExtJSONDocument[] }>(

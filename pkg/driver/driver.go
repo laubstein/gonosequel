@@ -89,9 +89,13 @@ type SchemaInferrer interface {
 	InferSchema(ctx context.Context, dbName, collName string, sampleSize int64) ([]SchemaField, error)
 }
 
-// QueryExplainer reports how the backend would execute a filter.
+// QueryExplainer reports how the backend would execute a query. It takes
+// the same FindOptions as Find, not just the filter: a sort can change the
+// chosen plan entirely (or add an in-memory sort stage), and a projection
+// decides whether an index covers the query — explaining the filter alone
+// describes a query the user never ran.
 type QueryExplainer interface {
-	Explain(ctx context.Context, dbName, collName string, filter Doc) (Doc, error)
+	Explain(ctx context.Context, dbName, collName string, opts FindOptions) (Doc, error)
 }
 
 // Aggregator runs a multi-stage aggregation pipeline. Not every backend has

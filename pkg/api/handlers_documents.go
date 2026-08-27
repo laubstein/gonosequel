@@ -208,16 +208,17 @@ func (d *deps) handleExplainQuery(c fiber.Ctx) error {
 	db, coll := c.Params("db"), c.Params("coll")
 	codec := currentClient(c)
 
-	var filter driver.Doc
-	if raw := c.Query("filter"); raw != "" {
-		f, err := codec.UnmarshalDoc([]byte(raw))
-		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid filter: "+err.Error())
-		}
-		filter = f
+	// Reuses the same option parsing as the documents route, so Explain
+	// describes the query the grid actually ran — sort and projection
+	// included. Explaining the filter alone reported the plan for a query
+	// the user never issued (a sort can pick a different index, or add a
+	// blocking in-memory SORT stage that the explain would never show).
+	opts, err := parseFindOptions(c, codec)
+	if err != nil {
+		return err
 	}
 
-	result, err := codec.Explain(c.Context(), db, coll, filter)
+	result, err := codec.Explain(c.Context(), db, coll, opts)
 	if err != nil {
 		return fmt.Errorf("explain: %w", err)
 	}

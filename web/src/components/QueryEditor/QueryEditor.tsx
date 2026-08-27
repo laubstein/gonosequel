@@ -481,9 +481,13 @@ export function QueryEditor({
     const filter = textToRun(filterText)
     try {
       if (filter.trim()) JSON.parse(filter)
+      // Same normalization Run does, so Explain describes exactly the
+      // query Run would issue rather than only its filter.
+      const sort = normalizeJsonField(sortText)
+      const projection = normalizeJsonField(projectionText)
       setError(null)
       setExplaining(true)
-      const result = await api.explain(db, coll, filter.trim() || '{}')
+      const result = await api.explain(db, coll, filter.trim() || '{}', sort, projection)
       setExplainResult(JSON.stringify(result, null, 2))
       setExplainCollscan(containsCollscan(result))
     } catch (e) {

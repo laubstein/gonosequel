@@ -22,7 +22,7 @@ func TestUnsupportedCapabilitiesReturnErrUnsupported(t *testing.T) {
 	if err := c.UpdateIndexTTL(ctx, "8", "widgets", "some_index", 60); !errors.Is(err, driver.ErrUnsupported) {
 		t.Errorf("UpdateIndexTTL: expected ErrUnsupported, got %v", err)
 	}
-	if _, err := c.Explain(ctx, "8", "widgets", nil); !errors.Is(err, driver.ErrUnsupported) {
+	if _, err := c.Explain(ctx, "8", "widgets", driver.FindOptions{}); !errors.Is(err, driver.ErrUnsupported) {
 		t.Errorf("Explain: expected ErrUnsupported, got %v", err)
 	}
 	if _, err := c.Aggregate(ctx, "8", "widgets", nil); !errors.Is(err, driver.ErrUnsupported) {
