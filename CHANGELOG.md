@@ -3,6 +3,30 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.8] - 2026-08-27
+
+### Added
+
+- Results table context menu: right-click a value for **Filter by value** (fills the filter
+  editor without running) or **Hide field** (excludes that field from the query via a MongoDB
+  projection, not just from the display). Disabled for cells with no single value to filter by
+  (an array or a multi-field subdocument).
+- Projection field in the find form, in the same raw-JSON style as Sort — the direct way to
+  include or exclude fields before they're ever fetched, not just after seeing them once via
+  "Hide field". Every exclusion currently in it shows as a removable chip above Run.
+- Run button shows a highlighted outline (and a tooltip) whenever the prepared filter/sort/
+  projection no longer match what's actually shown in the results table.
+- Per-page dropdown offers 1 through 9, in addition to the usual 10/25/50/100/250, when a
+  collection's average document size is large enough that even 10/page would risk a large
+  transfer — and the size guard's "reduce and load" suggestion can recommend one of them.
+- Tools tab's Collections overview table can now be sorted by any column (click the header;
+  click again to reverse) — Collection name stays the default.
+
+### Fixed
+
+- The index editor's "Editing ..." form (and its warning banner) stayed open after switching to
+  a different collection, even though the index being edited didn't exist there.
+
 ## [0.0.7] - 2026-08-26
 
 ### Added
