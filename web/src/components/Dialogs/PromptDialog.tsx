@@ -7,15 +7,33 @@ interface Props {
   defaultValue?: string
   confirmLabel: string
   cancelLabel: string
-  onConfirm: (value: string) => void
+  // An optional second input, for the cases where one value alone can't
+  // create the thing — MongoDB materializes a database only once it holds
+  // a collection, so "new database" genuinely needs two names.
+  secondLabel?: string
+  secondDefaultValue?: string
+  secondHint?: string
+  onConfirm: (value: string, second: string) => void
   onCancel: () => void
 }
 
 // PromptDialog replaces window.prompt() for free-text input (new
 // database/collection name, rename) with something styled consistently
 // with the rest of the app, instead of the browser's own unstyled dialog.
-export function PromptDialog({ title, label, defaultValue, confirmLabel, cancelLabel, onConfirm, onCancel }: Props) {
+export function PromptDialog({
+  title,
+  label,
+  defaultValue,
+  confirmLabel,
+  cancelLabel,
+  secondLabel,
+  secondDefaultValue,
+  secondHint,
+  onConfirm,
+  onCancel,
+}: Props) {
   const [value, setValue] = useState(defaultValue ?? '')
+  const [second, setSecond] = useState(secondDefaultValue ?? '')
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -25,10 +43,11 @@ export function PromptDialog({ title, label, defaultValue, confirmLabel, cancelL
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onCancel])
 
+  const canConfirm = value.trim() !== '' && (secondLabel === undefined || second.trim() !== '')
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const trimmed = value.trim()
-    if (trimmed) onConfirm(trimmed)
+    if (canConfirm) onConfirm(value.trim(), second.trim())
   }
 
   return (
@@ -48,11 +67,24 @@ export function PromptDialog({ title, label, defaultValue, confirmLabel, cancelL
               onFocus={(e) => e.currentTarget.select()}
             />
           </div>
+          {secondLabel !== undefined && (
+            <div className={styles.field}>
+              <label className={styles.label}>{secondLabel}</label>
+              <input
+                className={styles.input}
+                value={second}
+                onChange={(e) => setSecond(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              {secondHint && <div className={styles.hint}>{secondHint}</div>}
+            </div>
+          )}
           <div className={styles.footer}>
             <button type="button" className={styles.button} onClick={onCancel}>
               {cancelLabel}
             </button>
-            <button type="submit" className={styles.buttonPrimary} disabled={!value.trim()}>
+            <button type="submit" className={styles.buttonPrimary} disabled={!canConfirm}>
               {confirmLabel}
             </button>
           </div>

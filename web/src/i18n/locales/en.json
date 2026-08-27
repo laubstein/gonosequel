@@ -35,6 +35,8 @@
     "dropCollection": "Delete {{name}}",
     "promptNewDatabaseName": "New database name:",
     "confirmDropDatabase": "Delete database \"{{name}}\" and all its collections?",
+    "promptInitialCollectionName": "First collection name:",
+    "initialCollectionHint": "A database exists only once it holds a collection, so one is created with it.",
     "promptNewCollectionName": "New collection name:",
     "confirmDropCollection": "Delete collection \"{{name}}\"?",
     "documentCount_one": "{{formattedCount}} document",

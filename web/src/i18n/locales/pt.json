@@ -35,6 +35,8 @@
     "dropCollection": "Apagar {{name}}",
     "promptNewDatabaseName": "Nome do novo banco:",
     "confirmDropDatabase": "Apagar o banco \"{{name}}\" e todas as suas coleções?",
+    "promptInitialCollectionName": "Nome da primeira coleção:",
+    "initialCollectionHint": "Um banco só existe quando tem uma coleção, então uma é criada junto.",
     "promptNewCollectionName": "Nome da nova coleção:",
     "confirmDropCollection": "Apagar a coleção \"{{name}}\"?",
     "documentCount_one": "{{formattedCount}} documento",

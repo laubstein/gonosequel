@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import CodeMirror from '@uiw/react-codemirror'
 import { autocompletion } from '@codemirror/autocomplete'
 import { keymap, type EditorView } from '@codemirror/view'
@@ -69,6 +69,7 @@ const PRESETS: { labelKey: string; command: (coll: string) => string }[] = [
 // by clicking a key, or "+ New key") are unrelated to this and unaffected.
 export function RedisCommandRunner({ db, coll }: Props) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const key = scriptKey(db, coll)
   const [script, setScriptState] = useState(() => loadScript(key))
   const [presetIndex, setPresetIndex] = useState('')
@@ -97,8 +98,23 @@ export function RedisCommandRunner({ db, coll }: Props) {
     onSuccess: (res) => {
       setResults(res)
       setError(null)
+      // A command typed here can write (SET), delete (DEL), or wipe the
+      // database (FLUSHDB) — but this runner is outside the query/mutation
+      // flow those views use, so nothing else knows the data moved. Without
+      // this, the key table and the sidebar's collection list keep showing
+      // what was true before the command ran, indefinitely. The command
+      // text isn't parsed to decide whether it wrote: a read-only command
+      // just makes this a no-op refetch.
+      void queryClient.invalidateQueries({ queryKey: ['documents', db] })
+      void queryClient.invalidateQueries({ queryKey: ['collections', db] })
+      void queryClient.invalidateQueries({ queryKey: ['collectionStats', db] })
     },
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+    onError: (e) => {
+      setError(e instanceof Error ? e.message : String(e))
+      // Drop the previous run's output: leaving it under the new error
+      // message reads as though it were this command's result.
+      setResults(null)
+    },
   })
 
   // Read via the live EditorView rather than the `script` state: the

@@ -65,9 +65,15 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
     setDialog({ kind: 'none' })
   }
 
+  // MongoDB has no "create database" command — a database exists once it
+  // holds a collection, so one has to be created alongside it. The UI used
+  // to send no name for it, which meant every database created here was
+  // born with a collection literally called "_init" (the server's
+  // fallback) that the user never asked for and had to clean up.
   const createDatabase = useMutation({
-    mutationFn: (name: string) => api.createDatabase(name),
-    onSuccess: (_r, name) => {
+    mutationFn: ({ name, initialCollection }: { name: string; initialCollection: string }) =>
+      api.createDatabase(name, initialCollection),
+    onSuccess: (_r, { name }) => {
       void queryClient.invalidateQueries({ queryKey: ['databases'] })
       onSelectDb(name)
       closeDialog()
@@ -220,7 +226,10 @@ export function Sidebar({ selectedDb, onSelectDb, selection, onSelect, onCollect
           label={t('sidebar.promptNewDatabaseName')}
           confirmLabel={t('dialog.create')}
           cancelLabel={t('dialog.cancel')}
-          onConfirm={(name) => createDatabase.mutate(name)}
+          secondLabel={t('sidebar.promptInitialCollectionName')}
+          secondDefaultValue="data"
+          secondHint={t('sidebar.initialCollectionHint')}
+          onConfirm={(name, initialCollection) => createDatabase.mutate({ name, initialCollection })}
           onCancel={closeDialog}
         />
       )}
