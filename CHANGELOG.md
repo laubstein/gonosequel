@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.15] - 2026-08-28
+
+### Fixed
+
+- **Blank page with no recovery.** The app had no error boundary anywhere, so an uncaught render
+  error (triggered by a particular document or state, not a fluke) unmounted the entire React
+  tree, leaving a blank page — and reloading landed on the same data, so the same crash recurred
+  immediately. A top-level error boundary now catches this, shows what happened, and offers both
+  a soft "Try again" (re-renders in place) and a full reload.
+
 ## [0.0.14] - 2026-08-27
 
 ### Added

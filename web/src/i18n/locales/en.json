@@ -236,6 +236,12 @@
     "retrying": "Retrying…",
     "disconnect": "Disconnect"
   },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "This part of the app hit an error it couldn't recover from on its own.",
+    "reload": "Reload page",
+    "tryAgain": "Try again"
+  },
   "connectionModal": {
     "title": "Connect to a database",
     "titleFor": "Connect to {{driver}}",

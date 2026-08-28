@@ -236,6 +236,12 @@
     "retrying": "Tentando…",
     "disconnect": "Desconectar"
   },
+  "errorBoundary": {
+    "title": "Algo deu errado",
+    "message": "Esta parte do aplicativo encontrou um erro do qual não conseguiu se recuperar sozinha.",
+    "reload": "Recarregar página",
+    "tryAgain": "Tentar novamente"
+  },
   "connectionModal": {
     "title": "Conectar a um banco",
     "titleFor": "Conectar ao {{driver}}",
