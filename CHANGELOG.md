@@ -3,6 +3,21 @@
 All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.16] - 2026-08-28
+
+### Fixed
+
+- **Blank page after restarting or updating gonosequel, that a reload never fixed.** `go:embed`
+  reports every embedded file's modification time as the zero value, identically across every
+  build. fasthttp's static file server uses that timestamp for conditional requests, so once a
+  browser tab had loaded the page, restarting the binary with a new build made every subsequent
+  reload get back a bare `304 Not Modified` for `/` — telling the browser its old, cached
+  `index.html` was still current. That cached page pointed at the previous build's
+  content-hashed JS/CSS filenames, which the new build no longer serves, so the app never loaded
+  and every reload repeated the same false 304. `/` and `/index.html` (for both the app and the
+  docs site) now always answer with `Cache-Control: no-store` and are never served from the
+  static handler's own file path, so a reload after a restart always fetches the current build.
+
 ## [0.0.15] - 2026-08-28
 
 ### Fixed

@@ -43,15 +43,39 @@ func registerAssets(app *fiber.App, dist fs.FS, devProxy string) {
 			return proxy.Do(c, devProxy+c.OriginalURL())
 		})
 	case dist != nil:
+		// "/" and "/index.html" are registered explicitly, ahead of the
+		// wildcard static handler below, so they never go through
+		// static.New's own file-serving path for those two exact
+		// paths — see serveIndex for why that matters.
+		index := serveIndex(dist)
+		app.Get("/", index)
+		app.Get("/index.html", index)
 		app.Get("/*", static.New("", static.Config{
 			FS:              dist,
-			NotFoundHandler: serveIndex(dist),
+			NotFoundHandler: index,
 		}))
 	}
 }
 
-// serveIndex returns index.html for any path the static handler didn't
-// match, so client-side routing survives a hard reload on an inner route.
+// serveIndex returns index.html, for a path the static handler didn't
+// match (client-side routing surviving a hard reload on an inner route)
+// and, deliberately, for "/" and "/index.html" themselves rather than
+// letting static.New serve those two paths as ordinary files.
+//
+// The embed package reports every embedded file's ModTime as the zero
+// time, identically across every build — verified against the stdlib.
+// fasthttp's static file server uses that ModTime for If-Modified-Since
+// handling, so after the binary is rebuilt and restarted, a browser tab's
+// next reload
+// sends back the same (zero) Last-Modified it saw before and gets a bare
+// 304, telling it to keep using its own cached copy of index.html. That
+// cached HTML references the previous build's content-hashed JS/CSS
+// filenames, which no longer exist — so the page never loads the new
+// bundle, and every subsequent reload repeats the same 304, forever. The
+// hashed asset files themselves don't have this problem (a change in
+// content always means a new filename, so a stale cache entry is simply
+// never looked up again) — only the unhashed entry document does, hence
+// fixing it here specifically rather than disabling caching everywhere.
 func serveIndex(dist fs.FS) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		data, err := fs.ReadFile(dist, "index.html")
@@ -61,6 +85,7 @@ func serveIndex(dist fs.FS) fiber.Handler {
 		// The static handler already set a 404 status on the underlying
 		// response before calling us; reset it to 200 since this is a
 		// legitimate SPA route, not a missing asset.
+		c.Set(fiber.HeaderCacheControl, "no-store")
 		return c.Status(fiber.StatusOK).Type("html").Send(data)
 	}
 }
